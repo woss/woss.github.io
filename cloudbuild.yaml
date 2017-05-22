@@ -6,7 +6,5 @@ steps:
     'gcr.io/woss-private/$REPO_NAME:$COMMIT_SHA',
     'gcr.io/woss-private/$REPO_NAME:latest'
   ]
-images: ['gcr.io/woss-private/$REPO_NAME']
-
 
 # docker tag 22755e woss.io/base_python_box:latest 
