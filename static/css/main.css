@@ -1,0 +1,12 @@
+.text-align-center {
+    text-align: center;
+}
+
+.pull-50-from-top {
+    margin-top: 50%;
+}
+
+.social-items a {
+    margin: 10px;
+    color: #fff;
+}
