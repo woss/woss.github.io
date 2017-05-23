@@ -1,6 +1,6 @@
 FROM alpine:3.5
 
-ADD static /app/static
+ADD www /app/www
 ADD app /app/app
 
 WORKDIR /app
