@@ -1,0 +1,17 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: woss-io-website
+spec:
+  replicas: 2
+  template: 
+    metadata:
+      labels:
+        app: woss-io-website
+    spec:
+      containers:
+      - name: woss-io
+        image: gcr.io/woss-private/woss-io:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
