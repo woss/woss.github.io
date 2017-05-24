@@ -40,6 +40,7 @@ spec:
   template: 
     metadata:
       labels:
+        app: woss-io
         run: woss-io
     spec:
       containers:
