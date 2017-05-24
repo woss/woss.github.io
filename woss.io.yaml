@@ -25,14 +25,9 @@ spec:
   - host: woss.io
     http:
       paths:
-      - path: /
-        backend:
+      - backend:
           serviceName: woss-io
           servicePort: 80
-      # - path: /cv
-      #   backend:
-      #     serviceName: cv
-      #     servicePort: 8080
 
 ---
 
