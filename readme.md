@@ -7,6 +7,6 @@
 # console deployment
 
 
-`kubectl run woss-io --image=gcr.io/woss-private/woss-io --port=80`
+`kubectl run woss-io --image=gcr.io/signals-prod/woss-io --port=80`
 `kubectl expose deployment woss-io --target-port=80  --type=NodePort`
 `kubectl apply -f woss.io.yaml`

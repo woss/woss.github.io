@@ -1,7 +1,7 @@
 version: '3'
 services:
   woss-io:
-    image: "gcr.io/woss-private/woss-io"
+    image: "gcr.io/signals-prod/woss-io"
     restart: always
     expose:
         - "3000"

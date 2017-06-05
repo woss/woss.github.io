@@ -1,9 +1,9 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'gcr.io/woss-private/$REPO_NAME:$COMMIT_SHA', '.']
+  args: ['build', '-t', 'gcr.io/signals-prod/$REPO_NAME:$COMMIT_SHA', '.']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['tag',
     'gcr.io/woss-private/$REPO_NAME:$COMMIT_SHA',
     'gcr.io/woss-private/$REPO_NAME:latest'
   ]
-images: [gcr.io/woss-private/$REPO_NAME]
+images: [gcr.io/signals-prod/$REPO_NAME]

@@ -1,0 +1,358 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      kubernetes.io/created-by: |
+        {"kind":"SerializedReference","apiVersion":"v1","reference":{"kind":"ReplicaSet","namespace":"default","name":"woss-io-3693875746","uid":"1eec7c8a-4066-11e7-a187-42010a84003c","apiVersion":"extensions","resourceVersion":"224370"}}
+      kubernetes.io/limit-ranger: 'LimitRanger plugin set: cpu request for container
+        woss-io'
+    creationTimestamp: 2017-05-24T09:54:27Z
+    generateName: woss-io-3693875746-
+    labels:
+      pod-template-hash: "3693875746"
+      run: woss-io
+    name: woss-io-3693875746-7sfn6
+    namespace: default
+    ownerReferences:
+    - apiVersion: extensions/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: woss-io-3693875746
+      uid: 1eec7c8a-4066-11e7-a187-42010a84003c
+    resourceVersion: "224381"
+    selfLink: /api/v1/namespaces/default/pods/woss-io-3693875746-7sfn6
+    uid: f96fe921-4066-11e7-a187-42010a84003c
+  spec:
+    containers:
+    - image: gcr.io/woss-private/woss-io
+      imagePullPolicy: Always
+      name: woss-io
+      ports:
+      - containerPort: 80
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 100m
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: default-token-lhfhc
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    nodeName: gke-cluster-1-default-pool-3ecc3dc6-m6x2
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext: {}
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.alpha.kubernetes.io/notReady
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.alpha.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: default-token-lhfhc
+      secret:
+        defaultMode: 420
+        secretName: default-token-lhfhc
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: 2017-05-24T09:54:27Z
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: 2017-05-24T09:54:28Z
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: 2017-05-24T09:54:27Z
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - containerID: docker://d6af5a66932fd13561e87083d6fa283babd89b32ec075d60164002fa3130b23b
+      image: gcr.io/woss-private/woss-io:latest
+      imageID: docker://sha256:3e03198571d7cd691ffb4e00f3f1b98dbafab7f4bf65f88329d0d11fe44f3003
+      lastState: {}
+      name: woss-io
+      ready: true
+      restartCount: 0
+      state:
+        running:
+          startedAt: 2017-05-24T09:54:28Z
+    hostIP: 10.132.0.4
+    phase: Running
+    podIP: 10.112.2.24
+    qosClass: Burstable
+    startTime: 2017-05-24T09:54:27Z
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: 2017-05-24T09:48:20Z
+    generation: 5
+    labels:
+      run: woss-io
+    name: woss-io
+    namespace: default
+    resourceVersion: "224383"
+    selfLink: /apis/extensions/v1beta1/namespaces/default/deployments/woss-io
+    uid: 1eebaf6e-4066-11e7-a187-42010a84003c
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        run: woss-io
+    strategy:
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 1
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          run: woss-io
+      spec:
+        containers:
+        - image: gcr.io/woss-private/woss-io
+          imagePullPolicy: Always
+          name: woss-io
+          ports:
+          - containerPort: 80
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: 2017-05-24T09:48:20Z
+      lastUpdateTime: 2017-05-24T09:48:20Z
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 5
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: extensions/v1beta1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      deployment.kubernetes.io/desired-replicas: "1"
+      deployment.kubernetes.io/max-replicas: "2"
+      deployment.kubernetes.io/revision: "1"
+    creationTimestamp: 2017-05-24T09:48:20Z
+    generation: 5
+    labels:
+      pod-template-hash: "3693875746"
+      run: woss-io
+    name: woss-io-3693875746
+    namespace: default
+    ownerReferences:
+    - apiVersion: extensions/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Deployment
+      name: woss-io
+      uid: 1eebaf6e-4066-11e7-a187-42010a84003c
+    resourceVersion: "224382"
+    selfLink: /apis/extensions/v1beta1/namespaces/default/replicasets/woss-io-3693875746
+    uid: 1eec7c8a-4066-11e7-a187-42010a84003c
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        pod-template-hash: "3693875746"
+        run: woss-io
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          pod-template-hash: "3693875746"
+          run: woss-io
+      spec:
+        containers:
+        - image: gcr.io/woss-private/woss-io
+          imagePullPolicy: Always
+          name: woss-io
+          ports:
+          - containerPort: 80
+            protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    fullyLabeledReplicas: 1
+    observedGeneration: 5
+    readyReplicas: 1
+    replicas: 1
+- apiVersion: v1
+  kind: Node
+  metadata:
+    annotations:
+      node.alpha.kubernetes.io/ttl: "0"
+      volumes.kubernetes.io/controller-managed-attach-detach: "true"
+    creationTimestamp: 2017-05-23T16:34:05Z
+    labels:
+      beta.kubernetes.io/arch: amd64
+      beta.kubernetes.io/fluentd-ds-ready: "true"
+      beta.kubernetes.io/instance-type: n1-standard-1
+      beta.kubernetes.io/os: linux
+      cloud.google.com/gke-nodepool: default-pool
+      failure-domain.beta.kubernetes.io/region: europe-west1
+      failure-domain.beta.kubernetes.io/zone: europe-west1-d
+      kubernetes.io/hostname: gke-cluster-1-default-pool-3ecc3dc6-m6x2
+    name: gke-cluster-1-default-pool-3ecc3dc6-m6x2
+    namespace: ""
+    resourceVersion: "228635"
+    selfLink: /api/v1/nodesgke-cluster-1-default-pool-3ecc3dc6-m6x2
+    uid: a32a4152-3fd5-11e7-a187-42010a84003c
+  spec:
+    externalID: "3908388819653221071"
+    podCIDR: 10.112.2.0/24
+    providerID: gce://woss-private/europe-west1-d/gke-cluster-1-default-pool-3ecc3dc6-m6x2
+  status:
+    addresses:
+    - address: 10.132.0.4
+      type: InternalIP
+    - address: 35.187.187.21
+      type: ExternalIP
+    - address: gke-cluster-1-default-pool-3ecc3dc6-m6x2
+      type: Hostname
+    allocatable:
+      cpu: "1"
+      memory: 3794460Ki
+      pods: "110"
+    capacity:
+      cpu: "1"
+      memory: 3794460Ki
+      pods: "110"
+    conditions:
+    - lastHeartbeatTime: 2017-05-23T16:34:25Z
+      lastTransitionTime: 2017-05-23T16:34:25Z
+      message: RouteController created a route
+      reason: RouteCreated
+      status: "False"
+      type: NetworkUnavailable
+    - lastHeartbeatTime: 2017-05-24T10:39:29Z
+      lastTransitionTime: 2017-05-23T16:34:05Z
+      message: kubelet has sufficient disk space available
+      reason: KubeletHasSufficientDisk
+      status: "False"
+      type: OutOfDisk
+    - lastHeartbeatTime: 2017-05-24T10:39:29Z
+      lastTransitionTime: 2017-05-23T16:34:05Z
+      message: kubelet has sufficient memory available
+      reason: KubeletHasSufficientMemory
+      status: "False"
+      type: MemoryPressure
+    - lastHeartbeatTime: 2017-05-24T10:39:29Z
+      lastTransitionTime: 2017-05-23T16:34:05Z
+      message: kubelet has no disk pressure
+      reason: KubeletHasNoDiskPressure
+      status: "False"
+      type: DiskPressure
+    - lastHeartbeatTime: 2017-05-24T10:39:29Z
+      lastTransitionTime: 2017-05-23T16:34:25Z
+      message: kubelet is posting ready status. AppArmor enabled
+      reason: KubeletReady
+      status: "True"
+      type: Ready
+    - lastHeartbeatTime: 2017-05-24T10:38:38Z
+      lastTransitionTime: 2017-05-23T16:34:05Z
+      message: kernel has no deadlock
+      reason: KernelHasNoDeadlock
+      status: "False"
+      type: KernelDeadlock
+    daemonEndpoints:
+      kubeletEndpoint:
+        Port: 10250
+    images:
+    - names:
+      - gcr.io/google-containers/fluentd-gcp:2.0.2
+      sizeBytes: 170632862
+    - names:
+      - gcr.io/google_containers/echoserver:1.4
+      sizeBytes: 140366210
+    - names:
+      - nginx:latest
+      sizeBytes: 109365602
+    - names:
+      - gcr.io/google_containers/kube-proxy:7e9fc4499ced8a0514f9403f8ffddfd7
+      sizeBytes: 109158443
+    - names:
+      - eu.gcr.io/google_containers/kubernetes-dashboard-amd64:v1.6.0
+      sizeBytes: 108572029
+    - names:
+      - eu.gcr.io/google_containers/heapster-amd64:v1.3.0
+      sizeBytes: 68105973
+    - names:
+      - eu.gcr.io/google_containers/k8s-dns-kube-dns-amd64:1.14.1
+      sizeBytes: 52357032
+    - names:
+      - eu.gcr.io/google_containers/cluster-proportional-autoscaler-amd64:1.1.1-r2
+      sizeBytes: 47349029
+    - names:
+      - eu.gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64:1.14.1
+      sizeBytes: 44844722
+    - names:
+      - eu.gcr.io/google_containers/k8s-dns-sidecar-amd64:1.14.1
+      sizeBytes: 44517061
+    - names:
+      - eu.gcr.io/google_containers/addon-resizer:1.7
+      sizeBytes: 38983736
+    - names:
+      - gcr.io/woss-private/woss-io:latest
+      sizeBytes: 9940445
+    - names:
+      - <none>@<none>
+      - <none>:<none>
+      sizeBytes: 9940445
+    - names:
+      - radial/busyboxplus:curl
+      sizeBytes: 4212341
+    - names:
+      - eu.gcr.io/google_containers/defaultbackend:1.3
+      sizeBytes: 3618880
+    - names:
+      - gcr.io/google_containers/pause-amd64:3.0
+      sizeBytes: 746888
+    nodeInfo:
+      architecture: amd64
+      bootID: bc631808-0342-4cb2-aed6-75e5ac0c6283
+      containerRuntimeVersion: docker://1.11.2
+      kernelVersion: 4.4.35+
+      kubeProxyVersion: v1.6.2
+      kubeletVersion: v1.6.2
+      machineID: 7a62770ae3271b938c9beeb5b02d38ed
+      operatingSystem: linux
+      osImage: Container-Optimized OS from Google
+      systemUUID: 7A62770A-E327-1B93-8C9B-EEB5B02D38ED
+kind: List
+metadata: {}
+resourceVersion: ""
+selfLink: ""

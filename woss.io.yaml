@@ -19,7 +19,7 @@ kind: Ingress
 metadata:
   name: woss-io
   annotations:
-    kubernetes.io/ingress.global-static-ip-name:  kubes-cluster-1
+    kubernetes.io/ingress.global-static-ip-name: kubes-cluster-1
 spec:
   rules:
   - host: woss.io
@@ -45,7 +45,7 @@ spec:
     spec:
       containers:
       - name: woss-io
-        image: gcr.io/woss-private/woss-io:latest
+        image: gcr.io/signals-prod/woss-io:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80
