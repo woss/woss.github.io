@@ -9,6 +9,6 @@
 - Not statically built
 - Multiple themes
 
-[Get Started](#get-started)
+[Get Started](#welcome)
 or
 [Check the CV](https://woss.io/cv/index.html)
