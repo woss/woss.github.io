@@ -1,3 +1,5 @@
+# Welcome
+
 # Substrate Tricks
 
 > substrate-tricks and tips, basically some stuff i learn along the way
