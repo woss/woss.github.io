@@ -1,4 +1,4 @@
-# On saving the TX in substrate
+## On saving the TX in substrate
 
 [doc](https://polkadot.js.org/api/start/api.rpc.html)
 
