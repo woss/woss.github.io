@@ -4,6 +4,8 @@
 
 > substrate-tricks and tips, basically some stuff i learn along the way
 
+[how-to-save-tx-and-get-the-error](pages/how-to-save-tx-and-get-the-error.md ':include')
+
 [basic-runtime-macros](pages/basic-runtime-macros.md ':include')
 
 [on-hasher](pages/on-hasher.md ':include')
