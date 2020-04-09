@@ -12,6 +12,27 @@ And
 
 Which means that the event of `isFinalized` will be triggered and you will get the green light, but the TX is failed.
 
+The event structures are only defined in the metadata and they are decoded on the fly. The source of truth as to what the event contains is the Rust code. The `///` comment is the one that defines the error message. The sample code is:
+
+```rust
+// The pallet's events
+decl_event!(
+  pub enum Event<T>
+  where
+    AccountId = <T as system::Trait>::AccountId,
+  {
+    /// Event emitted when a proof has been claimed.
+    ClaimCreated(AccountId, Vec<u8>),
+    /// Event emitted when a claim is revoked by the owner.
+    ClaimRevoked(AccountId, Vec<u8>),
+    /// Event emitted when a rule is created.
+    RuleCreated(AccountId, Vec<u8>),
+  }
+);
+```
+
+There is no specific types for those anyway. It is decorated and injected at runtime once the metadata is retrieved.
+
 Code sample from SensioNetwork:
 
 ```ts
@@ -35,15 +56,20 @@ async function createTX(
 
           events.forEach(({ event, phase }) => {
             const { data, method, section } = event;
+            const [error] = data;
 
-            console.log('\r', phase.toString(), `: ${section}.${method}`, data.toString());
+            // console.log('\r', phase.toString(), `: ${section}.${method}`, data.toString());
+            // console.log('\r', phase.toString(), `: ${section}.${method}`);
 
-            if (method === 'ExtrinsicFailed') {
-              data.forEach((d) => console.log(d.toString()));
-              unSubscribe();
+            if (error.isModule) {
+              const { documentation, name, section } = api.registry.findMetaError(error.asModule);
+              console.log(documentation, name, section);
               console.log('\rRejecting ...');
               // reject here would make all the other promises to fail
-              resolve('ExtrinsicFailed');
+
+              unSubscribe();
+              reject('ExtrinsicFailed');
+              // resolve();
             } else {
               console.log('\r', phase.toString(), `: ${section}.${method}`, data.toString());
             }
@@ -55,8 +81,26 @@ async function createTX(
         } else if (isError) {
           console.error(status);
         }
+
+        // console.log(
+        //   `Rule created for ${ForWhat[r.forWhat]}\n hash: ${createdRuleSimple.toHex()}\n cid: ${hexToString(ruleId)}`,
+        // );
       })
       .catch(reject);
   });
 }
+```
+
+The above code in the real life can produce this:
+
+```bash
+Creating TX for the ruleId: bafkzbzaccd4az2tqvpf57p36l5zi6uua7rla
+Transaction status:Ready
+Transaction status:InBlock
+Included at block hash 0x639973f4d215d5ce58aa79b581f167ad54ddfa004b7bef32034a530579a7eeb2
+
+Events: 1
+[ ' Rule already exists' ] RuleAlreadyCreated poeModule
+Rejecting ...
+ExtrinsicFailed
 ```
