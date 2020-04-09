@@ -56,6 +56,8 @@ async function createTX(
 
           events.forEach(({ event, phase }) => {
             const { data, method, section } = event;
+
+            // this is the way to get the failed TX error message.
             const [error] = data;
 
             // console.log('\r', phase.toString(), `: ${section}.${method}`, data.toString());
