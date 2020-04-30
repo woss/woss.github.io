@@ -168,3 +168,15 @@ Vector
 
 Advance Example
 `[ { "MyEnum": { "_enum": ["A", "B", "C"] } }, { "MyPartA": "Vec<(MyEnum, u32)>" }, { "MyType": "(MyPartA, u128)" }, { "MyFinalType": "Vec<MyType>" } ]`
+
+### From matrix
+
+Daniel Maricic: if you want to decode a variable using scale_codec from a Vec<u8> you have to convert it to input and use the decode method:
+
+`let proof = MyType::decode(&mut &proof[..]);`
+But if you want the extrinsic to have the type MyType as input you can just specifies:
+
+`fn create_rule ( origin, proof: Proof) {`
+And dispatch will decode the argument for you.
+
+they must implement Codec though
