@@ -4,6 +4,8 @@
 
 > substrate-tricks and tips, basically some stuff i learn along the way
 
+[on-substrate](pages/on-substrate.md ':include')
+
 [how-to-debug-pallet-like-console-log](pages/how-to-debug-pallet-like-console-log.md ':include')
 
 [how-to-save-tx-and-get-the-error](pages/how-to-save-tx-and-get-the-error.md ':include')
