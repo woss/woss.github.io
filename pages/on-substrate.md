@@ -41,6 +41,16 @@ impl pallet_utility::Trait for Runtime {
   type MultisigDepositFactor = MultisigDepositFactor;
   type MaxSignatories = MaxSignatories;
 }
+construct_runtime!(
+  pub enum Runtime where
+    Block = Block,
+    NodeBlock = opaque::Block,
+    UncheckedExtrinsic = UncheckedExtrinsic
+  {
+    //...
+    Utility: pallet_utility::{Module, Call, Storage, Event<T>}
+  }
+);
 
 ```
 
