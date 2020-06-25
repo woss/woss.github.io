@@ -58,6 +58,8 @@ await api.createType('BasicInputParam', {
 });
 ```
 
+Naturally you need to have the `api` instantiated and connected to your chain. See how it is done [here](https://polkadot.js.org/api/start/create.html)
+
 ## How to batch the transactions
 
 First of all the chain must have the `pallet-utility` installed and `runtime/src/lib.rs` properly configured.
