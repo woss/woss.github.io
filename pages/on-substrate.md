@@ -1,3 +1,63 @@
+## Custom Types creation and saving In PolkadotJs library and Substrate
+
+Let's say that you have the definition like this in your rust code:
+
+```rust
+#[derive(Default, Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+pub struct BasicInputParam {
+    name: Vec<u8>,
+    desc: Vec<u8>,
+    what_type: Vec<u8>,
+}
+```
+
+And now you would like to use the `polkadot-types-from-defs` to generate Typescript interfaces for your TS based app. Following the tutorial from [here](https://polkadot.js.org/api/examples/promise/90_typegen/) you can see that you need to define the custom type in your TS file like so:
+
+```ts
+export const OperationsCustomTypes = {
+  BasicInputParam: {
+    name: 'Vec<u8>', // or this can be Text it extends the JS String
+    desc: 'Vec<u8>',
+    whatType: 'Vec<u8>',
+  },
+};
+```
+
+Which will in generate this:
+
+```ts
+/** @name BasicInputParam */
+export interface BasicInputParam extends Struct {
+  readonly name: Bytes; // in case Text ths will be Text
+  readonly desc: Bytes;
+  readonly whatType: Bytes;
+}
+```
+
+Now, to create an instance of the `BasicInputParams` we need to do something like this:
+
+```ts
+// module.something(params: BasicInputParam)`
+await api.tx.module
+  .save_basic_params({
+    name: 'something',
+    desc: 'something longer',
+    whatType: 'zanzzii',
+  })
+  .send();
+```
+
+OR
+
+```ts
+// module.save_basic_params(params: BasicInputParam)`
+await api.createType('BasicInputParam', {
+  name: 'something',
+  desc: 'something longer',
+  whatType: 'zanzzii',
+});
+```
+
 ## How to batch the transactions
 
 First of all the chain must have the `pallet-utility` installed and `runtime/src/lib.rs` properly configured.
