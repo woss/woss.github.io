@@ -42,4 +42,5 @@ decl_event!(
 ```
 
 [src](https://substrate.dev/rustdocs/v2.0.0-alpha.3/src/frame_support/event.rs.html#102-149)
+
 [doc](https://substrate.dev/rustdocs/v2.0.0-alpha.3/frame_support/macro.decl_event.html)
