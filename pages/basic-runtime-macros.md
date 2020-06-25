@@ -11,9 +11,9 @@ When you need an on-chain modification, it doesn't work like an classic API woul
 
 It's database for the runtime, each of the definitions can be considered as a table => column definition.
 It is a storage and api for retrieving the record.
-`Proofs: map hasher(opaque_blake2_256) Vec<u8> => (T::AccountId, T::BlockNumber, u64);`
+`Proofs: map hasher(blake2_128_concat) Vec<u8> => (T::AccountId, T::BlockNumber, u64);`
 
-[src]<https://substrate.dev/rustdocs/v2.0.0-alpha.3/src/frame_support_procedural/lib.rs.html#251-253)>
+[src](https://substrate.dev/rustdocs/v2.0.0-alpha.3/src/frame_support_procedural/lib.rs.html#251-253)
 [doc](https://substrate.dev/rustdocs/v2.0.0-alpha.3/frame_support/macro.decl_storage.html)
 
 ### decl_event
