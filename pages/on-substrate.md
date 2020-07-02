@@ -1,6 +1,6 @@
 ## Remove duplicates in Rust Vector of Enums
 
-```rs
+```rust
 enum MyEnum {
   GEN,
   PHO,
