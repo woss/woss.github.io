@@ -1,3 +1,20 @@
+## Remove duplicates in Rust Vector of Enums
+
+```rs
+enum MyEnum {
+  GEN,
+  PHO,
+  LE,
+  SS
+}
+
+let mut groups = vec![MyEnum::GEN, MyEnum::PHO, MyEnum::GEN];
+groups.sort();
+groups.dedup();
+
+assert_eq!(groups, vec![MyEnum::GEN, MyEnum::PHO])
+```
+
 ## Custom Types creation and saving In PolkadotJs library and Substrate
 
 Let's say that you have the definition like this in your rust code:
