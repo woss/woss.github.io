@@ -2,7 +2,7 @@
 
 # Typescript tricks
 
-[close-all-gitlab-issues-for-given-project](close-all-gitlab-issues-for-given-project.md ':include')
+[close-all-gitlab-issues-for-given-project](pages/close-all-gitlab-issues-for-given-project.md ':include')
 
 # Substrate Tricks
 
