@@ -37,7 +37,7 @@ const issues = axios
   })
   .catch(e => console.error(e.data))
 
-``
+```
 
 Replace the *personAccessToken* and *projectId* with correct values.
 
