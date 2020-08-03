@@ -1,5 +1,9 @@
 # Welcome
 
+# Typescript tricks
+
+[close-all-gitlab-issues-for-given-project](close-all-gitlab-issues-for-given-project.md ':include')
+
 # Substrate Tricks
 
 > substrate-tricks and tips, basically some stuff i learn along the way
