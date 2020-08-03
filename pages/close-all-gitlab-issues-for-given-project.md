@@ -1,4 +1,4 @@
-#
+# How to close all gitlab issues for a project in bulk
 
 Make a folder called `closeAllIssues` then copy this and save it to the file named `closeAllIssues.js`
 
