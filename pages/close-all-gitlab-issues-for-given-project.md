@@ -12,7 +12,7 @@ const gitlabHost = 'https://gitlab.com';
 const apiPath = `api/v4/projects/${projectId}`;
 const url = `${gitlabHost}/${apiPath}/issues?private_token=${personAccessToken}&per_page=100&state=opened`;
 
-const issues = axios
+axios
   .get(url)
   .then((response) => {
     const issues = response.data;
