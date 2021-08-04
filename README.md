@@ -8,6 +8,8 @@
 
 > substrate-tricks and tips, basically some stuff i learn along the way
 
+[Understand benchmarking template with benchmark init state](pages/understand-benchmarking-template-with-benchmark-init-state.md ':include')
+
 [on-substrate](pages/on-substrate.md ':include')
 
 [how-to-debug-pallet-like-console-log](pages/how-to-debug-pallet-like-console-log.md ':include')

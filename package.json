@@ -4,6 +4,7 @@
     "prettier": "^2.0.2"
   },
   "scripts": {
+    "serve": "docsify serve .",
     "l:check": "prettier --check ./**/*.{ts,tsx,js,md}",
     "l:fix": "prettier --write ./**/*.{ts,tsx,js,md}"
   },
@@ -12,5 +13,8 @@
       "pre-commit": "yarn l:fix",
       "pre-push": "yarn l:check"
     }
+  },
+  "dependencies": {
+    "docsify-cli": "^4.4.3"
   }
 }
