@@ -19,7 +19,7 @@ pub trait WeightInfo {
 
 the `benchmark.components` are the parameters that are passed into the execution of the benchmark like this or the variables that the input depends on ( especially if they are ranges ).
 
-```rs
+```rust
 benchmarks! {
     create_rule {
         let n in 1 .. 1000;
@@ -33,7 +33,7 @@ benchmarks! {
 
 given the correct cli command with the template this will generate the struct like this:
 
-```rs
+```rust
 /// Weight functions needed for an_rules.
 pub trait WeightInfo {
 	fn create_rule(n: u32, ) -> Weight;
@@ -55,7 +55,7 @@ The template will generate the trait correctly, because it thinks that the `n` w
 
 Here is the extrinsic call implementation:
 
-```rs
+```rust
   #[pallet::call]
   impl<T: Config> Pallet<T> {
     /// Create Rule
@@ -85,7 +85,7 @@ To make this work here are the changes needed in order this simple extrinsic to 
 
 Remove the range from benchmark and assign some meaningful value if needed:
 
-```rs
+```rust
 benchmarks! {
     create_rule {
         let caller: T::AccountId = whitelisted_caller();
@@ -99,7 +99,7 @@ benchmarks! {
 
 This will generate the WeightInfo struct without the `n` param without changing the template:
 
-```rs
+```rust
 /// Weight functions needed for an_rules.
 pub trait WeightInfo {
 	fn create_rule() -> Weight;
@@ -118,7 +118,7 @@ impl<T: frame_system::Config> WeightInfo for AnagolayWeight<T> {
 
 and then in the implementation you need to remove the `255`:
 
-```rs
+```rust
 
   #[pallet::call]
   impl<T: Config> Pallet<T> {
