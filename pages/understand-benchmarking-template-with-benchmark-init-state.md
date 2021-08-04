@@ -1,4 +1,4 @@
-# Understand benchmarking template with benchmark init state
+## Understand benchmarking template with benchmark init state
 
 Lately i've been reseraching and implementing the benchmarking simple pallets for [Anagolay Network](https://anagolay.dev).
 
