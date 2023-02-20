@@ -1,3 +1,0 @@
-[submodule "cv-builder"]
-	path = cv-builder
-	url = git@github.com:woss/pyhtmlcv.git
