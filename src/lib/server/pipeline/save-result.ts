@@ -1,0 +1,124 @@
+import { addMessage } from '$lib/server/db';
+import { publishPersistent } from '$lib/server/chat-events';
+import { CAT, createLogger } from '$lib/server/logger';
+import { storeCache } from '$lib/server/llm-cache';
+import { config } from '$lib/server/config';
+
+const log = createLogger(CAT.chat);
+
+/**
+ * Parameters for saveAndEmitResult — everything needed to persist the answer
+ * and emit the final SSE 'done' or 'error' event to the client.
+ */
+export interface SaveResultParams {
+  userId: string;
+  chatId: string;
+  userAgentId: number | undefined;
+  answerText: string;
+  reasoningText: string;
+  sources: { title: string; score: number; slug: string; url: string }[];
+  currentModelId: number;
+  tokenUsage: { promptTokens: number; completionTokens: number };
+  responseMs: number;
+  maxTokens: number;
+  partial: boolean;
+  lastError: Error | null;
+  msgId: string;
+  cacheEmbeddingData: number[];
+  cacheText: string;
+  ragChunks: { title: string; text: string; score: number }[];
+  queryType: string;
+  startTime: number;
+  irrecoverable: boolean;
+}
+
+/**
+ * Persist the assistant's answer to the messages table and emit the final
+ * SSE event ('done' or 'error') to the client.
+ *
+ * On lastError (retries exhausted): saves the partial answer (if any)
+ * or a generic failure message, then emits an 'error' event.
+ *
+ * On success: saves the full answer, stores in semantic cache, emits 'done'
+ * with sources and usage metadata.
+ */
+export async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
+  const {
+    userId,
+    chatId,
+    userAgentId,
+    answerText,
+    reasoningText,
+    sources,
+    currentModelId,
+    tokenUsage,
+    responseMs,
+    maxTokens,
+    partial,
+    lastError,
+    msgId,
+    queryType,
+    cacheEmbeddingData,
+    cacheText,
+    ragChunks,
+    startTime,
+    irrecoverable,
+  } = params;
+
+  if (lastError && !partial) {
+    const fallbackText = answerText.trim()
+      ? answerText
+      : "I'm sorry, I wasn't able to generate a response. Please try rephrasing your question.";
+    try {
+      addMessage({ userId, role: 'assistant', content: fallbackText, sources: JSON.stringify(sources), reasoning: reasoningText, chatId, modelId: currentModelId, tokensIn: tokenUsage.promptTokens, tokensOut: tokenUsage.completionTokens, durationMs: responseMs, maxTokens, queryType, irrecoverable: irrecoverable || undefined, userAgentId });
+    } catch (e) {
+      log.error`Failed to save fallback error message: ${e}`;
+    }
+    const retryErrMsgId = addMessage({ userId, role: 'assistant', content: '', sources: JSON.stringify(sources ?? []), chatId, modelId: currentModelId, tokensIn: tokenUsage?.promptTokens ?? 0, tokensOut: tokenUsage?.completionTokens ?? 0, durationMs: responseMs, queryType, irrecoverable: irrecoverable || undefined, error: 'Failed to generate answer after retries', userAgentId });
+    log.info('Sending SSE event', { event: 'error', chatId, dataLength: 'Failed to generate answer after retries'.length });
+    publishPersistent(chatId, 'error', {
+      message: 'Failed to generate answer after retries',
+      messageId: retryErrMsgId,
+      irrecoverable: irrecoverable === true,
+    });
+    return;
+  }
+
+  // Save assistant message
+  try {
+    addMessage({ userId, role: 'assistant', content: answerText, sources: JSON.stringify(sources), reasoning: reasoningText, chatId, modelId: currentModelId, tokensIn: tokenUsage.promptTokens, tokensOut: tokenUsage.completionTokens, durationMs: responseMs, maxTokens, queryType, msgId, userAgentId });
+  } catch (err) {
+    log.error`addMessage failed: ${err}`;
+    const errMsgId = addMessage({ userId, role: 'assistant', content: '', chatId, queryType, error: 'Failed to save response', userAgentId });
+    log.info('Sending SSE event', { event: 'error', chatId, dataLength: 'Failed to save response'.length });
+    publishPersistent(chatId, 'error', { message: 'Failed to save response', messageId: errMsgId });
+    return;
+  }
+
+  // Store cache (skip if disabled via env)
+  if (config().llmCache.enabled && !partial) {
+    try {
+      storeCache(cacheEmbeddingData, cacheText, answerText, JSON.stringify(sources), msgId);
+    } catch (err) {
+      log.error`storeCache failed: ${err}`;
+    }
+  }
+  log.info`✅ done: tokensIn=${tokenUsage.promptTokens} tokensOut=${tokenUsage.completionTokens} durationMs=${responseMs} answerLen=${answerText.length} partial=${partial}`;
+
+  const elapsed = performance.now() - startTime;
+  log.info('Sending SSE event', { event: 'done', chatId, dataLength: answerText.length });
+  publishPersistent(chatId, 'done', {
+    answer: answerText,
+    sources,
+    messageId: msgId,
+    queryType,
+    usage: {
+      chunks: ragChunks.length,
+      totalTime: Math.floor(elapsed),
+      modelId: currentModelId,
+      tokensIn: tokenUsage.promptTokens,
+      tokensOut: tokenUsage.completionTokens,
+      durationMs: responseMs,
+    },
+  });
+}
