@@ -1,0 +1,553 @@
+---
+title: 'Type-Safe SurrealDB: Meet the ORM That Ships'
+featured: true
+description: 'Introducing a new ORM for SurrealDB that delivers type-safe query building without abstraction overhead. Your schema becomes your TypeScript, and your queries chain like they should. Built on the official SurrealDB SDK, this ORM gives you compile-time validation, autocomplete, and a fluent API that maps directly to SurrealQL. Say goodbye to runtime errors and hello to a better way to work with SurrealDB.'
+date: 2026-06-03
+tags:
+  - surrealdb
+  - orm
+  - typescript
+  - database
+  - query builder
+  - migrations
+header_image: '[Future in the city](https://u.macula.link/HR7CSIPkTFOBV8xVNmVUxg-7?preset=sys_lg)'
+---
+
+You've used SurrealDB. You know SurrealQL. You write raw queries, hand-roll validation, and debug runtime errors at 2 AM. There's a better way.
+
+DaliORM gives you type-safe query building without abstraction overhead. Your schema becomes your TypeScript. Your queries chain like they should.
+
+## Why We Built This
+
+SurrealDB is genuinely exciting. It's not just another document store—it's a multi-model database that handles documents and graphs seamlessly. You can model complex relationships without the ORM dance that other databases require. Live queries keep your UI in sync automatically. The embedded mode makes it perfect for testing and edge deployments. And the flexible schema means you're not fighting rigidity when your data evolves.
+
+TypeScript should work the same way. The type system catches bugs before they hit production. Autocomplete accelerates your workflow. Refactoring becomes safe—you rename a field and your IDE updates every reference.
+
+Here's the problem: when you write raw SurrealQL, you lose all of that. Your IDE sees strings. TypeScript sees `any`. A typo in a column name doesn't error—it crashes at runtime. Refactoring means grep-based manual labor across your codebase.
+
+We built this ORM to bridge that gap. Not by hiding SurrealQL behind abstraction, but by making TypeScript understand it.
+
+## The Problem
+
+Raw SurrealQL is powerful. Your IDE doesn't know about it.
+
+```ts
+const email = 'user@example.com';
+const result = await db.query(`SELECT * FROM user WHERE email = $email`, { email });
+// ^ TypeScript sees "any". Result is "any".
+// Typos? Runtime crashes. Refactoring? Manual grep.
+```
+
+You define schema in your head. You define schema in migrations. They drift. You validate data in five places.
+
+This ORM solves that.
+
+## How It Compares
+
+Other TypeScript ORMs exist for SurrealDB:
+
+- **[Surqlize](https://github.com/surrealdb/surqlize)** (official) - Uses `t.*` builders, code generation approach
+- **[SurrealORM](https://github.com/SurrealORM/orm)** (@surrealorm/orm) - Decorator-based, early alpha
+- **[Cerial](https://github.com/cerial-orm/cerial)** - Prisma-like with `.cerial` schema files, code generation
+- **TypeSurrealDB** - Class decorators approach
+
+This ORM differs:
+
+- **No code generation** - Pure TypeScript type inference, no build step
+- **Immutable query builders** - Each method returns new instance, safe for concurrency
+- **1:1 SurrealQL mapping** - Queries map directly, no hidden abstraction
+- **Migration-first** - Schema drives migrations, not the other way around
+- **Minimal runtime** - Core is tiny, no heavy dependencies
+
+**Built on the official SurrealDB SDK** - We wrap `surrealdb` (the official Node.js client), not reimplementing the connection layer. This means WebSocket, HTTP, and embedded modes all work out of the box, and we benefit from every SDK update.
+
+## Defining Schema
+
+Your schema lives in code. It's compile-time validated. Instead of keeping schema definitions in your head or in separate migration files, you define them directly in TypeScript. This gives you type inference everywhere—query builders know your columns, conditions know your types, results know your shape.
+
+```typescript
+import { defineTable } from '@woss/dali-orm/sdk/table';
+import { string, datetime } from '@woss/dali-orm/sdk/schema/column/simple-builders';
+
+export const users = defineTable('user', {
+  id: string('id'),
+  name: string('name'),
+  email: string('email'),
+  role: string('role'), // 'author', 'editor', 'publisher'
+  bio: string('bio').optional(),
+  created_at: datetime('created_at'),
+});
+```
+
+TypeScript infers the full shape of your table. When you use `users` in queries, it knows exactly what columns exist and what types they hold.
+
+The ORM gives you a solid set of column types to work with:
+
+- `string()`, `int()`, `float()`, `bool()` - Basic types
+- `datetime()`, `duration()`, `decimal()` - Time and precision types
+- `array()` - String arrays for multi-value fields
+- `object()` - Nested objects for complex structures
+- `record(table)` - Foreign keys to other tables
+
+Column builders live under `@woss/dali-orm/sdk/schema/column/simple-builders`. The `record()` builder is at `@woss/dali-orm/sdk/schema/column/record`.
+
+For graph databases, relations matter as much as the data itself. SurrealDB handles this with edge tables, and the ORM supports them too:
+
+```typescript
+import { defineRelationTable } from '@woss/dali-orm/sdk/table';
+
+export const wrote = defineRelationTable(
+  'wrote',
+  {
+    id: string('id'),
+    created_at: datetime('created_at'),
+  },
+  {
+    in: 'user', // source table
+    out: 'article', // target table
+  },
+);
+```
+
+This defines an edge table called "wrote" that connects users (as authors) to articles. The `in` and `out` fields define directionality—users write articles.
+
+Register your tables in an `OrmSchema` and pass it when connecting:
+
+```typescript
+import { createOrmSchema } from '@woss/dali-orm';
+
+const schema = createOrmSchema({
+  tables: { users, articles, wrote, edited, published },
+});
+```
+
+Now TypeScript knows your schema. Everywhere your code uses it.
+
+## Building Queries
+
+All builders are immutable. Every method returns a new instance. This might feel different if you're used to mutating query objects, but it matters—you can safely pass queries around without worrying they'll change unexpectedly. Concurrent code stays safe.
+
+Query builders need two things: a driver instance (from your connected ORM) and a table definition. Get the driver with `orm.getDriver()`:
+
+```typescript
+const driver = orm.getDriver();
+```
+
+### SELECT
+
+```typescript
+import { select, eq, and, gte } from '@woss/dali-orm/query';
+
+// Basic select
+const query = select(driver, users);
+// TypeScript infers: query is SelectBuilder<typeof users>
+
+// Select specific fields
+const byFields = select(driver, users).fields('name', 'email');
+// TypeScript infers: byFields returns { name: string, email: string, id: string }[]
+
+// Filter with where (callback form)
+const filtered = select(driver, users).where((w) => w.eq('role', 'author'));
+// TypeScript validates 'role' exists in schema and value 'author' matches type
+
+// Filter with standalone conditions
+const filtered2 = select(driver, users).where(eq('role', 'author'));
+// Same result, different style—eq() returns a SerializedCondition
+
+// Complex conditions
+const active = select(driver, users).where(and(eq('active', true), gte('age', 18)));
+// and() composes conditions, TypeScript validates all fields
+
+// Ordering, limit, offset
+const paginated = select(driver, users).orderBy('name', 'ASC').limit(10).start(20);
+
+// Execute
+const results = await paginated.execute();
+// results is typed as User[]
+```
+
+The chainable API means you build up complex queries piece by piece. Each method returns a new query builder with the modification applied. The original query stays unchanged—this is the immutability at work.
+
+These are the main methods available on select queries:
+
+- `.fields(...names)` - Choose specific columns to return
+- `.columns(selection)` - Drizzle-style object column selection with columnRef
+- `.where(fn)` - Add filter conditions (callback or SerializedCondition)
+- `.orderBy(column, 'ASC'|'DESC')` - Sort results
+- `.limit(n)` - Cap how many results you get
+- `.start(n)` - Skip results (pagination offset)
+- `.groupBy(...columns)` - Group results
+- `.fetch(...tables)` - Include related records
+- `.traverse(direction, edge, target, alias)` - Traverse graph relations
+- `.timeout(ms)` - Set query timeout
+- `.execute()` - Run the query and return typed results
+- `.toSQL()` - Get generated SurrealQL string and params
+
+### INSERT
+
+```typescript
+import { insert } from '@woss/dali-orm/query';
+
+const query = insert(driver, users).one({
+  id: 'user:123',
+  name: 'Jane Smith',
+  email: 'jane@example.com',
+  role: 'author',
+  created_at: new Date().toISOString(),
+});
+
+const [result] = await query.execute();
+// Inserts the record and returns it
+```
+
+The `insert` builder takes your driver and table definition. Add a single record with `.one()` or multiple with `.many()`:
+
+```typescript
+await insert(driver, users)
+  .many([
+    { name: 'Alice', email: 'alice@example.com', role: 'author' },
+    { name: 'Bob', email: 'bob@example.com', role: 'editor' },
+  ])
+  .execute();
+```
+
+TypeScript validates that you provide all required fields—miss one and the compiler catches it.
+
+### UPDATE
+
+```typescript
+import { update } from '@woss/dali-orm/query';
+
+await update(driver, users).id('user:123').set('name', 'Jane Doe').set('bio', 'Writer and editor').execute();
+```
+
+Update a specific record by ID with `.id()`, then chain `.set()` calls for each field you want to change. Each `.set()` returns a new builder, so you can keep chaining. For bulk updates, set all data at once with `.data(obj)`.
+
+### DELETE
+
+```typescript
+import { delete_ } from '@woss/dali-orm/query';
+
+await delete_(driver, users).id('user:123').execute();
+```
+
+Delete works similarly—specify the record ID and execute. The function is named `delete_` (trailing underscore) because `delete` is a reserved word in JavaScript.
+
+### RELATE
+
+Graph relations connect records in SurrealDB. The `relate` builder handles this:
+
+```typescript
+import { relate } from '@woss/dali-orm/query';
+
+await relate(driver, wrote).from('user:123').to('article:456').set('created_at', new Date().toISOString()).execute();
+```
+
+You specify the edge table definition (from `defineRelationTable()`), then `.from()` the source record and `.to()` the target record. The ORM builds the proper SurrealQL RELATE statement. Set properties on the edge itself with `.set()`.
+
+The `.from()` maps to SurrealDB's `in` field, `.to()` maps to `out`. This matches the direction you declared in `defineRelationTable()`.
+
+## Conditions
+
+Filters in queries use composable helpers. You can use them two ways:
+
+**Callback form** (fluent builder, best for simple queries):
+
+```typescript
+select(driver, users).where((w) => w.eq('role', 'author').gte('age', 18));
+```
+
+**Standalone condition form** (composable, best for reusable logic):
+
+```typescript
+import { eq, ne, gt, gte, lt, lte, and, or, not } from '@woss/dali-orm/query';
+
+// Equality
+eq('active', true);
+ne('role', 'admin');
+
+// Comparison
+gt('age', 18);
+gte('score', 100);
+lt('price', 50);
+lte('quantity', 10);
+
+// Logical composition
+and(eq('active', true), gte('age', 18));
+or(eq('role', 'author'), eq('role', 'editor'));
+not(eq('status', 'archived'));
+```
+
+Conditions compose naturally. Use `and()` and `or()` to build complex filters from simple pieces.
+
+Additional conditions available: `contains()`, `inside()`, `isNull()`, `isNotNull()`, `intersects()`, `containsAll()`, `containsAny()`, `containsNone()`, `outside()`.
+
+## Transactions
+
+When you need multiple operations to succeed or fail together, wrap them in a transaction. The ORM handles the commit/rollback automatically.
+
+```typescript
+await orm.transaction(async (tx) => {
+  // All queries execute within a single transaction
+  await tx.query('CREATE user:john SET name = "John"');
+  await tx.query('CREATE post:1 SET title = "Hello", author = user:john');
+
+  // Return value is returned from transaction()
+  return { success: true };
+});
+// Automatically commits on success, rolls back on error
+```
+
+The transaction object gives you raw query execution:
+
+- `.query(sql, vars)` - Execute raw SQL within the transaction
+
+If any operation throws, the transaction rolls back cleanly. No manual cleanup required.
+
+## Type Safety in Action
+
+Here's where this gets fun. TypeScript infers types from your schema, so you get autocomplete and validation everywhere—not just in your editor, but at compile time.
+
+```typescript
+import { insert, select } from '@woss/dali-orm/query';
+import { DaliORM } from '@woss/dali-orm';
+import { users, schema } from './schema';
+
+const orm = await DaliORM.connect({
+  nodeDriver: {
+    url: 'ws://localhost:10101',
+    namespace: 'test',
+    database: 'test',
+    auth: { username: 'root', password: 'root' },
+  },
+  schema,
+});
+
+const driver = orm.getDriver();
+
+// Insert - TypeScript knows required fields
+const [user] = await insert(driver, users)
+  .one({
+    id: 'user:123',
+    name: 'Jane',
+    email: 'jane@example.com',
+    // bio: 'optional field - can skip',
+    // ^ No error - bio is optional
+    // Missing required fields like name? Compile error.
+  })
+  .execute();
+
+// Select - TypeScript knows return shape
+const result = await select(driver, users).execute();
+// result is User[]
+
+// Query builder - autocomplete works
+const query = select(driver, users)
+  .fields('id', 'name') // autocomplete: column names from schema
+  .where((w) => w.eq('role', 'author')) // autocomplete: column names
+  .orderBy('name'); // autocomplete: columns
+```
+
+How does this work? TypeScript uses the schema definition from `defineTable()` to validate queries at compile time. The schema is defined as a TypeScript type that query builders reference. When you write `w.eq('role', 'author')`, TypeScript looks up `role` in the schema's column definitions, validates the column exists and matches the expected type, and checks the value `'author'` is compatible with that column type. This all happens during compilation, before any code runs.
+
+That means these errors surface at compile time, not runtime:
+
+- Missing required fields
+- Invalid column names
+- Type mismatches
+- Unknown tables
+
+## Migration System
+
+Schema changes require migrations. The ORM includes a MigrationRunner that keeps your database in sync with your code.
+
+Our migration engine takes heavy inspiration from [Drizzle ORM](https://orm.drizzle.team/) (beta)—the best migration system in the TypeScript ecosystem. We aim for that same clarity: simple files, clear direction, and no magic.
+
+### Configuration
+
+```typescript
+// dali-orm.config.ts
+import type { Config } from '@woss/dali-orm/migration/api';
+
+const config: Config = {
+  url: 'ws://localhost:10101',
+  namespace: 'main',
+  database: 'main',
+  auth: { user: 'admin', pass: 'admin' },
+  migrations: {
+    dir: './migrations',
+    table: '__migrations',
+  },
+  schema: {
+    dir: './src',
+    pattern: 'schema.ts',
+  },
+};
+
+export default config;
+```
+
+The config covers connection details, authentication at different levels, and where to find migrations and schema files.
+
+Auth options:
+
+- Root auth: `{ user: 'root', pass: 'password' }`
+- Namespace auth: `{ user: 'user', pass: 'pass', namespace: 'ns' }`
+- Database auth: `{ user: 'user', pass: 'pass', namespace: 'ns', database: 'db' }`
+- Record auth: `{ table: 'users', namespace: 'ns', database: 'db' }`
+
+### Run Migrations
+
+```typescript
+import { DaliORM } from '@woss/dali-orm';
+import { MigrationRunner } from '@woss/dali-orm/migration/api';
+
+// Connect
+const orm = await DaliORM.connect({
+  nodeDriver: {
+    url: 'ws://localhost:10101',
+    namespace: 'main',
+    database: 'main',
+    auth: { username: 'admin', password: 'admin' },
+  },
+});
+
+const driver = orm.getDriver();
+
+// Run migrations
+const runner = new MigrationRunner(driver, {
+  migrationsDir: './migrations',
+  migrationsTable: '__migrations',
+});
+
+await runner.init();
+const result = await runner.up();
+// Applies pending migrations
+// result.applied = ['001_initial', '002_add_users']
+// result.skipped = ['001_initial']
+```
+
+Migrations live in `./migrations/` as timestamped files. The runner tracks which ones have been applied in the database itself, so running migrations twice is safe—it skips what's already done.
+
+You can also use the CLI:
+
+```bash
+npx dali-orm migrate up
+npx dali-orm migrate status
+npx dali-orm generate
+```
+
+## Trying It Out
+
+The repo includes a working todo app example:
+
+### Prerequisites
+
+- SurrealDB running at `ws://localhost:10101`
+- Docker installed
+
+Start SurrealDB:
+
+```bash
+docker compose up -d
+```
+
+### Running the Example
+
+```bash
+cd examples/todo-app
+pnpm install
+pnpm dev
+```
+
+This starts a SvelteKit app connected to SurrealDB via DaliORM. Check the schema at `examples/todo-app/schema.ts` to see how tables are defined, and `examples/todo-app/migrations/` to see how migrations work.
+
+### Example Queries to Try
+
+In Surrealist run:
+
+```sql
+-- All users
+SELECT * FROM user;
+
+-- Authors only
+SELECT * FROM user WHERE role = 'author';
+
+-- Published articles
+SELECT * FROM article WHERE status = 'published';
+
+-- Articles with authors
+SELECT *, ->wrote->user AS author FROM article;
+
+-- Relations for article
+SELECT * FROM wrote WHERE out = 'article:abc123';
+```
+
+## Why This ORM Works
+
+Zero abstraction.
+
+Your queries map 1:1 to SurrealQL. The ORM builds strings, executes them, returns results. No hidden queries. No ORM magic you can't debug.
+
+**Debug mode**: Set the `DEBUG` environment variable to see what's happening:
+
+- `DEBUG=dali-orm:*` - see all debug output
+- `DEBUG=dali-orm:kit:generate` - code generation only
+- `DEBUG=dali-orm:kit:driver:node` - connection details
+- `DEBUG=dali-orm:kit:runner` - migration steps
+
+Debug output shows generated SQL, connection details, migration progress, and more.
+
+Fluent API that respects immutability. Chain methods, each returns new instance. Safe for concurrent code.
+
+Type safety from your schema. Compile-time errors, not runtime crashes.
+
+Migrations tied to schema definitions. No drift.
+
+## Installation
+
+```bash
+pnpm add @woss/dali-orm
+```
+
+## Quick Start
+
+```typescript
+import { DaliORM, createOrmSchema } from '@woss/dali-orm';
+import { defineTable } from '@woss/dali-orm/sdk/table';
+import { string } from '@woss/dali-orm/sdk/schema/column/simple-builders';
+import { select, insert } from '@woss/dali-orm/query';
+
+// Define schema
+const users = defineTable('user', {
+  id: string('id'),
+  name: string('name'),
+  email: string('email'),
+});
+
+const schema = createOrmSchema({ tables: { users } });
+
+// Connect
+const orm = await DaliORM.connect({
+  nodeDriver: {
+    url: 'ws://localhost:10101',
+    namespace: 'test',
+    database: 'test',
+    auth: { username: 'root', password: 'root' },
+  },
+  schema,
+});
+
+const driver = orm.getDriver();
+
+// Insert
+await insert(driver, users).one({ id: 'user:1', name: 'Jane', email: 'jane@example.com' }).execute();
+
+// Query
+const results = await select(driver, users).execute();
+// results is { id: string, name: string, email: string }[]
+```
+
+Query builders compile to SurrealQL. Immutability by default. TypeScript inference throughout.
+
+Go try it. Run the demo.

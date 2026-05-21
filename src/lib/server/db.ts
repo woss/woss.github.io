@@ -1,0 +1,746 @@
+import Database from 'better-sqlite3';
+import { Index } from 'usearch';
+import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
+import { SEARCH_INDEX_CONFIG } from '../search-config.ts';
+import { CAT, createLogger } from './logger';
+import { initDatabase, DATA_DIR, DB_PATH, DB_WAL_PATH, DB_SHM_PATH, VECTOR_INDEX_PATH } from './schema.ts';
+
+const log = createLogger(CAT.db);
+
+/** A single chunk loaded from the database with parsed fields. */
+interface StoredChunk {
+  id: string;
+  text: string;
+  title: string;
+  date: string | null;
+  tags: string[];
+  section: string;
+  slug: string;
+  embedding: number[];
+  type: 'post' | 'experience';
+}
+
+/** Result of a vector similarity search. */
+interface SearchResult {
+  chunk: StoredChunk;
+  /** Cosine distance from query embedding (0 = identical). */
+  score: number;
+}
+
+/** A single message from the chat history. */
+interface StoredMessage {
+  id: string;
+  userId: string;
+  chatId: string | null;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  sources: string; // JSON array of {title, score}
+  reasoning: string;
+  error?: string;
+  irrecoverable?: boolean;
+  userAgentId?: number;
+  createdAt: string;
+  modelId: number;
+  tokensIn: number;
+  tokensOut: number;
+  durationMs: number;
+  maxTokens: number;
+  deletedAt?: string;
+}
+
+/** A chat conversation. */
+interface Chat {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: string;
+  messageCount: number;
+  deletedAt?: string;
+  locked?: boolean;
+  userAgentId?: number;
+}
+
+export interface ToolCallRecord {
+  id: string;
+  name: string;
+  serverId: string;
+  startedAt: string;
+  finishedAt: string | null;
+  durationMs: number | null;
+}
+
+let _db: Database.Database | null = null;
+let _index: Index | null = null;
+
+/**
+ * Return cached database connection or create one.
+ */
+function getDb(): Database.Database {
+  if (_db) return _db;
+
+  if (!existsSync(DATA_DIR)) {
+    mkdirSync(DATA_DIR, { recursive: true });
+  }
+
+  // Delete stale WAL/SHM journal files when DB is missing — prevents SQLITE_IOERR_SHORT_READ
+  // on new database creation after a hard reset that left journal files behind.
+  if (!existsSync(DB_PATH)) {
+    try {
+      if (existsSync(DB_WAL_PATH)) unlinkSync(DB_WAL_PATH);
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (existsSync(DB_SHM_PATH)) unlinkSync(DB_SHM_PATH);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const db = new Database(DB_PATH);
+
+  db.exec('PRAGMA journal_mode = WAL');
+  db.exec('PRAGMA foreign_keys = ON');
+
+  initDatabase(db);
+
+  // Re-read the DB ref (initDatabase runs schema/migrations)
+  _db = db;
+  return db;
+}
+
+/**
+ * Get or create the USearch vector index.
+ */
+function getIndex(): Index {
+  if (_index) return _index;
+
+  const idx = new Index(SEARCH_INDEX_CONFIG);
+
+  if (existsSync(VECTOR_INDEX_PATH)) {
+    idx.load(VECTOR_INDEX_PATH);
+  }
+
+  _index = idx;
+  return idx;
+}
+
+/**
+ * Search chunks by cosine similarity to the given embedding.
+ * Uses USearch for KNN search, then looks up metadata from SQLite.
+ */
+function searchChunks(embedding: number[], limit: number = 10, typeFilter?: 'post' | 'experience'): SearchResult[] {
+  const db = getDb();
+  const idx = getIndex();
+
+  if (idx.size() === 0) return [];
+
+  const queryVector = new Float32Array(embedding);
+
+  // Search more results to have room for type filtering
+  const searchLimit = typeFilter ? limit * 5 : limit;
+  const matches = idx.search(queryVector, searchLimit, 0);
+
+  const keys = matches.keys;
+  const distances = matches.distances;
+
+  // Batch-fetch all chunks in one query instead of N individual lookups
+  const rowIds = Array.from(keys, Number);
+  const placeholders = rowIds.map(() => '?').join(',');
+  const allRows = db.prepare(`SELECT * FROM chunks WHERE id IN (${placeholders})`).all(...rowIds) as Record<string, unknown>[];
+  const rowMap = new Map<number, Record<string, unknown>>(
+    allRows.map((row) => [Number(row.id), row]),
+  );
+
+  const results: SearchResult[] = [];
+  for (let i = 0; i < keys.length; i++) {
+    const rowId = Number(keys[i]);
+    const distance = distances[i];
+    const row = rowMap.get(rowId);
+
+    if (!row) continue;
+
+    const parsed = parseSearchRow(row, distance);
+
+    // Apply type filter if specified
+    if (typeFilter && parsed.chunk.type !== typeFilter) continue;
+
+    results.push(parsed);
+
+    // Stop once we have enough filtered results
+    if (results.length >= limit) break;
+  }
+
+  return results;
+}
+
+/** Parse a raw DB row into a typed SearchResult. */
+function parseSearchRow(row: Record<string, unknown>, distance: number): SearchResult {
+  const tagsRaw = typeof row.tags === 'string' ? row.tags : '[]';
+  const embeddingRaw = typeof row.embedding === 'string' ? row.embedding : '[]';
+
+  let tags: string[];
+  try {
+    const parsed = JSON.parse(tagsRaw);
+    tags = Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    tags = [];
+  }
+
+  let embedding: number[];
+  try {
+    const parsed = JSON.parse(embeddingRaw);
+    embedding = Array.isArray(parsed) ? parsed.map(Number) : [];
+  } catch {
+    embedding = [];
+  }
+
+  const chunkId = String(row.chunk_id ?? '');
+  const slug = chunkId.includes('_chunk_') ? chunkId.split('_chunk_')[0] : '';
+
+  return {
+    chunk: {
+      id: String(row.id ?? ''),
+      text: String(row.text ?? ''),
+      title: String(row.title ?? ''),
+      date: row.date == null ? null : String(row.date),
+      tags,
+      section: String(row.section ?? ''),
+      slug,
+      embedding,
+      type: (row.type as 'post' | 'experience') || 'post',
+    },
+    score: distance,
+  };
+}
+
+/** Close the database connection gracefully. */
+function closeDb(): void {
+  if (_db) {
+    _db.close();
+    _db = null;
+  }
+  _index = null;
+}
+
+/**
+ * Ensure a user exists in the users table. Inserts if absent;
+ * updates email/name only when provided and non-empty.
+ */
+function ensureUser(userId: string, email?: string, name?: string): void {
+  const db = getDb();
+
+  db.prepare('INSERT OR IGNORE INTO users (id, email, name) VALUES (?, ?, ?)').run(userId, email ?? null, name ?? null);
+
+  if (email !== undefined && email.length > 0) {
+    db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email, userId);
+  }
+
+  if (name !== undefined && name.length > 0) {
+    db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name, userId);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Chat Functions                                                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Ensure a chat exists. Creates the chat row if absent.
+ * Parallel to ensureUser — called from addMessage to guarantee
+ * the FK target exists before inserting a message.
+ */
+function ensureChat(chatId: string, userId: string, title?: string): void {
+  // Only allow UUID-format chat IDs
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chatId)) return;
+  const db = getDb();
+  ensureUser(userId);
+  db.prepare('INSERT OR IGNORE INTO chats (id, user_id, title) VALUES (?, ?, ?)').run(
+    chatId,
+    userId,
+    title?.slice(0, 100) ?? 'New Chat',
+  );
+}
+
+/**
+ * Get or create a user agent record.
+ * Returns the user_agent id.
+ */
+export function getOrCreateUserAgent(ua: string, ip?: string): number {
+  const db = getDb();
+  const trimmed = ua.slice(0, 500);
+  db.prepare('INSERT OR IGNORE INTO user_agents (ua) VALUES (?)').run(trimmed);
+  if (ip) {
+    db.prepare('UPDATE user_agents SET ip = ? WHERE ua = ? AND ip IS NULL').run(ip, trimmed);
+  }
+  const row = db.prepare('SELECT id FROM user_agents WHERE ua = ?').get(trimmed) as { id: number } | undefined;
+  return row?.id ?? 0;
+}
+
+/**
+ * Create a new chat for a user.
+ * Returns the new chat ID.
+ */
+function createChat(userId: string, title?: string, userAgentId?: number): string {
+  const db = getDb();
+  ensureUser(userId);
+
+  const chatId = crypto.randomUUID();
+  const chatTitle = title?.slice(0, 100) || 'New Chat';
+
+  db.prepare('INSERT INTO chats (id, user_id, title, user_agent_id) VALUES (?, ?, ?, ?)').run(
+    chatId,
+    userId,
+    chatTitle,
+    userAgentId ?? null,
+  );
+
+  return chatId;
+}
+
+/**
+ * Get all chats for a user, ordered by created_at DESC.
+ */
+function getChats(userId: string): Chat[] {
+  const db = getDb();
+  log.debug`Loading chats for user ${userId}`;
+  const rows = db
+    .prepare(
+      `SELECT c.id, c.user_id, c.title, c.created_at, c.locked, c.user_agent_id, (SELECT COUNT(*) FROM messages m WHERE m.chat_id = c.id AND m.role = 'user' AND m.deleted_at IS NULL) AS message_count FROM chats c WHERE c.user_id = ? AND c.deleted_at IS NULL ORDER BY c.created_at DESC`,
+    )
+    .all(userId) as Record<string, unknown>[];
+
+  log.debug`Loaded ${rows.length} chats for user ${userId}`;
+
+  return rows.map((row) => ({
+    id: String(row.id),
+    userId: String(row.user_id),
+    title: String(row.title),
+    createdAt: String(row.created_at),
+    messageCount: Number(row.message_count ?? 0),
+    locked: Boolean(row.locked ?? false),
+    userAgentId: row.user_agent_id == null ? undefined : Number(row.user_agent_id),
+  }));
+}
+
+/**
+ * Get a single chat by ID.
+ */
+function getChat(chatId: string): Chat | undefined {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `SELECT c.id, c.user_id, c.title, c.created_at, c.locked, c.user_agent_id, (SELECT COUNT(*) FROM messages m WHERE m.chat_id = c.id AND m.role = 'user' AND m.deleted_at IS NULL) AS message_count FROM chats c WHERE c.id = ? AND c.deleted_at IS NULL`,
+    )
+    .get(chatId) as Record<string, unknown> | undefined;
+
+  if (!row) return undefined;
+
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    title: String(row.title),
+    createdAt: String(row.created_at),
+    messageCount: Number(row.message_count ?? 0),
+    locked: Boolean(row.locked ?? false),
+    userAgentId: row.user_agent_id == null ? undefined : Number(row.user_agent_id),
+  };
+}
+
+/**
+ * Soft-delete a chat by setting its deleted_at timestamp.
+ * Messages are preserved but the chat is hidden from normal queries.
+ */
+function deleteChat(chatId: string): void {
+  const db = getDb();
+  db.prepare("UPDATE chats SET deleted_at = datetime('now') WHERE id = ?").run(chatId);
+}
+
+/**
+ * Rename a chat. Title is truncated to 100 chars.
+ */
+function renameChat(chatId: string, title: string): void {
+  const db = getDb();
+  db.prepare('UPDATE chats SET title = ? WHERE id = ?').run(title.slice(0, 100), chatId);
+}
+
+/**
+ * Get count of messages in a chat.
+ */
+function getChatMessageCount(chatId: string): number {
+  const db = getDb();
+  const row = db
+    .prepare("SELECT COUNT(*) AS count FROM messages WHERE chat_id = ? AND role = 'user' AND deleted_at IS NULL")
+    .get(chatId) as { count: number };
+  return row.count;
+}
+
+/**
+ * Get count of chats for a user.
+ */
+function getUserChatCount(userId: string): number {
+  const db = getDb();
+  const row = db
+    .prepare('SELECT COUNT(*) AS count FROM chats WHERE user_id = ? AND deleted_at IS NULL')
+    .get(userId) as { count: number };
+  return row.count;
+}
+
+/**
+ * Insert a lead from the contact form.
+ */
+function insertLead(
+  userId: string,
+  name: string,
+  email: string,
+  companyName: string,
+  role: string,
+  message: string,
+  ipAddress: string,
+): void {
+  const db = getDb();
+  db.prepare(
+    `INSERT INTO leads (user_id, name, email, company_name, role, message, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(userId, name, email, companyName, role, message, ipAddress);
+}
+
+/**
+ * Update user's name and email in the users table.
+ */
+function updateUserContact(userId: string, name: string, email: string): void {
+  const db = getDb();
+  db.prepare(`UPDATE users SET name = ?, email = ? WHERE id = ?`).run(name, email, userId);
+}
+
+/**
+ * Log a contact intent detection event.
+ */
+function insertContactIntent(userId: string, chatId: string, text: string): void {
+  const db = getDb();
+  db.prepare('INSERT INTO contact_intents (user_id, chat_id, text) VALUES (?, ?, ?)').run(userId, chatId, text);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Message Functions                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Add a message to a chat history.
+ * Guarantees the user and chat exist before inserting (auto-creates if absent).
+ * If chatId not provided, message has NULL chat_id (legacy support).
+ */
+function addMessage(
+  userId: string,
+  role: 'user' | 'assistant' | 'system',
+  content: string,
+  sources?: string,
+  reasoning?: string,
+  chatId?: string,
+  modelId?: number,
+  tokensIn?: number,
+  tokensOut?: number,
+  durationMs?: number,
+  maxTokens?: number,
+  irrecoverable?: boolean,
+  error?: string,
+  msgId?: string,
+  _userAgentId?: number,
+): string {
+  const db = getDb();
+  ensureUser(userId);
+  if (chatId) ensureChat(chatId, userId, role === 'user' ? content.slice(0, 100) : undefined);
+  const id = msgId ?? crypto.randomUUID();
+  db.prepare(
+    'INSERT INTO messages (id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, model_id, tokens_in, tokens_out, duration_ms, max_tokens, user_agent_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  ).run(
+    id,
+    userId,
+    chatId ?? null,
+    role,
+    content,
+    sources ?? '[]',
+    reasoning ?? '',
+    error ?? null,
+    irrecoverable ? 1 : 0,
+    modelId ?? null,
+    tokensIn ?? 0,
+    tokensOut ?? 0,
+    durationMs ?? 0,
+    maxTokens ?? 0,
+    _userAgentId ?? null,
+  );
+  return id;
+}
+
+/**
+ * Retrieve messages by chat ID, oldest first.
+ */
+function getMessages(chatId: string, limit: number = 50, offset: number = 0): StoredMessage[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      'SELECT id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, created_at, model_id, tokens_in, tokens_out, duration_ms, max_tokens, deleted_at FROM messages WHERE chat_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
+    )
+    .all(chatId, limit, offset) as Record<string, unknown>[];
+
+  return rows.map((row) => parseStoredMessage(row));
+}
+
+/**
+ * Retrieve messages by user ID (legacy fallback).
+ */
+function getMessagesByUserId(userId: string, limit: number = 50, offset: number = 0): StoredMessage[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      'SELECT id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, created_at, model_id, tokens_in, tokens_out, duration_ms, max_tokens, deleted_at FROM messages WHERE user_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
+    )
+    .all(userId, limit, offset) as Record<string, unknown>[];
+
+  return rows.map((row) => parseStoredMessage(row));
+}
+
+/** Parse raw DB row into StoredMessage. */
+function parseStoredMessage(row: Record<string, unknown>): StoredMessage {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    chatId: row.chat_id == null ? null : String(row.chat_id),
+    role: String(row.role) as 'user' | 'assistant' | 'system',
+    content: String(row.content),
+    sources: String(row.sources),
+    reasoning: String(row.reasoning),
+    error: row.error ? String(row.error) : undefined,
+    irrecoverable: Boolean(row.irrecoverable ?? false),
+    createdAt: String(row.created_at),
+    modelId: Number(row.model_id ?? 0),
+    tokensIn: Number(row.tokens_in ?? 0),
+    tokensOut: Number(row.tokens_out ?? 0),
+    durationMs: Number(row.duration_ms ?? 0),
+    maxTokens: Number(row.max_tokens ?? 0),
+    deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
+  };
+}
+
+function ensureModel(provider: string, modelName: string, actualModelName: string, maxTokens: number): number {
+  const safeMaxTokens = maxTokens ?? 0;
+  const db = getDb();
+  db.prepare(
+    'INSERT OR IGNORE INTO models (provider, model_name, actual_model_name, max_tokens) VALUES (?, ?, ?, ?)',
+  ).run(provider, modelName, actualModelName, safeMaxTokens);
+  const row = db
+    .prepare('SELECT id FROM models WHERE provider = ? AND model_name = ? AND actual_model_name = ?')
+    .get(provider, modelName, actualModelName) as { id: number } | undefined;
+  if (!row) {
+    throw new Error(
+      `ensureModel: failed to find model row for provider="${provider}" model="${modelName}" actual="${actualModelName}"`,
+    );
+  }
+  return row.id;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Chat Events (SSE reconnect)                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Insert a chat event. Returns the new event ID.
+ */
+function insertChatEvent(chatId: string, type: string, data: unknown): number {
+  const db = getDb();
+  const result = db
+    .prepare('INSERT INTO chat_events (chat_id, type, data) VALUES (?, ?, ?)')
+    .run(chatId, type, JSON.stringify(data));
+  return Number(result.lastInsertRowid);
+}
+
+/**
+ * Get chat events since a given event ID (exclusive).
+ * Returns events ordered by id ascending.
+ */
+function getChatEventsSince(
+  chatId: string,
+  lastEventId: number,
+): { id: number; chatId: string; type: string; data: unknown; createdAt: string }[] {
+  const db = getDb();
+  const rows = db
+    .prepare('SELECT id, chat_id, type, data, created_at FROM chat_events WHERE chat_id = ? AND id > ? ORDER BY id ASC')
+    .all(chatId, lastEventId) as Record<string, unknown>[];
+  return rows.map((r) => ({
+    id: Number(r.id),
+    chatId: String(r.chat_id),
+    type: String(r.type),
+    data: JSON.parse(String(r.data)),
+    createdAt: String(r.created_at),
+  }));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Reaction Functions                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Save or update a reaction for a message.
+ * Upserts: if reaction exists for this message+user, update type and reason.
+ */
+function setReaction(messageId: string, userId: string, reactionType: 'up' | 'down' | 'heart', reason?: string): void {
+  const db = getDb();
+  db.prepare(
+    `INSERT INTO reactions (message_id, user_id, reaction_type, reason)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(message_id, user_id) DO UPDATE SET
+       reaction_type = excluded.reaction_type,
+       reason = excluded.reason,
+       created_at = datetime('now')`,
+  ).run(messageId, userId, reactionType, reason ?? '');
+}
+
+/**
+ * Get reaction for a specific message + user, or null if none.
+ */
+function getReaction(messageId: string, userId: string): { type: 'up' | 'down' | 'heart'; reason: string } | null {
+  const db = getDb();
+  const row = db
+    .prepare('SELECT reaction_type, reason FROM reactions WHERE message_id = ? AND user_id = ?')
+    .get(messageId, userId) as Record<string, unknown> | undefined;
+  if (!row) return null;
+  return {
+    type: String(row.reaction_type) as 'up' | 'down' | 'heart',
+    reason: String(row.reason ?? ''),
+  };
+}
+
+/**
+ * Remove a reaction for a message + user.
+ */
+function deleteReaction(messageId: string, userId: string): void {
+  const db = getDb();
+  db.prepare('DELETE FROM reactions WHERE message_id = ? AND user_id = ?').run(messageId, userId);
+}
+
+/**
+ * Delete all messages for a specific chat.
+ */
+function clearChatMessages(chatId: string): void {
+  const db = getDb();
+  db.prepare('DELETE FROM messages WHERE chat_id = ?').run(chatId);
+}
+
+/**
+ * Get page content entries, optionally filtered by type.
+ * Parses the meta JSON column into a Record.
+ */
+function getPageContent(
+  type?: string,
+  slug?: string,
+): { slug: string; type: string; content: string; meta: Record<string, unknown>; featured: boolean; toc: { id: string; text: string; level: number }[]; title: string; description: string; date: string | null; tags: string[]; published: boolean; excerpt: string; headerImage: { alt: string; url: string } | null; position: number | null; company: string; role: string; startDate: string | null; endDate: string | null; duration: string; skills: string[] }[] {
+  const db = getDb();
+  let rows;
+  if (type && slug) {
+    rows = db.prepare('SELECT slug, type, content, meta, featured, toc, title, description, date, tags, published, excerpt, header_image, position, company, role, start_date, end_date, duration, skills FROM page_content WHERE type = ? AND slug = ?').all(type, slug);
+  } else if (type) {
+    rows = db.prepare('SELECT slug, type, content, meta, featured, toc, title, description, date, tags, published, excerpt, header_image, position, company, role, start_date, end_date, duration, skills FROM page_content WHERE type = ?').all(type);
+  } else {
+    rows = db.prepare('SELECT slug, type, content, meta, featured, toc, title, description, date, tags, published, excerpt, header_image, position, company, role, start_date, end_date, duration, skills FROM page_content').all();
+  }
+  return (rows as Record<string, unknown>[]).map((r) => {
+    let toc: { id: string; text: string; level: number }[] = [];
+    try {
+      const parsed = JSON.parse(String(r.toc ?? '[]'));
+      if (Array.isArray(parsed)) toc = parsed;
+    } catch { /* ignore parse errors */ }
+    return {
+      slug: String(r.slug),
+      type: String(r.type),
+      content: String(r.content),
+      meta: JSON.parse(String(r.meta)),
+      featured: Number(r.featured) === 1,
+      toc,
+      title: String(r.title ?? ''),
+      description: String(r.description ?? ''),
+      date: r.date ? String(r.date) : null,
+      tags: JSON.parse(String(r.tags ?? '[]')),
+      published: r.published !== 0,
+      excerpt: String(r.excerpt ?? ''),
+      headerImage: JSON.parse(String(r.header_image ?? 'null')) as { alt: string; url: string } | null,
+      position: r.position != null ? Number(r.position) : null,
+      company: String(r.company ?? ''),
+      role: String(r.role ?? ''),
+      startDate: r.start_date ? String(r.start_date) : null,
+      endDate: r.end_date ? String(r.end_date) : null,
+      duration: String(r.duration ?? ''),
+      skills: JSON.parse(String(r.skills ?? '[]')),
+    };
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Chat Locking                                                       */
+/* ------------------------------------------------------------------ */
+
+function lockChat(chatId: string): void {
+  const db = getDb();
+  db.prepare('UPDATE chats SET locked = 1 WHERE id = ?').run(chatId);
+}
+
+function isChatLocked(chatId: string): boolean {
+  const db = getDb();
+  const row = db.prepare('SELECT locked FROM chats WHERE id = ?').get(chatId) as { locked: number } | undefined;
+  return row?.locked === 1;
+}
+
+/**
+ * Get tool calls for a message, ordered by start time.
+ * Computes durationMs from started_at/finished_at timestamps.
+ */
+function getToolCallsByMessageId(messageId: string): ToolCallRecord[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT id, name, server_id, started_at, finished_at,
+        CASE WHEN finished_at IS NOT NULL THEN
+          (julianday(finished_at) - julianday(started_at)) * 86400000
+        ELSE NULL END as duration_ms
+      FROM tool_calls WHERE message_id = ? ORDER BY started_at ASC`,
+    )
+    .all(messageId) as Record<string, unknown>[];
+  return rows.map((row) => ({
+    id: String(row.id),
+    name: String(row.name),
+    serverId: String(row.server_id),
+    startedAt: String(row.started_at),
+    finishedAt: row.finished_at ? String(row.finished_at) : null,
+    durationMs: row.duration_ms != null ? Math.round(Number(row.duration_ms)) : null,
+  }));
+}
+
+export {
+  getDb,
+  searchChunks,
+  closeDb,
+  addMessage,
+  getMessages,
+  getToolCallsByMessageId,
+  getMessagesByUserId,
+  clearChatMessages,
+  ensureModel,
+  insertChatEvent,
+  getChatEventsSince,
+  setReaction,
+  getReaction,
+  deleteReaction,
+  getPageContent,
+  createChat,
+  getChats,
+  getChat,
+  deleteChat,
+  renameChat,
+  getChatMessageCount,
+  getUserChatCount,
+  insertLead,
+  updateUserContact,
+  insertContactIntent,
+  lockChat,
+  isChatLocked,
+};
+export type { StoredChunk, SearchResult, StoredMessage, Chat };

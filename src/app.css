@@ -1,0 +1,188 @@
+@import 'sv5ui/theme.css';
+@plugin '@tailwindcss/typography';
+
+@theme {
+  /* ─── Typography Fonts ─── */
+  --font-heading: 'SS Standard', 'Akkurat Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-body: 'Inter', 'SF Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+
+  /* ─── Line Heights ─── */
+  --leading-tight: 1.15;
+  --leading-relaxed: 1.7;
+
+  /* ─── Border Radius ─── */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* ─── Shadows ─── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
+
+  /* ─── Animations ─── */
+  --animate-blink: blink 0.8s step-end infinite;
+  --animate-pulse-send: pulse-send 1s ease-in-out infinite;
+  --animate-pulse-dot: pulse-dot 1.2s ease-in-out infinite;
+  --animate-message-in: message-in 250ms ease both;
+  --animate-page-enter: page-enter 600ms ease-out both;
+  --animate-content-enter: content-enter 500ms ease-out both;
+  --animate-fade-in: fade-in 500ms ease-out both;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes pulse-send {
+  0%, 100% { opacity: 0.5; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes message-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes content-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Legacy layout tokens (backward compat for var() refs in .svelte files) ─── */
+:root {
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.5rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  --width-prose: 720px;
+  --width-grid: 1200px;
+  --nav-height: 64px;
+
+  --shadow-glow-neon: 0 0 20px rgba(0, 255, 136, 0.15);
+  --shadow-glow-magenta: 0 0 20px rgba(247, 0, 255, 0.15);
+
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms ease;
+
+  --z-base: 1;
+  --z-sticky: 100;
+  --z-nav: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+}
+
+/* ─── Global Base Styles ─── */
+
+/* Gradient mesh background */
+html {
+  scroll-padding-top: 80px;
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(0, 255, 136, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 90% 80%, rgba(247, 0, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(0, 100, 200, 0.04) 0%, transparent 50%);
+  position: relative;
+}
+
+/* Grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Base typography */
+body {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* Focus visible for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--color-surface); }
+::-webkit-scrollbar-thumb { background: var(--color-outline-variant); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-outline); }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
+  }
+}
+
+/* Fix code block double padding — pre delegates to atom-one-dark */
+.prose pre {
+  padding: 0;
+  background: transparent;
+}
