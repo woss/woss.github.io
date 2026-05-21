@@ -1,5 +1,8 @@
 # Welcome
 
+
+[How to take ownershipt of yourSpotify account](pages/spotify-account-sync.md ':include')
+
 # Typescript tricks
 
 [How to serve SPA with fallback on IPFS](pages/caddy-serving-spa-apps-with-fallback-on-ipfs.md ':include')
