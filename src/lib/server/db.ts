@@ -5,6 +5,33 @@ import { SEARCH_INDEX_CONFIG } from '../search-config.ts';
 import { CAT, createLogger } from './logger';
 import { initDatabase, DATA_DIR, DB_PATH, DB_WAL_PATH, DB_SHM_PATH, VECTOR_INDEX_PATH } from './schema.ts';
 
+/** Typed wrapper around better-sqlite3 .all() — avoids scattering `as Record<string, unknown>[]` everywhere. */
+function queryRows<T>(stmt: Database.Statement, ...params: unknown[]): T[] {
+  return stmt.all(...params) as T[];
+}
+
+/** Typed wrapper around better-sqlite3 .get() — avoids scattering `as Record<string, unknown> | undefined` everywhere. */
+function queryRow<T>(stmt: Database.Statement, ...params: unknown[]): T | undefined {
+  return stmt.get(...params) as T | undefined;
+}
+
+function validateRowType(value: unknown): 'post' | 'experience' {
+  if (value === 'post' || value === 'experience') return value;
+  return 'post';
+}
+
+function parseRole(value: unknown): 'user' | 'assistant' | 'system' {
+  const s = String(value);
+  if (s === 'user' || s === 'assistant' || s === 'system') return s;
+  return 'system';
+}
+
+function parseReactionType(value: unknown): 'up' | 'down' | 'heart' {
+  const s = String(value);
+  if (s === 'up' || s === 'down' || s === 'heart') return s;
+  return 'up';
+}
+
 const log = createLogger(CAT.db);
 
 /** A single chunk loaded from the database with parsed fields. */
@@ -147,9 +174,9 @@ function searchChunks(embedding: number[], limit: number = 10, typeFilter?: 'pos
   // Batch-fetch all chunks in one query instead of N individual lookups
   const rowIds = Array.from(keys, Number);
   const placeholders = rowIds.map(() => '?').join(',');
-  const allRows = db.prepare(`SELECT * FROM chunks WHERE id IN (${placeholders})`).all(...rowIds) as Record<string, unknown>[];
+  const rawRows = queryRows<Record<string, unknown>>(db.prepare(`SELECT * FROM chunks WHERE id IN (${placeholders})`), ...rowIds);
   const rowMap = new Map<number, Record<string, unknown>>(
-    allRows.map((row) => [Number(row.id), row]),
+    rawRows.map((row) => [Number(row.id), row]),
   );
 
   const results: SearchResult[] = [];
@@ -208,7 +235,7 @@ function parseSearchRow(row: Record<string, unknown>, distance: number): SearchR
       section: String(row.section ?? ''),
       slug,
       embedding,
-      type: (row.type as 'post' | 'experience') || 'post',
+      type: validateRowType(row.type),
     },
     score: distance,
   };
@@ -304,11 +331,12 @@ function createChat(userId: string, title?: string, userAgentId?: number): strin
 function getChats(userId: string): Chat[] {
   const db = getDb();
   log.debug`Loading chats for user ${userId}`;
-  const rows = db
-    .prepare(
+  const rows = queryRows<Record<string, unknown>>(
+    db.prepare(
       `SELECT c.id, c.user_id, c.title, c.created_at, c.locked, c.user_agent_id, (SELECT COUNT(*) FROM messages m WHERE m.chat_id = c.id AND m.role = 'user' AND m.deleted_at IS NULL) AS message_count FROM chats c WHERE c.user_id = ? AND c.deleted_at IS NULL ORDER BY c.created_at DESC`,
-    )
-    .all(userId) as Record<string, unknown>[];
+    ),
+    userId,
+  );
 
   log.debug`Loaded ${rows.length} chats for user ${userId}`;
 
@@ -328,11 +356,12 @@ function getChats(userId: string): Chat[] {
  */
 function getChat(chatId: string): Chat | undefined {
   const db = getDb();
-  const row = db
-    .prepare(
+  const row = queryRow<Record<string, unknown>>(
+    db.prepare(
       `SELECT c.id, c.user_id, c.title, c.created_at, c.locked, c.user_agent_id, (SELECT COUNT(*) FROM messages m WHERE m.chat_id = c.id AND m.role = 'user' AND m.deleted_at IS NULL) AS message_count FROM chats c WHERE c.id = ? AND c.deleted_at IS NULL`,
-    )
-    .get(chatId) as Record<string, unknown> | undefined;
+    ),
+    chatId,
+  );
 
   if (!row) return undefined;
 
@@ -477,11 +506,12 @@ function addMessage(
  */
 function getMessages(chatId: string, limit: number = 50, offset: number = 0): StoredMessage[] {
   const db = getDb();
-  const rows = db
-    .prepare(
+  const rows = queryRows<Record<string, unknown>>(
+    db.prepare(
       'SELECT id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, created_at, model_id, tokens_in, tokens_out, duration_ms, max_tokens, deleted_at FROM messages WHERE chat_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
-    )
-    .all(chatId, limit, offset) as Record<string, unknown>[];
+    ),
+    chatId, limit, offset,
+  );
 
   return rows.map((row) => parseStoredMessage(row));
 }
@@ -491,11 +521,12 @@ function getMessages(chatId: string, limit: number = 50, offset: number = 0): St
  */
 function getMessagesByUserId(userId: string, limit: number = 50, offset: number = 0): StoredMessage[] {
   const db = getDb();
-  const rows = db
-    .prepare(
+  const rows = queryRows<Record<string, unknown>>(
+    db.prepare(
       'SELECT id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, created_at, model_id, tokens_in, tokens_out, duration_ms, max_tokens, deleted_at FROM messages WHERE user_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
-    )
-    .all(userId, limit, offset) as Record<string, unknown>[];
+    ),
+    userId, limit, offset,
+  );
 
   return rows.map((row) => parseStoredMessage(row));
 }
@@ -506,7 +537,7 @@ function parseStoredMessage(row: Record<string, unknown>): StoredMessage {
     id: String(row.id),
     userId: String(row.user_id),
     chatId: row.chat_id == null ? null : String(row.chat_id),
-    role: String(row.role) as 'user' | 'assistant' | 'system',
+    role: parseRole(row.role),
     content: String(row.content),
     sources: String(row.sources),
     reasoning: String(row.reasoning),
@@ -563,9 +594,10 @@ function getChatEventsSince(
   lastEventId: number,
 ): { id: number; chatId: string; type: string; data: unknown; createdAt: string }[] {
   const db = getDb();
-  const rows = db
-    .prepare('SELECT id, chat_id, type, data, created_at FROM chat_events WHERE chat_id = ? AND id > ? ORDER BY id ASC')
-    .all(chatId, lastEventId) as Record<string, unknown>[];
+  const rows = queryRows<Record<string, unknown>>(
+    db.prepare('SELECT id, chat_id, type, data, created_at FROM chat_events WHERE chat_id = ? AND id > ? ORDER BY id ASC'),
+    chatId, lastEventId,
+  );
   return rows.map((r) => ({
     id: Number(r.id),
     chatId: String(r.chat_id),
@@ -600,12 +632,13 @@ function setReaction(messageId: string, userId: string, reactionType: 'up' | 'do
  */
 function getReaction(messageId: string, userId: string): { type: 'up' | 'down' | 'heart'; reason: string } | null {
   const db = getDb();
-  const row = db
-    .prepare('SELECT reaction_type, reason FROM reactions WHERE message_id = ? AND user_id = ?')
-    .get(messageId, userId) as Record<string, unknown> | undefined;
+  const row = queryRow<Record<string, unknown>>(
+    db.prepare('SELECT reaction_type, reason FROM reactions WHERE message_id = ? AND user_id = ?'),
+    messageId, userId,
+  );
   if (!row) return null;
   return {
-    type: String(row.reaction_type) as 'up' | 'down' | 'heart',
+    type: parseReactionType(row.reaction_type),
     reason: String(row.reason ?? ''),
   };
 }
@@ -635,11 +668,11 @@ function getPosts(
   const db = getDb();
   let rows;
   if (slug) {
-    rows = db.prepare('SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts WHERE slug = ?').all(slug);
+    rows = queryRows<Record<string, unknown>>(db.prepare('SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts WHERE slug = ?'), slug);
   } else {
-    rows = db.prepare('SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts').all();
+    rows = queryRows<Record<string, unknown>>(db.prepare('SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts'));
   }
-  return (rows as Record<string, unknown>[]).map((r) => {
+  return rows.map((r) => {
     let toc: { id: string; text: string; level: number }[] = [];
     try {
       const parsed = JSON.parse(String(r.toc ?? '[]'));
@@ -671,11 +704,11 @@ function getExperience(
   const db = getDb();
   let rows;
   if (slug) {
-    rows = db.prepare('SELECT slug, content, company, role, start_date, end_date, duration, skills, description, published FROM page_experience WHERE slug = ?').all(slug);
+    rows = queryRows<Record<string, unknown>>(db.prepare('SELECT slug, content, company, role, start_date, end_date, duration, skills, description, published FROM page_experience WHERE slug = ?'), slug);
   } else {
-    rows = db.prepare('SELECT slug, content, company, role, start_date, end_date, duration, skills, description, published FROM page_experience').all();
+    rows = queryRows<Record<string, unknown>>(db.prepare('SELECT slug, content, company, role, start_date, end_date, duration, skills, description, published FROM page_experience'));
   }
-  return (rows as Record<string, unknown>[]).map((r) => ({
+  return rows.map((r) => ({
     slug: String(r.slug),
     content: String(r.content),
     company: String(r.company ?? ''),
@@ -710,15 +743,16 @@ function isChatLocked(chatId: string): boolean {
  */
 function getToolCallsByMessageId(messageId: string): ToolCallRecord[] {
   const db = getDb();
-  const rows = db
-    .prepare(
+  const rows = queryRows<Record<string, unknown>>(
+    db.prepare(
       `SELECT id, name, server_id, started_at, finished_at,
         CASE WHEN finished_at IS NOT NULL THEN
           (julianday(finished_at) - julianday(started_at)) * 86400000
         ELSE NULL END as duration_ms
       FROM tool_calls WHERE message_id = ? ORDER BY started_at ASC`,
-    )
-    .all(messageId) as Record<string, unknown>[];
+    ),
+    messageId,
+  );
   return rows.map((row) => ({
     id: String(row.id),
     name: String(row.name),

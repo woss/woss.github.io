@@ -42,8 +42,12 @@ mock.module('./schema.ts', () => ({
   },
 }));
 
+interface MinimalDatabase {
+  prepare(sql: string): unknown;
+}
+
 interface DbModule {
-  getDb(): import('better-sqlite3').Database;
+  getDb(): MinimalDatabase;
   closeDb(): void;
   resetDatabase(): void;
 }
@@ -52,8 +56,7 @@ let mod: DbModule;
 
 describe('getDb', () => {
   beforeAll(async () => {
-    const m = await import('./db.ts');
-    mod = m as unknown as DbModule;
+    mod = await import('./db-bun.ts');
   });
 
   beforeEach(() => {

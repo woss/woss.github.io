@@ -6,9 +6,13 @@
  *   embedText(single)  — one query → one vector (for API routes)
  *   embedTexts(batch)  — N texts → N vectors (for indexing)
  */
+import { env, pipeline } from '@huggingface/transformers';
+import { join } from 'node:path';
 import type { FeatureExtractionPipeline } from '@huggingface/transformers';
-import { pipeline } from '@huggingface/transformers';
 import { EMBEDDING_MODEL } from '../search-config.ts';
+
+// Persist HuggingFace model cache inside shared data volume so it survives container rebuilds
+env.cacheDir = join(process.cwd(), 'data', '.hf-cache');
 
 let _extractor: FeatureExtractionPipeline | null = null;
 let _extractorPromise: Promise<FeatureExtractionPipeline> | null = null;
@@ -25,7 +29,7 @@ async function getExtractor(): Promise<FeatureExtractionPipeline> {
     _extractorPromise = pipeline('feature-extraction', EMBEDDING_MODEL, {
       dtype: 'fp32',
     }).then((p) => {
-      _extractor = p as FeatureExtractionPipeline;
+      _extractor = p;
       return _extractor;
     });
   }

@@ -102,6 +102,42 @@ const TOOL_ALLOWLIST: Record<string, string> = {
 const TOOL_ONLY_HINT = " Only use for queries about Daniel Maricic's work.";
 
 /* ------------------------------------------------------------------ */
+/*  Helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Safely convert an unknown value to Record<string, unknown> | undefined.
+ * Returns undefined for null, arrays, and non-objects.
+ */
+function toRecord(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value)) {
+    result[key] = val;
+  }
+  return result;
+}
+
+/**
+ * Parse a JSON string into Record<string, unknown>.
+ * Returns empty object on parse failure, null/undefined input, or non-object JSON.
+ */
+function parseRecord(value: string | undefined): Record<string, unknown> {
+  if (!value) return {};
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(parsed)) {
+      result[key] = val;
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Cache                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -343,7 +379,7 @@ async function getMcpToolDefs(): Promise<McpToolDef[]> {
       name: t.name,
       serverId: t.serverId,
       description: TOOL_ALLOWLIST[t.name] + TOOL_ONLY_HINT,
-      inputSchema: t.inputSchema as Record<string, unknown> | undefined,
+      inputSchema: toRecord(t.inputSchema),
     }));
   _mcpToolDefsCache = mapped;
   log.info`🔧 filtered tools: ${mapped.map((t) => t.name).join(', ')} (${mapped.length}/${tools.length})`;
@@ -355,7 +391,7 @@ async function getMcpToolDefs(): Promise<McpToolDef[]> {
  * Parses the JSON-stringified arguments and delegates to the MCP client.
  */
 async function executeMcpToolCall(toolCall: { name: string; arguments?: string }): Promise<McpToolCallResult> {
-  const args = toolCall.arguments ? (JSON.parse(toolCall.arguments) as Record<string, unknown>) : {};
+  const args = parseRecord(toolCall.arguments);
 
   // Auto-inject "woss" identity for tools where LLM omits user parameters
   const IDENTITY_TOOLS: Record<string, Record<string, string>> = {

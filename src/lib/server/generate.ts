@@ -25,6 +25,53 @@ import type { QueryClass } from '$lib/query-classifier';
 import { Effect, Stream } from 'effect';
 import type { ChatMessage } from '$lib/server/openai-provider';
 
+/** Shape of a chat-completion API response. */
+interface ChatCompletionResponse {
+  choices?: { message?: { content?: string; reasoning_content?: string } }[];
+}
+
+/**
+ * Source info parsed from JSON storage.
+ */
+interface RawSource {
+  title: string;
+  score: number;
+  slug?: string;
+  url?: string;
+}
+
+/**
+ * Parse a tool classification string into the union type.
+ * Invalid values fall back to 'none'.
+ */
+function parseToolClass(value: string): 'none' | 'github' | 'macula' | 'both' {
+  if (value === 'github' || value === 'macula' || value === 'both' || value === 'none') return value;
+  return 'none';
+}
+
+/**
+ * Parse a sources JSON string into a typed array.
+ * Malformed JSON or non-arrays return [].
+ */
+function parseSources(json: string): RawSource[] {
+  try {
+    const parsed = JSON.parse(json);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item: unknown) => {
+      if (typeof item !== 'object' || item === null) return { title: '', score: 0 };
+      const src = item as Record<string, unknown>;
+      return {
+        title: typeof src.title === 'string' ? src.title : '',
+        score: typeof src.score === 'number' ? src.score : 0,
+        slug: typeof src.slug === 'string' ? src.slug : undefined,
+        url: typeof src.url === 'string' ? src.url : undefined,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 const log = createLogger(CAT.chat);
 
 /**
@@ -158,9 +205,7 @@ Respond only with "yes" or "no".`,
       return true;
     }
 
-    const body = (await response.json()) as {
-      choices?: { message?: { content?: string; reasoning_content?: string } }[];
-    };
+    const body = (await response.json()) as ChatCompletionResponse;
     const msg = body.choices?.[0]?.message;
     const answer = (msg?.content || msg?.reasoning_content || '').trim().toLowerCase();
     return answer === 'yes';
@@ -248,23 +293,21 @@ Respond with exactly one word: github, macula, both, or none.`,
       return 'none';
     }
 
-    const body = (await response.json()) as {
-      choices?: { message?: { content?: string; reasoning_content?: string } }[];
-    };
+    const body = (await response.json()) as ChatCompletionResponse;
     const msg = body.choices?.[0]?.message;
     const rawAnswer = (msg?.content || msg?.reasoning_content || '').trim().toLowerCase();
     log.info`🔍 classifyToolNeeds raw response body: ${JSON.stringify(body).slice(0, 500)}`;
     log.info`🔍 classifyToolNeeds answer="${rawAnswer}"`;
     // Direct match — model put the keyword in content
     if (rawAnswer === 'github' || rawAnswer === 'macula' || rawAnswer === 'both' || rawAnswer === 'none')
-      return rawAnswer as 'github' | 'macula' | 'both' | 'none';
+      return rawAnswer;
     // Fallback: search reasoning content for classification keyword
     // DeepSeek puts reasoning in reasoning_content, answer may be buried mid-text
     if (rawAnswer.length > 10) {
       const reasoningKeywords = rawAnswer.match(/\b(github|macula|both|none)\b/);
       if (reasoningKeywords) {
         log.info`🔍 classifyToolNeeds: extracted "${reasoningKeywords[1]}" from reasoning content`;
-        return reasoningKeywords[1] as 'github' | 'macula' | 'both' | 'none';
+        return parseToolClass(reasoningKeywords[1]);
       }
     }
     log.info`🔍 classifyToolNeeds: answer not recognized, returning none`;
@@ -304,9 +347,7 @@ async function generatePoliteResponse(message: string, signal?: AbortSignal): Pr
     signal: signal ?? AbortSignal.timeout(5000),
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const body = (await response.json()) as {
-    choices?: { message?: { content?: string; reasoning_content?: string } }[];
-  };
+  const body = (await response.json()) as ChatCompletionResponse;
   const msg = body.choices?.[0]?.message;
   return (msg?.content || msg?.reasoning_content || '').trim();
 }
@@ -528,7 +569,7 @@ async function handleEarlyGates(
       undefined,
       userAgentId,
     );
-    const sources = JSON.parse(cached.sources) as { title: string; score: number; slug?: string; url?: string }[];
+    const sources = parseSources(cached.sources);
     const elapsed = performance.now() - startTime;
     publishPersistent(chatId, 'done', {
       answer: cached.answer,
@@ -1020,15 +1061,9 @@ export async function startGeneration(
     if (text.startsWith('/summarize')) {
       ragChunks = [];
       const seen = new Set<string>();
-      sources = (ctxMessages as unknown as { role: string; sources?: string }[])
+      sources = ctxMessages
         .filter((m) => m.role === 'assistant' && m.sources)
-        .flatMap((m) => {
-          try {
-            return JSON.parse(m.sources!) as { title: string; score: number; slug?: string; url?: string }[];
-          } catch {
-            return [];
-          }
-        })
+        .flatMap((m) => parseSources(m.sources))
         .filter((s) => {
           if (!s.slug) return false;
           if (seen.has(s.slug)) return false;
@@ -1038,7 +1073,7 @@ export async function startGeneration(
         .map((s) => ({
           title: s.title,
           score: s.score,
-          slug: s.slug!,
+          slug: s.slug ?? '',
           url: s.url ?? '',
         }));
 

@@ -157,26 +157,34 @@ describe('buildRagPrompt', () => {
 
 describe('isAvailable', () => {
   it('returns false when API responds with non-OK status', async () => {
-    const mockFetch = mock(() => Promise.resolve({ ok: false, status: 401 }));
-    globalThis.fetch = mockFetch as unknown as typeof globalThis.fetch;
+    const mockFetch = mock((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(new Response(null, { status: 401 })),
+    );
+    Object.defineProperty(globalThis, 'fetch', { value: mockFetch, writable: true, configurable: true });
     expect(await isAvailable()).toBe(false);
   });
 
   it('returns false when fetch throws', async () => {
-    const mockFetch = mock(() => Promise.reject(new Error('network error')));
-    globalThis.fetch = mockFetch as unknown as typeof globalThis.fetch;
+    const mockFetch = mock((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.reject(new Error('network error')),
+    );
+    Object.defineProperty(globalThis, 'fetch', { value: mockFetch, writable: true, configurable: true });
     expect(await isAvailable()).toBe(false);
   });
 
   it('returns true when API responds OK', async () => {
-    const mockFetch = mock(() => Promise.resolve({ ok: true }));
-    globalThis.fetch = mockFetch as unknown as typeof globalThis.fetch;
+    const mockFetch = mock((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(new Response(null, { status: 200 })),
+    );
+    Object.defineProperty(globalThis, 'fetch', { value: mockFetch, writable: true, configurable: true });
     expect(await isAvailable()).toBe(true);
   });
 
   it('uses correct URL and auth header', async () => {
-    const mockFetch = mock(() => Promise.resolve({ ok: true }));
-    globalThis.fetch = mockFetch as unknown as typeof globalThis.fetch;
+    const mockFetch = mock((input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve(new Response(null, { status: 200 })),
+    );
+    Object.defineProperty(globalThis, 'fetch', { value: mockFetch, writable: true, configurable: true });
 
     await isAvailable();
 

@@ -1,6 +1,9 @@
 /**
  * Unified OpenAI-compatible LLM provider.
  * Uses Vercel AI SDK streamText + Effect.ts Stream for typed event streaming.
+ * 
+ * Type safety: Uses LLMEvent factory functions instead of type assertions.
+ * Primitive values extracted via String()/Number() instead of `as string`/`as number`.
  */
 import { config } from '$lib/server/config';
 import { CAT, createLogger } from './logger';
@@ -8,23 +11,89 @@ import { jsonSchema, streamText } from 'ai';
 import { Effect, Stream } from 'effect';
 import type { Stream as StreamType } from 'effect/Stream';
 import { provider, modelName } from './llm/provider';
-import type { LLMEvent } from './llm/types';
-import type { LanguageModel, ModelMessage, StreamTextOnErrorCallback, ToolSet } from 'ai';
+import type { LLMEvent, FinishReason, TokenUsage } from './llm/types';
+import type { ModelMessage, ToolSet } from 'ai';
 import type { McpToolCallResult } from './mcp/client';
 
-interface StreamTextOptions {
-  model: LanguageModel;
-  messages: Array<ModelMessage>;
-  system?: string;
-  allowSystemInMessages?: boolean;
-  abortSignal?: AbortSignal;
-  temperature?: number;
-  maxTokens?: number;
-  maxSteps?: number;
-  tools?: ToolSet;
-  onChunk?: (event: { chunk: Record<string, unknown> }) => void;
-  onError?: StreamTextOnErrorCallback;
-  onFinish?: (event: Record<string, unknown>) => void;
+/* ------------------------------------------------------------------ */
+/*  LLMEvent Factory Functions (type-safe constructors)                */
+/* ------------------------------------------------------------------ */
+
+function textDeltaEvent(text: string): LLMEvent {
+  return { type: 'text-delta', text };
+}
+
+function reasoningDeltaEvent(text: string): LLMEvent {
+  return { type: 'reasoning-delta', text };
+}
+
+function toolCallEvent(id: string, name: string, input: unknown): LLMEvent {
+  return { type: 'tool-call', id, name, input };
+}
+
+function toolResultEvent(id: string, name: string, result: unknown): LLMEvent {
+  return { type: 'tool-result', id, name, result };
+}
+
+function toolInputDeltaEvent(id: string, name: string, text: string): LLMEvent {
+  return { type: 'tool-input-delta', id, name, text };
+}
+
+function stepFinishEvent(
+  reason: FinishReason,
+  toolCalls: number,
+  textProduced: boolean,
+  usage?: TokenUsage,
+): LLMEvent {
+  return usage !== undefined
+    ? { type: 'step-finish', reason, toolCalls, textProduced, usage }
+    : { type: 'step-finish', reason, toolCalls, textProduced };
+}
+
+function finishEvent(
+  reason: FinishReason,
+  actualModelName: string,
+  providerUrl: string,
+  maxTokens: number,
+  usage?: TokenUsage,
+): LLMEvent {
+  return {
+    type: 'finish',
+    reason,
+    usage,
+    modelName: config().openai.model,
+    actualModelName,
+    provider: providerUrl,
+    maxTokens,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  ModelMessage Converter (type-safe ChatMessage -> ModelMessage)     */
+/* ------------------------------------------------------------------ */
+
+function toModelMessages(messages: ChatMessage[]): Array<ModelMessage> {
+  const result: Array<ModelMessage> = [];
+  for (const m of messages) {
+    switch (m.role) {
+      case 'system':
+        result.push({ role: 'system', content: m.content });
+        break;
+      case 'user':
+        result.push({ role: 'user', content: m.content });
+        break;
+      case 'assistant':
+        result.push({ role: 'assistant', content: m.content });
+        break;
+      case 'tool':
+        result.push({
+          role: 'tool',
+          content: [{ type: 'tool-result', toolCallId: m.tool_call_id ?? '', toolName: '', output: { type: 'text', value: m.content } }],
+        });
+        break;
+    }
+  }
+  return result;
 }
 
 const log = createLogger(CAT.llm);
@@ -56,6 +125,7 @@ const MODEL = config().openai.model;
 const MAX_TOKENS = config().openai.maxTokens;
 
 log.debug`[openai-provider] BASE_URL: ${BASE_URL} | MODEL: ${MODEL}`;
+
 /* ------------------------------------------------------------------ */
 /*  Model Instance                                                     */
 /* ------------------------------------------------------------------ */
@@ -194,10 +264,7 @@ function chatStreamWithTools(
               })
             : undefined;
 
-          const currentMessages = messages.map((m) => ({
-            role: m.role,
-            content: String(m.content ?? ''),
-          })) as Array<ModelMessage>;
+          const currentMessages = toModelMessages(messages);
 
           // Aggregated across all rounds
           let aggregatedUsage: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | undefined;
@@ -213,104 +280,79 @@ function chatStreamWithTools(
             let roundTextLength = 0;
             const roundToolResults: string[] = [];
 
-            const streamOptions: StreamTextOptions = {
-              model,
-              allowSystemInMessages: true,
-              messages: currentMessages,
-              abortSignal: signal,
-              temperature: 0.2,
-              ...(MAX_TOKENS !== undefined ? { maxTokens: MAX_TOKENS } : {}),
-              ...(toolSet ? { tools: toolSet, maxSteps: 1 } : {}),
-              onChunk: ({ chunk }) => {
-                if (aborted) return;
-                switch (chunk.type) {
-                  case 'text-delta':
-                    roundTextLength += (chunk.text as string).length;
-                    emit.single({ type: 'text-delta', text: chunk.text } as LLMEvent);
-                    break;
-                  case 'reasoning-delta':
-                    emit.single({ type: 'reasoning-delta', text: chunk.text } as LLMEvent);
-                    break;
-                  case 'tool-call':
-                    roundToolCalls++;
-                    emit.single({
-                      type: 'tool-call',
-                      id: chunk.toolCallId,
-                      name: chunk.toolName,
-                      input: chunk.args,
-                    } as LLMEvent);
-                    break;
-                  case 'tool-result':
-                    log.debug`[onChunk-tool-result] name=${chunk.toolName}, resultType=${typeof chunk.output}, resultLength=${typeof chunk.output === 'string' ? chunk.output.length : JSON.stringify(chunk.output).length}, full=${typeof chunk.output === 'string' ? chunk.output : JSON.stringify(chunk.output)}`;
-                    emit.single({
-                      type: 'tool-result',
-                      id: chunk.toolCallId,
-                      name: chunk.toolName,
-                      result: chunk.output,
-                    } as LLMEvent);
-                    // Collect tool result text for re-round context
-                    if (typeof chunk.output === 'string') {
-                      roundToolResults.push(chunk.output);
-                    } else if (chunk.output && typeof chunk.output === 'object') {
-                      try {
-                        const text = JSON.stringify(chunk.output).slice(0, 2000);
-                        roundToolResults.push(text);
-                      } catch {
-                        /* ignore */
-                      }
-                    }
-                    break;
-                  case 'tool-input-delta':
-                    emit.single({
-                      type: 'tool-input-delta',
-                      id: chunk.id,
-                      name: chunk.toolName as string,
-                      text: chunk.delta as string,
-                    } as LLMEvent);
-                    break;
-                  case 'error':
-                    log.error`[streamText] chunk error: ${chunk.error}`;
-                    if (!aborted) {
-                      emit.fail(chunk.error instanceof Error ? chunk.error : new Error(String(chunk.error)));
-                    }
-                    break;
-                }
-              },
-              onError: ({ error }: { error: unknown }) => {
-                log.error`[first-round-error] ${error instanceof Error ? error.message : String(error)} stack=${error instanceof Error ? error.stack : 'N/A'}`;
-              },
-              onFinish: (event: Record<string, unknown>) => {
-                lastFinishReason = event.finishReason as string;
-                const finishResponse = event.response as Record<string, unknown> | undefined;
-                if (finishResponse?.modelId) {
-                  actualModelName = finishResponse.modelId as string;
-                }
-                const finishUsage = event.usage as Record<string, unknown> | undefined;
-                if (finishUsage) {
-                  aggregatedUsage = {
-                    inputTokens: (aggregatedUsage?.inputTokens ?? 0) + ((finishUsage.promptTokens as number) ?? 0),
-                    outputTokens: (aggregatedUsage?.outputTokens ?? 0) + ((finishUsage.completionTokens as number) ?? 0),
-                    totalTokens: (aggregatedUsage?.totalTokens ?? 0) + ((finishUsage.totalTokens as number) ?? 0),
-                  };
-                }
-              },
-            };
-
             return new Promise<void>((resolve, reject) => {
               try {
-                const result = streamText(streamOptions);
+                const result = streamText({
+                  model,
+                  allowSystemInMessages: true,
+                  messages: currentMessages,
+                  abortSignal: signal,
+                  temperature: 0.2,
+                  ...(MAX_TOKENS !== undefined ? { maxTokens: MAX_TOKENS } : {}),
+                  ...(toolSet ? { tools: toolSet, maxSteps: 1 } : {}),
+                  onChunk: ({ chunk }) => {
+                    if (aborted) return;
+                    switch (chunk.type) {
+                      case 'text-delta':
+                        roundTextLength += chunk.text.length;
+                        emit.single(textDeltaEvent(chunk.text));
+                        break;
+                      case 'reasoning-delta':
+                        emit.single(reasoningDeltaEvent(chunk.text));
+                        break;
+                      case 'tool-call':
+                        roundToolCalls++;
+                        emit.single(toolCallEvent(chunk.toolCallId, chunk.toolName, chunk.input));
+                        break;
+                      case 'tool-result':
+                        log.debug`[onChunk-tool-result] name=${chunk.toolName}, resultType=${typeof chunk.output}, resultLength=${typeof chunk.output === 'string' ? chunk.output.length : JSON.stringify(chunk.output).length}, full=${typeof chunk.output === 'string' ? chunk.output : JSON.stringify(chunk.output)}`;
+                        emit.single(toolResultEvent(chunk.toolCallId, chunk.toolName, chunk.output));
+                        if (typeof chunk.output === 'string') {
+                          roundToolResults.push(chunk.output);
+                        } else if (chunk.output && typeof chunk.output === 'object') {
+                          try {
+                            const text = JSON.stringify(chunk.output).slice(0, 2000);
+                            roundToolResults.push(text);
+                          } catch {
+                            /* ignore */
+                          }
+                        }
+                        break;
+                      case 'tool-input-delta':
+                        emit.single(toolInputDeltaEvent(chunk.id, '', chunk.delta));
+                        break;
+                    }
+                  },
+                  onError: ({ error }: { error: unknown }) => {
+                    log.error`[first-round-error] ${error instanceof Error ? error.message : String(error)} stack=${error instanceof Error ? error.stack : 'N/A'}`;
+                  },
+                  onFinish: (event) => {
+                    lastFinishReason = String(event.finishReason);
+                    if (event.response?.modelId) {
+                      actualModelName = String(event.response.modelId);
+                    }
+                    if (event.usage) {
+                      aggregatedUsage = {
+                        inputTokens: (aggregatedUsage?.inputTokens ?? 0) + Number(event.usage.inputTokens ?? 0),
+                        outputTokens: (aggregatedUsage?.outputTokens ?? 0) + Number(event.usage.outputTokens ?? 0),
+                        totalTokens: (aggregatedUsage?.totalTokens ?? 0) + Number((event.usage.inputTokens ?? 0) + (event.usage.outputTokens ?? 0)),
+                      };
+                    }
+                  },
+                });
                 Promise.resolve(result.text)
                   .then(() => {
                     try {
                       if (aborted) return resolve();
 
-                      emit.single({
-                        type: 'step-finish',
-                        reason: mapFinishReason(lastFinishReason),
-                        toolCalls: roundToolCalls,
-                        textProduced: roundTextLength > 0,
-                        usage: aggregatedUsage,
-                      } as unknown as LLMEvent);
+                      emit.single(
+                        stepFinishEvent(
+                          mapFinishReason(lastFinishReason),
+                          roundToolCalls,
+                          roundTextLength > 0,
+                          aggregatedUsage,
+                        ),
+                      );
 
                       if (roundToolCalls > 0 && round < MAX_ROUNDS) {
                         log.info`[synthesis-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round with results`;
@@ -344,13 +386,13 @@ function chatStreamWithTools(
                             temperature: 0.2,
                             ...(MAX_TOKENS !== undefined ? { maxOutputTokens: MAX_TOKENS } : {}),
                             allowSystemInMessages: true,
-                            onChunk: ({ chunk }: { chunk: Record<string, unknown> }) => {
+                            onChunk: ({ chunk }) => {
                               if (aborted) return;
                               if (chunk.type === 'text-delta') {
-                                roundTextLength += (chunk.text as string).length;
-                                emit.single({ type: 'text-delta', text: chunk.text } as LLMEvent);
+                                roundTextLength += chunk.text.length;
+                                emit.single(textDeltaEvent(chunk.text));
                               } else if (chunk.type === 'reasoning-delta') {
-                                emit.single({ type: 'reasoning-delta', text: chunk.text } as LLMEvent);
+                                emit.single(reasoningDeltaEvent(chunk.text));
                               }
                             },
                             onError: ({ error: err }: { error: unknown }) => {
@@ -366,12 +408,7 @@ function chatStreamWithTools(
                             .then(() => {
                               try {
                                 // Emit real step-finish reflecting synthesis outcome
-                                emit.single({
-                                  type: 'step-finish',
-                                  reason: 'stop',
-                                  toolCalls: 0,
-                                  textProduced: roundTextLength > 0,
-                                } as unknown as LLMEvent);
+                                emit.single(stepFinishEvent('stop', 0, roundTextLength > 0));
                                 resolve();
                               } catch (e: unknown) {
                                 reject(e);
@@ -379,12 +416,10 @@ function chatStreamWithTools(
                             })
                             .catch((err: unknown) => {
                               if (aborted) return resolve();
-                              const errWithCode = err as { code?: string; message?: string; stack?: string; name?: string };
-                              const errorMsg = errWithCode.message || String(err);
-                              const errorStack = errWithCode.stack || new Error().stack;
-                              const errorName = errWithCode.name || typeof err;
-                              const errorCode = errWithCode.code || 'N/A';
-                              log.error`[synthesis-crash] errorName=${errorName} message=${errorMsg} code=${errorCode}`;
+                              const errorMsg = err instanceof Error ? err.message : String(err);
+                              const errorStack = err instanceof Error ? err.stack : new Error().stack;
+                              const errorName = err instanceof Error ? err.name : typeof err;
+                              log.error`[synthesis-crash] errorName=${errorName} message=${errorMsg} code=N/A`;
                               log.error`[synthesis-crash-stack] ${errorStack}`;
                               reject(err);
                             });
@@ -413,15 +448,15 @@ function chatStreamWithTools(
               if (aborted) return;
               aborted = true;
 
-              emit.single({
-                type: 'finish' as const,
-                reason: mapFinishReason(lastFinishReason),
-                usage: aggregatedUsage,
-                modelName: config().openai.model,
-                actualModelName,
-                provider: BASE_URL,
-                maxTokens: MAX_TOKENS,
-              } as LLMEvent);
+              emit.single(
+                finishEvent(
+                  mapFinishReason(lastFinishReason),
+                  actualModelName,
+                  BASE_URL,
+                  MAX_TOKENS ?? 0,
+                  aggregatedUsage,
+                ),
+              );
               emit.end();
             })
             .catch((err: unknown) => {
@@ -448,7 +483,7 @@ function chatStreamWithTools(
 /*  Finish Reason Mapping                                              */
 /* ------------------------------------------------------------------ */
 
-function mapFinishReason(reason: string): 'stop' | 'tool-calls' | 'error' | 'length' | 'unknown' {
+function mapFinishReason(reason: string): FinishReason {
   switch (reason) {
     case 'stop':
       return 'stop';

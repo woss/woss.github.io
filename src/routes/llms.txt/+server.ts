@@ -12,8 +12,7 @@ function formatMeta(meta: Record<string, unknown>): string[] {
       lines.push(`${key}:`);
       for (const item of val) {
         if (typeof item === 'object' && item !== null) {
-          const obj = item as Record<string, unknown>;
-          const entries = Object.entries(obj);
+          const entries = Object.entries(item);
           if (entries.length > 0) {
             const [firstKey, firstVal] = entries[0];
             lines.push(`  - ${firstKey}: ${firstVal}`);

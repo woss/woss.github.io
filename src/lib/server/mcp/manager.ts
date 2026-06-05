@@ -56,6 +56,37 @@ export type McpPromptMessage = {
 };
 
 /* ------------------------------------------------------------------ */
+/*  Helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Safely convert an unknown value to Record<string, unknown> | undefined.
+ * Returns undefined for null, arrays, and non-objects.
+ */
+function toRecord(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value)) {
+    result[key] = val;
+  }
+  return result;
+}
+
+/**
+ * Extract type/text fields from MCP content items without type casts.
+ * Each item is checked at runtime for shape before field access.
+ */
+function parseMcpContent(content: unknown[]): Array<{ type?: string; text?: string }> {
+  return content.map((item) => {
+    if (typeof item !== 'object' || item === null) return {};
+    return {
+      type: 'type' in item && typeof item.type === 'string' ? item.type : undefined,
+      text: 'text' in item && typeof item.text === 'string' ? item.text : undefined,
+    };
+  });
+}
+
+/* ------------------------------------------------------------------ */
 /*  Noop JSON Schema Validator                                         */
 /* ------------------------------------------------------------------ */
 
@@ -69,6 +100,8 @@ class NoopValidator implements jsonSchemaValidator {
   getValidator<T>(_schema: JsonSchemaType): JsonSchemaValidator<T> {
     return (input: unknown) => ({
       valid: true as const,
+      // Intentional: no-op validator trusts all input as type T.
+      // This `as T` is the entire point — we skip validation and accept the type assertion.
       data: input as T,
       errorMessage: undefined,
     });
@@ -155,7 +188,7 @@ export class McpManager {
             name: tool.name,
             serverId,
             description: tool.description,
-            inputSchema: tool.inputSchema as Record<string, unknown> | undefined,
+            inputSchema: toRecord(tool.inputSchema),
           });
           nameCounts.set(tool.name, (nameCounts.get(tool.name) ?? 0) + 1);
         }
@@ -280,7 +313,7 @@ export class McpManager {
 
     log.debug`[mcp/manager] executeTool ${resolvedName} response: content.length=${result.content.length}, isError=${result.isError}`;
 
-    let contentItems = result.content as Array<{ type?: string; text?: string }>;
+    let contentItems = parseMcpContent(result.content);
     if (result.isError) {
       const errText = contentItems
         .filter((c) => c.type === 'text')

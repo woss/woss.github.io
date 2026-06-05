@@ -34,7 +34,7 @@ export async function GET(event: RequestEvent): Promise<Response> {
       try {
         const events = getChatEventsSince(chatId, lastEventId).filter((evt) => {
           // Don't replay irrecoverable errors if chat is no longer locked
-          if (evt.type === 'error' && (evt.data as Record<string, unknown>)?.irrecoverable === true) {
+          if (evt.type === 'error' && typeof evt.data === 'object' && evt.data !== null && 'irrecoverable' in evt.data && evt.data.irrecoverable === true) {
             if (!isChatLocked(chatId)) return false;
           }
           return true;

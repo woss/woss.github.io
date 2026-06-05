@@ -1,6 +1,15 @@
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { getMessages, getChatMessageCount, lockChat, isChatLocked, addMessage, getOrCreateUserAgent, deleteChat, getChat } from '$lib/server/db';
+import {
+  getMessages,
+  getChatMessageCount,
+  lockChat,
+  isChatLocked,
+  addMessage,
+  getOrCreateUserAgent,
+  deleteChat,
+  getChat,
+} from '$lib/server/db';
 import { config as clientConfig } from '$lib/config';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { isAvailable } from '$lib/server/llm';
@@ -26,13 +35,13 @@ export const actions: Actions = {
     if (!chatId) return fail(400, { error: 'chatId required' });
 
     const fd = await event.request.formData();
-    const text = sanitizeText((fd.get('text') as string) || '');
-    const userId = fd.get('userId') as string;
+    const text = sanitizeText(String(fd.get('text') ?? ''));
+    const userId = String(fd.get('userId') ?? '');
 
     if (!text) return fail(400, { error: 'text is required' });
     if (text.length > 500) return fail(400, { error: 'text must be 500 characters or fewer' });
 
-    let maxChunks = parseInt((fd.get('maxChunks') as string) || '6', 10);
+    let maxChunks = parseInt(String(fd.get('maxChunks') ?? '6'), 10);
     if (!Number.isInteger(maxChunks) || maxChunks < 1 || maxChunks > 20) maxChunks = 6;
 
     if (!userId || typeof userId !== 'string') return fail(400, { error: 'userId required' });
@@ -40,7 +49,10 @@ export const actions: Actions = {
     const msgCount = getChatMessageCount(chatId);
     if (msgCount >= clientConfig.public.maxMessages) {
       lockChat(chatId);
-      return fail(400, { error: `Chat has reached maximum of ${clientConfig.public.maxMessages} messages`, locked: true });
+      return fail(400, {
+        error: `Chat has reached maximum of ${clientConfig.public.maxMessages} messages`,
+        locked: true,
+      });
     }
 
     const ip = getClientIP(event);
@@ -59,10 +71,17 @@ export const actions: Actions = {
       userId,
       'user',
       text,
-      undefined, undefined, chatId,
-      undefined, undefined, undefined,
-      undefined, undefined, undefined,
-      undefined, undefined,
+      undefined,
+      undefined,
+      chatId,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
       userAgentId,
     );
 
@@ -76,7 +95,7 @@ export const actions: Actions = {
     if (!chatId) return fail(400, { error: 'chatId required' });
 
     const fd = await event.request.formData();
-    const userId = fd.get('userId') as string;
+    const userId = String(fd.get('userId') ?? '');
     if (!userId) return fail(400, { error: 'userId required' });
 
     const chat = getChat(chatId);
@@ -93,9 +112,9 @@ export const actions: Actions = {
     if (!chatId) return fail(400, { error: 'chatId required' });
 
     const fd = await event.request.formData();
-    const userId = fd.get('userId') as string;
-    const role = fd.get('role') as string;
-    const content = fd.get('content') as string;
+    const userId = String(fd.get('userId') ?? '');
+    const role = String(fd.get('role') ?? '');
+    const content = String(fd.get('content') ?? '');
 
     if (!userId) return fail(400, { error: 'userId required' });
     if (!role) return fail(400, { error: 'role required' });
@@ -114,11 +133,13 @@ export const actions: Actions = {
 
 export const load: PageServerLoad = async ({ params }) => {
   const chatId = params.id;
-  if (!chatId) { error(400, 'chatId required'); }
+  if (!chatId) {
+    error(400, 'chatId required');
+  }
   const storedMessages = getMessages(chatId, 50, 0);
   const messages = storedMessages.map((m) => ({
     id: m.id,
-    role: m.role === 'system' ? 'assistant' : (m.role as 'user' | 'assistant'),
+    role: m.role === 'system' ? 'assistant' : m.role === 'user' ? 'user' : 'assistant',
     text: m.content || '',
     sources: m.sources ? JSON.parse(m.sources) : undefined,
     reasoning: m.reasoning || undefined,
