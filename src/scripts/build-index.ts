@@ -240,12 +240,13 @@ async function buildIndex(): Promise<void> {
   log.info`Content files: ${fileEntries.length}`;
 
   // 2. Read stored hashes from previous build
-  const storedHashes = new Map<string, string>(
-    (db.prepare('SELECT slug, hash FROM page_content').all() as { slug: string; hash: string }[]).map((r) => [
-      r.slug,
-      r.hash,
-    ]),
-  );
+  const storedHashes = new Map<string, string>();
+  for (const row of db.prepare('SELECT slug, hash FROM page_posts').all() as { slug: string; hash: string }[]) {
+    storedHashes.set(row.slug, row.hash);
+  }
+  for (const row of db.prepare('SELECT slug, hash FROM page_experience').all() as { slug: string; hash: string }[]) {
+    storedHashes.set(row.slug, row.hash);
+  }
 
   // 3. Compare — only unchanged files can be skipped
   const changedEntries: FileEntry[] = [];
@@ -283,7 +284,8 @@ async function buildIndex(): Promise<void> {
 
   // 5. Delete obsolete chunks
   const deleteChunks = db.prepare('DELETE FROM chunks WHERE chunk_id LIKE ?');
-  const deletePageContent = db.prepare('DELETE FROM page_content WHERE slug = ?');
+  const deletePagePost = db.prepare('DELETE FROM page_posts WHERE slug = ?');
+  const deletePageExperience = db.prepare('DELETE FROM page_experience WHERE slug = ?');
 
   for (const entry of changedEntries) {
     deleteChunks.run(`${entry.slug}_chunk_%`);
@@ -291,7 +293,8 @@ async function buildIndex(): Promise<void> {
 
   for (const slug of removedSlugs) {
     deleteChunks.run(`${slug}_chunk_%`);
-    deletePageContent.run(slug);
+    deletePagePost.run(slug);
+    deletePageExperience.run(slug);
     log.debug`  removed: ${slug}`;
   }
 
@@ -362,33 +365,43 @@ async function buildIndex(): Promise<void> {
         processedEndDate = rawEnd instanceof Date ? rawEnd.toISOString() : (rawEnd as string | null) || null;
       }
 
-      // Save full content to page_content table
+      // Save full content to page_posts or page_experience table
       const toc = JSON.stringify(extractToc(content || raw));
-      db.prepare(
-        `INSERT OR REPLACE INTO page_content (slug, type, hash, content, meta, featured, toc, title, description, date, tags, published, excerpt, header_image, position, company, role, start_date, end_date, duration, skills, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-      ).run(
-        entry.slug,
-        entry.type,
-        entry.hash,
-        content || raw,
-        JSON.stringify(data),
-        data.featured ? 1 : 0,
-        toc,
-        title,
-        data.description ?? '',
-        date,
-        JSON.stringify(tags),
-        data.published !== false ? 1 : 0,
-        data.excerpt ?? '',
-        JSON.stringify(data.header_image ?? null),
-        data.position ?? null,
-        data.company ?? '',
-        data.role ?? '',
-        processedStartDate,
-        processedEndDate,
-        data.duration ?? '',
-        JSON.stringify(data.skills ?? []),
-      );
+      if (entry.type === 'post') {
+        db.prepare(
+          `INSERT OR REPLACE INTO page_posts (slug, hash, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        ).run(
+          entry.slug,
+          entry.hash,
+          content || raw,
+          toc,
+          title,
+          data.description ?? '',
+          date,
+          JSON.stringify(tags),
+          data.published !== false ? 1 : 0,
+          data.excerpt ?? '',
+          JSON.stringify(data.header_image ?? null),
+          data.featured ? 1 : 0,
+          data.position ?? null,
+        );
+      } else {
+        db.prepare(
+          `INSERT OR REPLACE INTO page_experience (slug, hash, content, company, role, start_date, end_date, duration, skills, description, published, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+        ).run(
+          entry.slug,
+          entry.hash,
+          content || raw,
+          data.company ?? '',
+          data.role ?? '',
+          processedStartDate,
+          processedEndDate,
+          data.duration ?? '',
+          JSON.stringify(data.skills ?? []),
+          data.description ?? '',
+          data.published !== false ? 1 : 0,
+        );
+      }
       const item: ContentItem = {
         slug: entry.slug,
         title,

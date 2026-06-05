@@ -627,21 +627,17 @@ function clearChatMessages(chatId: string): void {
 }
 
 /**
- * Get page content entries, optionally filtered by type.
- * Parses the meta JSON column into a Record.
+ * Get page posts, optionally filtered by slug.
  */
-function getPageContent(
-  type?: string,
+function getPosts(
   slug?: string,
-): { slug: string; type: string; content: string; meta: Record<string, unknown>; featured: boolean; toc: { id: string; text: string; level: number }[]; title: string; description: string; date: string | null; tags: string[]; published: boolean; excerpt: string; headerImage: { alt: string; url: string } | null; position: number | null; company: string; role: string; startDate: string | null; endDate: string | null; duration: string; skills: string[] }[] {
+): { slug: string; content: string; toc: { id: string; text: string; level: number }[]; title: string; description: string; date: string | null; tags: string[]; published: boolean; excerpt: string; headerImage: { alt: string; url: string } | null; featured: boolean; position: number | null }[] {
   const db = getDb();
   let rows;
-  if (type && slug) {
-    rows = db.prepare('SELECT slug, type, content, meta, featured, toc, title, description, date, tags, published, excerpt, header_image, position, company, role, start_date, end_date, duration, skills FROM page_content WHERE type = ? AND slug = ?').all(type, slug);
-  } else if (type) {
-    rows = db.prepare('SELECT slug, type, content, meta, featured, toc, title, description, date, tags, published, excerpt, header_image, position, company, role, start_date, end_date, duration, skills FROM page_content WHERE type = ?').all(type);
+  if (slug) {
+    rows = db.prepare('SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts WHERE slug = ?').all(slug);
   } else {
-    rows = db.prepare('SELECT slug, type, content, meta, featured, toc, title, description, date, tags, published, excerpt, header_image, position, company, role, start_date, end_date, duration, skills FROM page_content').all();
+    rows = db.prepare('SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts').all();
   }
   return (rows as Record<string, unknown>[]).map((r) => {
     let toc: { id: string; text: string; level: number }[] = [];
@@ -651,10 +647,7 @@ function getPageContent(
     } catch { /* ignore parse errors */ }
     return {
       slug: String(r.slug),
-      type: String(r.type),
       content: String(r.content),
-      meta: JSON.parse(String(r.meta)),
-      featured: Number(r.featured) === 1,
       toc,
       title: String(r.title ?? ''),
       description: String(r.description ?? ''),
@@ -663,15 +656,37 @@ function getPageContent(
       published: r.published !== 0,
       excerpt: String(r.excerpt ?? ''),
       headerImage: JSON.parse(String(r.header_image ?? 'null')) as { alt: string; url: string } | null,
+      featured: Number(r.featured) === 1,
       position: r.position != null ? Number(r.position) : null,
-      company: String(r.company ?? ''),
-      role: String(r.role ?? ''),
-      startDate: r.start_date ? String(r.start_date) : null,
-      endDate: r.end_date ? String(r.end_date) : null,
-      duration: String(r.duration ?? ''),
-      skills: JSON.parse(String(r.skills ?? '[]')),
     };
   });
+}
+
+/**
+ * Get page experience entries, optionally filtered by slug.
+ */
+function getExperience(
+  slug?: string,
+): { slug: string; content: string; company: string; role: string; startDate: string | null; endDate: string | null; duration: string; skills: string[]; description: string; published: boolean }[] {
+  const db = getDb();
+  let rows;
+  if (slug) {
+    rows = db.prepare('SELECT slug, content, company, role, start_date, end_date, duration, skills, description, published FROM page_experience WHERE slug = ?').all(slug);
+  } else {
+    rows = db.prepare('SELECT slug, content, company, role, start_date, end_date, duration, skills, description, published FROM page_experience').all();
+  }
+  return (rows as Record<string, unknown>[]).map((r) => ({
+    slug: String(r.slug),
+    content: String(r.content),
+    company: String(r.company ?? ''),
+    role: String(r.role ?? ''),
+    startDate: r.start_date ? String(r.start_date) : null,
+    endDate: r.end_date ? String(r.end_date) : null,
+    duration: String(r.duration ?? ''),
+    skills: JSON.parse(String(r.skills ?? '[]')),
+    description: String(r.description ?? ''),
+    published: r.published !== 0,
+  }));
 }
 
 /* ------------------------------------------------------------------ */
@@ -729,7 +744,8 @@ export {
   setReaction,
   getReaction,
   deleteReaction,
-  getPageContent,
+  getPosts,
+  getExperience,
   createChat,
   getChats,
   getChat,

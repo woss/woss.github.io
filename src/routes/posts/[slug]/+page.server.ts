@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import { getPageContent } from '$lib/server/db';
+import { getPosts } from '$lib/server/db';
 import { renderMarkdown } from '$lib/server/markdown';
 
 type HeaderImage = { alt: string; url: string } | null;
@@ -7,7 +7,7 @@ type HeaderImage = { alt: string; url: string } | null;
 export async function load({ params }: { params: Record<string, string> }) {
   const { slug } = params;
 
-  const allPosts = getPageContent('post');
+  const allPosts = getPosts();
   const currentRaw = allPosts.find((p) => p.slug === slug);
   if (!currentRaw) {
     throw error(404, 'Post not found');

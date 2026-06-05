@@ -1,4 +1,4 @@
-import { getPageContent } from '$lib/server/db';
+import { getExperience } from '$lib/server/db';
 
 function formatMeta(meta: Record<string, unknown>): string[] {
   const lines: string[] = [];
@@ -35,7 +35,7 @@ function formatMeta(meta: Record<string, unknown>): string[] {
 }
 
 export async function GET(): Promise<Response> {
-  const entries = getPageContent('experience');
+  const entries = getExperience();
 
   // Sort: current first, then by startDate descending
   entries.sort((a, b) => {

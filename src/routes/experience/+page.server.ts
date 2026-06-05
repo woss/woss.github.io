@@ -1,8 +1,8 @@
-import { getPageContent } from '$lib/server/db';
+import { getExperience } from '$lib/server/db';
 import type { ExperienceEntry } from '$content/index';
 
 export async function load() {
-  const records = getPageContent('experience');
+  const records = getExperience();
 
   const entries: ExperienceEntry[] = records.map((r) => {
     const description = r.description || r.content.trim();

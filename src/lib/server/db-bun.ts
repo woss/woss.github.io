@@ -49,6 +49,8 @@ function resetDatabase(): void {
   const db = new Database(DB_PATH);
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('DROP TABLE IF EXISTS chunks');
+  db.exec('DROP TABLE IF EXISTS page_posts');
+  db.exec('DROP TABLE IF EXISTS page_experience');
   db.exec('DROP TABLE IF EXISTS page_content');
   db.close();
 }

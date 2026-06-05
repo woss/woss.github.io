@@ -1,13 +1,13 @@
 import { error, fail } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
-import { getPageContent, insertLead, updateUserContact, createChat, getChat, deleteChat, getUserChatCount, getOrCreateUserAgent } from '$lib/server/db';
+import { getPosts, insertLead, updateUserContact, createChat, getChat, deleteChat, getUserChatCount, getOrCreateUserAgent } from '$lib/server/db';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { callWebhook } from '$lib/server/webhooks';
 import { CAT, createLogger } from '$lib/server/logger';
 import { config } from '$lib/config';
 
 export async function load() {
-  const allPosts = getPageContent('post');
+  const allPosts = getPosts();
 
   const heroPage = allPosts.find(p => p.slug === 'new-woss-io');
   const hero = heroPage

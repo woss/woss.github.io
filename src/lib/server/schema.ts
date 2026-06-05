@@ -45,13 +45,35 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
 
-CREATE TABLE IF NOT EXISTS page_content (
+CREATE TABLE IF NOT EXISTS page_posts (
   slug TEXT PRIMARY KEY,
-  type TEXT NOT NULL,
   hash TEXT NOT NULL DEFAULT '',
-  featured INTEGER NOT NULL DEFAULT 0,
   content TEXT NOT NULL,
-  meta TEXT NOT NULL DEFAULT '{}',
+  toc TEXT NOT NULL DEFAULT '[]',
+  title TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  date TEXT,
+  tags TEXT NOT NULL DEFAULT '[]',
+  published INTEGER NOT NULL DEFAULT 1,
+  excerpt TEXT NOT NULL DEFAULT '',
+  header_image TEXT NOT NULL DEFAULT 'null',
+  featured INTEGER NOT NULL DEFAULT 0,
+  position INTEGER,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS page_experience (
+  slug TEXT PRIMARY KEY,
+  hash TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL,
+  company TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT '',
+  start_date TEXT,
+  end_date TEXT,
+  duration TEXT NOT NULL DEFAULT '',
+  skills TEXT NOT NULL DEFAULT '[]',
+  description TEXT NOT NULL DEFAULT '',
+  published INTEGER NOT NULL DEFAULT 1,
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -389,78 +411,4 @@ export function initDatabase(db: Database): void {
     `);
   }
 
-  // 17. Merge content_files into page_content — add hash column, drop content_files
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN hash TEXT NOT NULL DEFAULT ''`);
-  } catch {
-    /* exists */
-  }
-  try {
-    db.exec(`UPDATE page_content SET hash = (SELECT cf.hash FROM content_files cf WHERE cf.slug = page_content.slug)`);
-  } catch {
-    /* content_files might not exist already */
-  }
-  try {
-    db.exec(`DROP TABLE IF EXISTS content_files`);
-  } catch {
-    /* already dropped */
-  }
-
-  // 18. Featured flag on page_content (for homepage cards)
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN featured INTEGER NOT NULL DEFAULT 0`);
-  } catch {
-    /* exists */
-  }
-
-  // 19. TOC column on page_content (table of contents for blog posts)
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN toc TEXT NOT NULL DEFAULT '[]'`);
-  } catch {
-    /* exists */
-  }
-
-  // 20. Extract meta keys to dedicated columns on page_content
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN title TEXT NOT NULL DEFAULT ''`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN description TEXT NOT NULL DEFAULT ''`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN date TEXT`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN published INTEGER NOT NULL DEFAULT 1`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN excerpt TEXT NOT NULL DEFAULT ''`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN header_image TEXT NOT NULL DEFAULT 'null'`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN position INTEGER`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN company TEXT NOT NULL DEFAULT ''`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN role TEXT NOT NULL DEFAULT ''`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN start_date TEXT`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN end_date TEXT`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN duration TEXT NOT NULL DEFAULT ''`);
-  } catch { /* exists */ }
-  try {
-    db.exec(`ALTER TABLE page_content ADD COLUMN skills TEXT NOT NULL DEFAULT '[]'`);
-  } catch { /* exists */ }
 }
