@@ -5,10 +5,9 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import GithubSlugger from 'github-slugger';
-import { Index } from 'usearch';
+import { Index, MetricKind, ScalarKind } from 'usearch';
 import { parseFrontmatter } from '../content/index.ts';
-import { SEARCH_INDEX_CONFIG } from '../lib/search-config.ts';
-import { closeDb, getDb, resetDatabase } from '../lib/server/db-bun.ts';
+import { getDb, closeDb } from '../lib/server/db.ts';
 import { embedTexts, releaseExtractor } from '../lib/server/embed.ts';
 import { chunkContent } from './chunk-content.ts';
 import { initLogger, CAT, createLogger } from '../lib/server/logger.ts';
@@ -214,6 +213,17 @@ export async function processFile(file: ContentItem, chunkOffset: number): Promi
   }
 
   return { rows, indexKeys };
+}
+
+// ---------------------------------------------------------------------------
+// Database helpers
+// ---------------------------------------------------------------------------
+
+function resetDatabase(): void {
+  const db = getDb();
+  db.exec('DELETE FROM chunks');
+  db.exec('DELETE FROM page_posts');
+  db.exec('DELETE FROM page_experience');
 }
 
 // ---------------------------------------------------------------------------
@@ -456,7 +466,15 @@ async function buildIndex(): Promise<void> {
   await releaseExtractor();
 
   // 8. Rebuild USearch index from all SQLite rows (streaming)
-  const index: Index = new Index(SEARCH_INDEX_CONFIG);
+  const index: Index = new Index({
+    dimensions: 1024,
+    metric: MetricKind.Cos,
+    quantization: ScalarKind.BF16,
+    connectivity: 16,
+    expansion_add: 128,
+    expansion_search: 200,
+    multi: false,
+  });
   let rowCount = 0;
   const iter: IterableIterator<unknown> = db.prepare('SELECT id, embedding FROM chunks').iterate();
   for (const rawRow of iter) {
@@ -466,7 +484,7 @@ async function buildIndex(): Promise<void> {
     index.add(BigInt(id), new Float32Array(embedding));
     rowCount++;
     // Allow GC to reclaim per-row allocations
-    if (rowCount % 100 === 0) await Bun.sleep(0);
+    if (rowCount % 100 === 0) await new Promise(resolve => setTimeout(resolve, 0));
   }
 
   if (rowCount === 0) {
@@ -477,8 +495,7 @@ async function buildIndex(): Promise<void> {
 
   index.save(INDEX_PATH);
 
-  // Force GC to release native USearch memory immediately — index is persisted to disk
-  Bun.gc(true);
+  // Index is persisted to disk; native USearch memory will be released when the process exits
 
   log.info`\nSaved USearch index (${rowCount} vectors) to ${INDEX_PATH}`;
   log.info`${JSON.stringify({

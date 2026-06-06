@@ -654,7 +654,7 @@ async function streamWithRetry(
   const db = getDb();
   const msgId = crypto.randomUUID();
   const toolCallStmt = db.prepare(
-    `INSERT INTO tool_calls (id, message_id, name, server_id, input) VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO tool_calls (id, message_id, name, server_id, tool_input) VALUES (?, ?, ?, ?, ?)`,
   );
   const toolCallFinishStmt = db.prepare(
     `UPDATE tool_calls SET finished_at = datetime('now'), result_size = ? WHERE id = ?`,

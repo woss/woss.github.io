@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { Index } from 'usearch';
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { SEARCH_INDEX_CONFIG } from '../search-config.ts';
-import { CAT, createLogger } from './logger';
+import { CAT, createLogger } from './logger.ts';
 import { initDatabase, DATA_DIR, DB_PATH, DB_WAL_PATH, DB_SHM_PATH, VECTOR_INDEX_PATH } from './schema.ts';
 
 /** Typed wrapper around better-sqlite3 .all() — avoids scattering `as Record<string, unknown>[]` everywhere. */
@@ -174,10 +174,11 @@ function searchChunks(embedding: number[], limit: number = 10, typeFilter?: 'pos
   // Batch-fetch all chunks in one query instead of N individual lookups
   const rowIds = Array.from(keys, Number);
   const placeholders = rowIds.map(() => '?').join(',');
-  const rawRows = queryRows<Record<string, unknown>>(db.prepare(`SELECT * FROM chunks WHERE id IN (${placeholders})`), ...rowIds);
-  const rowMap = new Map<number, Record<string, unknown>>(
-    rawRows.map((row) => [Number(row.id), row]),
+  const rawRows = queryRows<Record<string, unknown>>(
+    db.prepare(`SELECT * FROM chunks WHERE id IN (${placeholders})`),
+    ...rowIds,
   );
+  const rowMap = new Map<number, Record<string, unknown>>(rawRows.map((row) => [Number(row.id), row]));
 
   const results: SearchResult[] = [];
   for (let i = 0; i < keys.length; i++) {
@@ -510,7 +511,9 @@ function getMessages(chatId: string, limit: number = 50, offset: number = 0): St
     db.prepare(
       'SELECT id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, created_at, model_id, tokens_in, tokens_out, duration_ms, max_tokens, deleted_at FROM messages WHERE chat_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
     ),
-    chatId, limit, offset,
+    chatId,
+    limit,
+    offset,
   );
 
   return rows.map((row) => parseStoredMessage(row));
@@ -525,7 +528,9 @@ function getMessagesByUserId(userId: string, limit: number = 50, offset: number 
     db.prepare(
       'SELECT id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, created_at, model_id, tokens_in, tokens_out, duration_ms, max_tokens, deleted_at FROM messages WHERE user_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
     ),
-    userId, limit, offset,
+    userId,
+    limit,
+    offset,
   );
 
   return rows.map((row) => parseStoredMessage(row));
@@ -595,8 +600,11 @@ function getChatEventsSince(
 ): { id: number; chatId: string; type: string; data: unknown; createdAt: string }[] {
   const db = getDb();
   const rows = queryRows<Record<string, unknown>>(
-    db.prepare('SELECT id, chat_id, type, data, created_at FROM chat_events WHERE chat_id = ? AND id > ? ORDER BY id ASC'),
-    chatId, lastEventId,
+    db.prepare(
+      'SELECT id, chat_id, type, data, created_at FROM chat_events WHERE chat_id = ? AND id > ? ORDER BY id ASC',
+    ),
+    chatId,
+    lastEventId,
   );
   return rows.map((r) => ({
     id: Number(r.id),
@@ -634,7 +642,8 @@ function getReaction(messageId: string, userId: string): { type: 'up' | 'down' |
   const db = getDb();
   const row = queryRow<Record<string, unknown>>(
     db.prepare('SELECT reaction_type, reason FROM reactions WHERE message_id = ? AND user_id = ?'),
-    messageId, userId,
+    messageId,
+    userId,
   );
   if (!row) return null;
   return {
@@ -662,22 +671,44 @@ function clearChatMessages(chatId: string): void {
 /**
  * Get page posts, optionally filtered by slug.
  */
-function getPosts(
-  slug?: string,
-): { slug: string; content: string; toc: { id: string; text: string; level: number }[]; title: string; description: string; date: string | null; tags: string[]; published: boolean; excerpt: string; headerImage: { alt: string; url: string } | null; featured: boolean; position: number | null }[] {
+function getPosts(slug?: string): {
+  slug: string;
+  content: string;
+  toc: { id: string; text: string; level: number }[];
+  title: string;
+  description: string;
+  date: string | null;
+  tags: string[];
+  published: boolean;
+  excerpt: string;
+  headerImage: { alt: string; url: string } | null;
+  featured: boolean;
+  position: number | null;
+}[] {
   const db = getDb();
   let rows;
   if (slug) {
-    rows = queryRows<Record<string, unknown>>(db.prepare('SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts WHERE slug = ?'), slug);
+    rows = queryRows<Record<string, unknown>>(
+      db.prepare(
+        'SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts WHERE slug = ?',
+      ),
+      slug,
+    );
   } else {
-    rows = queryRows<Record<string, unknown>>(db.prepare('SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts'));
+    rows = queryRows<Record<string, unknown>>(
+      db.prepare(
+        'SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts',
+      ),
+    );
   }
   return rows.map((r) => {
     let toc: { id: string; text: string; level: number }[] = [];
     try {
       const parsed = JSON.parse(String(r.toc ?? '[]'));
       if (Array.isArray(parsed)) toc = parsed;
-    } catch { /* ignore parse errors */ }
+    } catch {
+      /* ignore parse errors */
+    }
     return {
       slug: String(r.slug),
       content: String(r.content),
@@ -698,15 +729,33 @@ function getPosts(
 /**
  * Get page experience entries, optionally filtered by slug.
  */
-function getExperience(
-  slug?: string,
-): { slug: string; content: string; company: string; role: string; startDate: string | null; endDate: string | null; duration: string; skills: string[]; description: string; published: boolean }[] {
+function getExperience(slug?: string): {
+  slug: string;
+  content: string;
+  company: string;
+  role: string;
+  startDate: string | null;
+  endDate: string | null;
+  duration: string;
+  skills: string[];
+  description: string;
+  published: boolean;
+}[] {
   const db = getDb();
   let rows;
   if (slug) {
-    rows = queryRows<Record<string, unknown>>(db.prepare('SELECT slug, content, company, role, start_date, end_date, duration, skills, description, published FROM page_experience WHERE slug = ?'), slug);
+    rows = queryRows<Record<string, unknown>>(
+      db.prepare(
+        'SELECT slug, content, company, role, start_date, end_date, duration, skills, description, published FROM page_experience WHERE slug = ?',
+      ),
+      slug,
+    );
   } else {
-    rows = queryRows<Record<string, unknown>>(db.prepare('SELECT slug, content, company, role, start_date, end_date, duration, skills, description, published FROM page_experience'));
+    rows = queryRows<Record<string, unknown>>(
+      db.prepare(
+        'SELECT slug, content, company, role, start_date, end_date, duration, skills, description, published FROM page_experience',
+      ),
+    );
   }
   return rows.map((r) => ({
     slug: String(r.slug),

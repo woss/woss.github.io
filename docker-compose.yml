@@ -21,26 +21,43 @@ services:
       - ollama_data:/root/.ollama
     environment:
       - OLLAMA_HOST=http://ollama:11434
-    command: ['pull', 'qwen2.5:3b']
+    command: ['pull', 'gemma4:e4b']
     depends_on:
       ollama:
         condition: service_healthy
     restart: 'no'
 
-  # app:
-  #   build: .
-  #   container_name: woss-app
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - OLLAMA_BASE_URL=http://ollama:11434
-  #     - OLLAMA_CHAT_MODEL=qwen2.5:3b
-  #     - AI_PROVIDER=ollama
-  #     - NODE_ENV=production
-  #   depends_on:
-  #     ollama-init:
-  #       condition: service_completed_successfully
-  #   restart: unless-stopped
+  search-index-init:
+    image: woss/woss-id:latest
+    build: .
+    env_file: .env
+    container_name: woss-search-index-init
+    volumes:
+      - search_data:/app/data
+    command: ["bun", "run", "src/scripts/build-index.ts"]
+    restart: "no"
+
+  app:
+    image: woss/woss-id:latest
+    build: .
+    env_file: .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - search_data:/app/data
+    environment:
+      - OPENAI_BASE_URL=http://ollama:11434/v1
+      - OPENAI_MODEL=gemma4:e4b
+      - OPENAI_API_KEY=public
+    depends_on:
+      ollama:
+        condition: service_started
+      ollama-init:
+        condition: service_completed_successfully
+      search-index-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
 
 volumes:
   ollama_data:
+  search_data:

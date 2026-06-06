@@ -5,6 +5,7 @@
  * Usage: node src/scripts/visualize-embedding-space.ts
  */
 
+import { writeFile } from 'node:fs/promises';
 import { initLogger, CAT, createLogger } from '../lib/server/logger.ts';
 import { SEED_QUERIES } from '../lib/chat/suggested-questions.ts';
 import { embedAndComputeCentroids, saveCentroids } from './seed-data.ts';
@@ -339,7 +340,7 @@ function starPoints(cx: number, cy: number, r: number): string {
 
 const svg = lines.join('\n');
 const outPath = './docs/embedding-space.svg';
-await Bun.write(outPath, svg);
+await writeFile(outPath, svg, 'utf-8');
 log.info`SVG written to ${outPath}`;
 
 // ---------------------------------------------------------------------------
@@ -445,7 +446,7 @@ const centData = [
 
 const html = buildPlotlyHtml3d(queryPoints, centData);
 const htmlPath = './docs/embedding-space-3d.html';
-await Bun.write(htmlPath, html);
+await writeFile(htmlPath, html, 'utf-8');
 log.info`3D HTML written to ${htmlPath}`;
 
 // Also print cosine similarities for inspection

@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
 
 import { embedTexts } from '../lib/server/embed.ts';
 import type { SeedQuery } from '../lib/chat/suggested-questions.ts';
 import { SEED_QUERIES } from '../lib/chat/suggested-questions.ts';
 import type { Logger } from '@logtape/logtape';
-import { EMBEDDING_DIM, EMBEDDING_MODEL } from '$lib/search-config';
+import { EMBEDDING_DIM, EMBEDDING_MODEL } from '../lib/search-config.ts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -81,22 +82,22 @@ export async function saveCentroids(result: EmbedResult, log: Logger): Promise<v
     },
   };
   const data = JSON.stringify(centroidData, null, 2);
-  await Bun.write('./data/centroid.json', data);
+  await writeFile('./data/centroid.json', data, 'utf-8');
 }
 
 async function storeCentroidHash(data: string, log: Logger): Promise<void> {
   const hash = hashCentroidData(data);
   log.debug`Centroid hash: ${hash.slice(0, 12)}...`;
-  await Bun.write(
+  await writeFile(
     './data/centroid-hash.json',
     JSON.stringify({ hash, comment: 'Hash of seed queries for change detection' }),
+    'utf-8',
   );
 }
 
 export async function readCentroidHash(): Promise<string | null> {
   try {
-    const file = Bun.file('./data/centroid-hash.json');
-    const content = await file.text();
+    const content = await readFile('./data/centroid-hash.json', 'utf-8');
     const parsed = JSON.parse(content);
     return parsed.hash;
   } catch {
