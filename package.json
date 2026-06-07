@@ -15,7 +15,6 @@
     "format": "prettier --write .",
     "test": "echo 'no tests configured'",
     "test:e2e": "playwright test",
-    "orm": "dali-orm",
     "build-index": "tsx src/scripts/build-index.ts"
   },
   "devDependencies": {
@@ -30,6 +29,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "25.9.2",
+    "devalue": "^5.8.1",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.17.0",
@@ -56,6 +56,7 @@
     "@logtape/file": "^2.1.1",
     "@logtape/logtape": "^2.1.1",
     "@logtape/pretty": "^2.1.1",
+    "@lucide/svelte": "^1.0.1",
     "@modelcontextprotocol/client": "^2.0.0-alpha.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@resvg/resvg-js": "^2.6.2",
@@ -68,9 +69,9 @@
     "dayjs": "^1.11.21",
     "effect": "^3.21.2",
     "geoip-country": "^5.0.202605270000",
+    "github-slugger": "2.0.0",
     "highlight.js": "11.11.1",
     "js-yaml": "^4.1.1",
-    "lucide-svelte": "^1.0.1",
     "markdown-it": "^14.2.0",
     "markdown-it-highlightjs": "^4.3.0",
     "mode-watcher": "^1.1.0",
@@ -89,14 +90,11 @@
     "unified": "^11.0.5",
     "usearch": "2.25.3"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3",
-      "esbuild",
-      "onnxruntime-node",
-      "protobufjs",
-      "sharp",
-      "usearch"
-    ]
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "25.x",
+      "onFail": "download"
+    }
   }
 }

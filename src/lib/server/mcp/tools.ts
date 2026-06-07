@@ -5,6 +5,7 @@
 import { mcp } from './client.ts';
 import { CAT, createLogger } from '$lib/server/logger';
 import type { McpToolDefinition, McpToolCallResult } from './client.ts';
+import { config } from '../config.ts';
 
 const log = createLogger(CAT.mcp);
 
@@ -75,27 +76,16 @@ const TOOL_ALLOWLIST: Record<string, string> = {
 
   get_metadata_json_schema: 'Get JSON Schema for Macula metadata structure.',
 
-  list_files_by_license:
-    'List files from Macula filtered by license type. License options: "No license", "All rights reserved", "Attribution (CC BY)", "ShareAlike (CC BY-SA)", "NonCommercial (CC BY-NC)", "NonCommercial-ShareAlike (CC BY-NC-SA)", "NoDerivs (CC BY-ND)", "NonCommercial-NoDerivs (CC BY-NC-ND)", "Public domain (CC0)".',
-
   get_user: 'Get a Macula user profile by nickname. Returns name, bio, directories, stats.',
 
-  list_user_files:
-    "List a Macula user's published files. Supports pagination and type filtering (images/videos/files).",
+  get_node: 'Get a single Macula node (user, file, or directory) by type. Rich return with all metadata inline.',
 
-  list_random_files:
-    'Discover random files from Macula. Filter by type: "images", "videos", or "files". Optionally filter by nickname.',
+  search: 'Search Macula files by title. Supports query (string, min 2 chars) and filter (what: images/videos/files, allowAI, nickname). Use for finding specific content by name.',
 
   search_keywords:
     'Search keywords in Macula for prompt generation or topic discovery. Use this to find available keywords/tags.',
 
-  list_files_by_keyword: 'List Macula files associated with a specific keyword/tag.',
-
-  get_directory: 'Get a Macula directory by nickname and pathCid.',
-
-  get_directory_files: 'Get paginated files from a Macula directory.',
-
-  list_files_for_ai: 'List Macula files filtered by data mining allowance (DMI-ALLOWED or DMI-UNSPECIFIED).',
+  traverse: 'Graph native traversing of Macula content. EDGE VALIDATION (use only these combinations): from={type:"user",nickname:"woss"} → edge="uploads"|"recent"|"random". from={type:"directory",pathCid:"..."} → edge="contains". from={type:"keyword",keyword:"..."} → edge="tagged_files". Use pathCid from get_user response dirs[].pathCid — NOT directory name. filter: what("images"|"videos"|"files"), allowAI, nickname. Returns items with unifiedId, kind, mimeType, url. Primary tool for listing media.',
 };
 
 /** Suffix appended to all tool descriptions for Q&A context */
@@ -285,7 +275,7 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
       '  1. USE MULTIPLE QUERIES — do NOT rely on a single broad search_pull_requests call.\n' +
       '     Query each prioritized repo individually with "repo:owner/name author:woss"\n' +
       '     and ALSO run a broad query "author:woss" to catch repos not in the priority list.\n' +
-      '  2. PRIORITIZE these repos in your answer: microsoft/rushstack, lovell/sharp-libvips\n' +
+      '  2. PRIORITIZE these repos in your answer: microsoft/rushstack, lovell/sharp-libvips, woss/dali and woss/opencode-visualizer\n' +
       '     List contributions to these repos FIRST before listing other repos.\n' +
       '  3. ORDER by state: merged PRs FIRST, then open, then draft, then closed.\n' +
       '  4. Also include any relevant contributions to repos OUTSIDE the priority list.\n' +
@@ -293,21 +283,31 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
       'When you call any GitHub tool that accepts a "username" parameter, ' +
       'ALWAYS use username "woss" — "Daniel" and "Daniel Maricic" both refer to the same person.\n\n';
   }
-
+  const maculaNickname = config().maculaNickname;
   if (mac) {
     result +=
       '---\n' +
-      'MACULA MEDIA ASSETS — Daniel has a Macula media library with images, videos, and files.\n' +
-      '  • search_keywords: FIRST, search for keywords/tags to understand what topics are available.\n' +
-      '  • list_files_by_keyword: Get files associated with a specific keyword.\n' +
-      '  • list_random_files: Discover random media by type ("images", "videos", or "files"). Always pass nickname="daniel" (also "woss").\n' +
-      '  • get_file: Get detailed info about a specific file by its unifiedId.\n' +
-      '  • get_file_metadata: Get EXIF/camera metadata for a file.\n' +
-      '  • list_files_by_license: Filter files by license type.\n' +
-      '  • get_user: Look up Daniel\'s Macula profile with nickname "daniel" (also "woss").\n' +
-      '  • list_user_files(nickname): List Daniel\'s published files. ALWAYS use nickname "daniel" (also "woss").\n' +
-      '  • get_directory(nickname, pathCid): List files in a directory. Uses nickname "daniel" (also "woss").\n' +
-      '  • get_directory_files(nickname, pathCid): Get paginated files from a directory. Uses nickname "daniel" (also "woss").\n\n' +
+      'MACULA MEDIA ASSETS — Daniel has a Macula media library with images, videos, and files. Use these tools to discover and display media.\n' +
+      `When using Macula tools that accept a "nickname" parameter (get_user) or nested nickname in "from" (traverse), ALWAYS use "${maculaNickname}".\n` +
+      `  • get_user(nickname): Start here. Look up ${maculaNickname}'s profile to get directories, stats, and file counts.\n` +
+      `  • traverse(edge="uploads"|"recent") for user content: from={type:"user",nickname:"${maculaNickname}"}, filter={what:"images"}.\n` +
+      `  • traverse(edge="contains") for directory/album: from={type:"directory",pathCid:"..."} — use pathCid from get_user dirs[].pathCid, NOT directory name.\n` +
+      `  • traverse(edge="tagged_files") for keywords: from={type:"keyword",keyword:"..."}. Combine with search_keywords first.\n` +
+      '  • search_keywords: Search for available keywords/tags for topic discovery.\n' +
+      '  • search: Search Macula files by title. Use for finding specific content by name.\n' +
+      '  • get_file(unifiedId): Get detailed info about a specific file including cachedRenditions with image URLs.\n' +
+      '  • get_file_metadata(unifiedId): Get EXIF/camera metadata for a file.\n' +
+      '  • get_file_presets(unifiedId): Get available renditions for a file.\n' +
+      '  • get_node(type, nickname): Get a single node (user/file/directory) by identifier.\n\n' +
+      'STRICT WORKFLOW FOR MEDIA QUERIES — follow these steps WITHOUT asking the user:\n' +
+      `  1. get_user(nickname="${maculaNickname}") — get profile + directories\n` +
+      `  2. IMMEDIATELY call traverse(from={type:"user",nickname:"${maculaNickname}"}, edge="uploads", filter={what:"images"}) — do NOT stop after get_user, do NOT ask which album\n` +
+      `  3. Pick first 4-6 files from traverse results and call get_file(unifiedId) for each to get cachedRenditions with image URLs\n` +
+      '  4. Display images inline using cachedRenditions[presetName="sys_md"].url + [View on Macula](_links.base)\n' +
+      '  NOTE: Ignore dirs from get_user for initial query — show uploads directly. ' +
+      'If user later asks about an album, use traverse(from={type:"directory",pathCid:"..."}, edge="contains") — pathCid is the "bafk..." value from get_user dirs[].pathCid, never directory name.\n\n' +
+      'PROACTIVITY RULE: When user asks to see images/photos/pictures/media, DO NOT ask follow-up questions. ' +
+      'Execute steps 1-4 immediately. Show results and let user refine.\n\n' +
       'IMAGE EMBEDDING — When showing Macula photos, display them inline and add a Macula link:\n' +
       '  Use the EXACT url value from _links.cachedRenditions[].url in the tool response.\n' +
       '  NEVER construct URLs from ipfsCid or any other field — only use cachedRenditions[].url values as-is.\n' +
@@ -323,10 +323,7 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
       '  Example:\n' +
       '    ![Example](https://u.macula.link/8TArWWYSRASQAHgpkAVvlg-7?preset=sys_md)\n' +
       '    [View on Macula](https://macula.link/8TArWWYSRASQAHgpkAVvlg-7)\n\n' +
-      'WORKFLOW for media queries: Start with search_keywords or list_random_files(nickname="daniel") to discover content, ' +
-      'then drill down with get_file or list_files_by_keyword for details. ' +
-      'Always verify Daniel owns the content by checking the nickname/creator field.\n' +
-      'When you call any Macula tool that accepts a "nickname" parameter (get_user, list_user_files, list_random_files, etc.), ALWAYS use nickname "daniel" (also "woss", Daniel Maricic).\n' +
+      `Always verify ${maculaNickname} owns the content by checking the nickname/creator field.\n` +
       'CRITICAL: Use ONLY URLs that appear in MCP tool call results. ' +
       'Never generate, guess, or invent any URL — for Macula, GitHub, or anything else. ' +
       'If a tool result does not contain the URL you need, do not create one.\n';
@@ -396,10 +393,7 @@ async function executeMcpToolCall(toolCall: { name: string; arguments?: string }
   // Auto-inject "woss" identity for tools where LLM omits user parameters
   const IDENTITY_TOOLS: Record<string, Record<string, string>> = {
     // Macula tools — nickname param
-    list_user_files: { nickname: 'woss' },
     get_user: { nickname: 'woss' },
-    get_directory: { nickname: 'woss' },
-    get_directory_files: { nickname: 'woss' },
     // GitHub tools — user param
     get_teams: { user: 'woss' },
   };

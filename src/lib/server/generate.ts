@@ -757,7 +757,7 @@ async function streamWithRetry(
       // replace with a fallback message. This catches cases where the LLM outputs tool calls
       // as text (e.g., when tools weren't properly enabled).
       if (
-        /^(?:\s*\n)*(?:get_file|search_files|list_files|search_keywords|list_user_files|get_directory_files|get_file_presets|search_code|search_issues|search_pull_requests|list_issues|list_pull_requests|get_file_contents|create_or_update_file)\s*\{/i.test(
+        /^(?:\s*\n)*(?:get_file|search_files|list_files|search_keywords|get_file_presets|search_code|search_issues|search_pull_requests|list_issues|list_pull_requests|get_file_contents|create_or_update_file)\s*\{/i.test(
           answerText.trim(),
         )
       ) {

@@ -3,11 +3,14 @@
  * Central source of truth for all environment variables and constants.
  * All server modules should import from here, not from $env/static/* directly.
  *
- * Uses a lazy singleton so tests can set process.env values before first access.
- * Set process.env values before the first call to config().
+ * Uses a lazy singleton for testability. Before first call to config(),
+ * tests can override values by importing the variable from $env/static/private
+ * or setting it in process.env.
  */
+
+import { parseMcpServers, type McpServerConfig } from './mcp/config.ts';
 import {
-  WEB_ORIGIN,
+  ORIGIN,
   OPENAI_API_KEY,
   OPENAI_BASE_URL,
   OPENAI_MODEL,
@@ -17,10 +20,10 @@ import {
   WOSS_USER_WEBHOOK_URL,
   WOSS_USER_WEBHOOK_TOKEN,
 } from '$env/static/private';
-import { parseMcpServers, type McpServerConfig } from './mcp/config.ts';
 type DeepReadonly<T> = { readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K] };
 
 type Config = DeepReadonly<{
+  maculaNickname: string;
   app: { origin: string };
   openai: { apiKey: string; baseUrl: string; model: string; maxTokens: number | undefined; maxResultsLength: number };
   mcp: { servers: McpServerConfig[] };
@@ -35,9 +38,10 @@ function loadConfig(): Config {
   const mcpServers = parseMcpServers(MCP_SERVERS);
 
   const c = {
+    maculaNickname: 'woss',
     app: {
       /** Allowed origin for CORS/CSRF checks */
-      origin: WEB_ORIGIN ?? 'http://localhost:5173',
+      origin: ORIGIN ?? 'http://localhost:5173',
     },
     openai: {
       apiKey: OPENAI_API_KEY ?? '',
@@ -84,6 +88,3 @@ export function config(): Config {
   }
   return _config;
 }
-
-
-

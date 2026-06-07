@@ -1,4 +1,3 @@
-import { createDebug } from 'obug';
 import { publishLive, publishPersistent } from '$lib/server/chat-events';
 import { callWebhook } from '$lib/server/webhooks';
 import {
@@ -27,7 +26,6 @@ import { classifyQuery } from '$lib/query-classifier';
 import type { QueryClass } from '$lib/query-classifier';
 import { Effect, Stream } from 'effect';
 
-const debug = createDebug('woss:ask');
 const log = createLogger(CAT.chat);
 
 interface AskBody {
@@ -694,11 +692,7 @@ async function startGeneration(
               switch (event.type) {
                 case 'text-delta':
                   answerText += event.text;
-                  debug(
-                    'STREAM TOKEN length: %d preview: %s',
-                    event.text.length,
-                    JSON.stringify(event.text.slice(0, 80)),
-                  );
+
                   publishLive(chatId, 'token', { token: event.text });
                   break;
                 case 'reasoning-delta':
@@ -827,6 +821,7 @@ async function startGeneration(
           undefined,
           userAgentId,
         );
+        log.debug`Saved fallback error message with id ${errMsgId}`;
       } catch (e) {
         log.error`Failed to save fallback error message: ${e}`;
       }

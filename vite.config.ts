@@ -6,5 +6,6 @@ export default defineConfig({
   plugins: [tailwindcss(), sveltekit()],
   ssr: {
     noExternal: ['sv5ui'],
+    external: true,
   },
 });

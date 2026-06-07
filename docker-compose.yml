@@ -28,23 +28,23 @@ services:
     restart: 'no'
 
   search-index-init:
-    image: woss/woss-id:latest
+    image: woss/woss-io:latest
     build: .
     env_file: .env
     container_name: woss-search-index-init
     volumes:
-      - search_data:/app/data
-    command: ["bun", "run", "src/scripts/build-index.ts"]
+      - ./new-data/:/app/data
+    command: ["pnpm", "run", "build-index"]
     restart: "no"
 
   app:
-    image: woss/woss-id:latest
+    image: woss/woss-io:latest
     build: .
     env_file: .env
     ports:
       - "3000:3000"
     volumes:
-      - search_data:/app/data
+      - ./new-data/:/app/data
     environment:
       - OPENAI_BASE_URL=http://ollama:11434/v1
       - OPENAI_MODEL=gemma4:e4b
@@ -57,6 +57,7 @@ services:
       search-index-init:
         condition: service_completed_successfully
     restart: unless-stopped
+    command: ["node", "build/index.js"]
 
 volumes:
   ollama_data:

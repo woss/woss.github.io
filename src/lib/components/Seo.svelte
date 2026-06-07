@@ -17,8 +17,8 @@
     tags?: string[];
   } = $props();
 
-  const imgUrl = typeof image === 'string' ? image : image?.url ?? '';
-  const imgAlt = typeof image === 'string' ? '' : image?.alt ?? '';
+  const imgUrl = $derived(typeof image === 'string' ? image : image?.url ?? '');
+  const imgAlt = $derived(typeof image === 'string' ? '' : image?.alt ?? '');
 </script>
 
 <svelte:head>

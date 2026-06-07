@@ -1,11 +1,12 @@
 import 'dotenv/config';
 
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { createInterface } from 'node:readline';
 import GithubSlugger from 'github-slugger';
 import { Index, MetricKind, ScalarKind } from 'usearch';
+// @ts-expect-error no types for better-sqlite3
+import Database from 'better-sqlite3';
 import { parseFrontmatter } from '../content/index.ts';
 import { getDb, closeDb } from '../lib/server/db.ts';
 import { embedTexts, releaseExtractor } from '../lib/server/embed.ts';
@@ -31,15 +32,19 @@ await initLogger((process.env.LOG_LEVEL as 'trace' | 'debug' | 'info' | 'warning
 const log = createLogger(CAT.search);
 
 if (reset) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await new Promise<string>((resolve) => {
-    rl.question('WARNING: This will delete all search index data (chunks, page_content, vector index). User data (chats, messages) will NOT be affected. Continue? [y/N] ', resolve);
-  });
-  rl.close();
-  if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
-    log.info`Reset cancelled.`;
-    process.exit(0);
-  }
+  throw new Error('Reset flag is no longer supported.');
+  // const rl = createInterface({ input: process.stdin, output: process.stdout });
+  // const answer = await new Promise<string>((resolve) => {
+  //   rl.question(
+  //     'WARNING: This will delete all search index data (chunks, page_content, vector index). User data (chats, messages) will NOT be affected. Continue? [y/N] ',
+  //     resolve,
+  //   );
+  // });
+  // rl.close();
+  // if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
+  //   log.info`Reset cancelled.`;
+  //   process.exit(0);
+  // }
 }
 
 // ---------------------------------------------------------------------------
@@ -231,6 +236,32 @@ function resetDatabase(): void {
 // ---------------------------------------------------------------------------
 
 async function buildIndex(): Promise<void> {
+  // Ensure database exists — create from migrate.sql if missing
+  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+
+  const dbPath = 'data/woss.db';
+  if (!existsSync(dbPath)) {
+    const schemaPath = 'src/scripts/migrate.sql';
+    if (existsSync(schemaPath)) {
+      log.info`Database not found. Creating schema from ${schemaPath}...`;
+      const schemaSql = readFileSync(schemaPath, 'utf-8');
+      const statements = schemaSql
+        .split(';')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const tmp = new Database(dbPath);
+      tmp.exec('PRAGMA journal_mode = WAL');
+      tmp.exec('PRAGMA foreign_keys = ON');
+      for (const stmt of statements) {
+        if (stmt) tmp.exec(`${stmt};`);
+      }
+      tmp.close();
+      log.info`Database created successfully.`;
+    } else {
+      log.warn`Schema file not found at ${schemaPath}. DB will be initialized by application code.`;
+    }
+  }
+
   if (reset) {
     closeDb();
     resetDatabase();
@@ -380,15 +411,15 @@ async function buildIndex(): Promise<void> {
       if (entry.type === 'post') {
         title = String(data.title ?? '') || entry.slug;
         const rawDate = data.date;
-        date = rawDate instanceof Date ? rawDate.toISOString() : (rawDate ? String(rawDate) : null);
-        tags = [...new Set(Array.isArray(data.tags) ? data.tags.map(String) : [])];
+        date = rawDate instanceof Date ? rawDate.toISOString() : rawDate ? String(rawDate) : null;
+        tags = [...new Set<string>(Array.isArray(data.tags) ? data.tags.map(String) : [])];
       } else {
         const company = String(data.company ?? '');
         const role = String(data.role ?? '');
         title = company ? `${company} — ${role}` : entry.slug;
         const rawStartDate = data.startDate;
-        date = rawStartDate instanceof Date ? rawStartDate.toISOString() : (rawStartDate ? String(rawStartDate) : null);
-        tags = [...new Set(Array.isArray(data.skills) ? data.skills.map(String) : [])];
+        date = rawStartDate instanceof Date ? rawStartDate.toISOString() : rawStartDate ? String(rawStartDate) : null;
+        tags = [...new Set<string>(Array.isArray(data.skills) ? data.skills.map(String) : [])];
       }
 
       // Process date fields that may be Date objects from frontmatter parsing
@@ -396,9 +427,9 @@ async function buildIndex(): Promise<void> {
       let processedEndDate: string | null = null;
       if (entry.type === 'experience') {
         const rawStart = data.startDate;
-        processedStartDate = rawStart instanceof Date ? rawStart.toISOString() : (rawStart ? String(rawStart) : null);
+        processedStartDate = rawStart instanceof Date ? rawStart.toISOString() : rawStart ? String(rawStart) : null;
         const rawEnd = data.endDate;
-        processedEndDate = rawEnd instanceof Date ? rawEnd.toISOString() : (rawEnd ? String(rawEnd) : null);
+        processedEndDate = rawEnd instanceof Date ? rawEnd.toISOString() : rawEnd ? String(rawEnd) : null;
       }
 
       // Save full content to page_posts or page_experience table
@@ -484,7 +515,7 @@ async function buildIndex(): Promise<void> {
     index.add(BigInt(id), new Float32Array(embedding));
     rowCount++;
     // Allow GC to reclaim per-row allocations
-    if (rowCount % 100 === 0) await new Promise(resolve => setTimeout(resolve, 0));
+    if (rowCount % 100 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   if (rowCount === 0) {
