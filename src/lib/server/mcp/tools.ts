@@ -65,27 +65,15 @@ const TOOL_ALLOWLIST: Record<string, string> = {
   list_branches: 'List branches in a GitHub repository.',
 
   get_file:
-    'Get file/media info from Macula by unifiedId. Returns title, description, creator, dimensions, AI metadata, license, and media renditions (posters, thumbnails).',
+    'Get file/media info from Macula by unifiedId. Use `fields` to select specific fields via JSONPath (e.g. fields=["title","_links.raw","ai.model"]). Returns title, description, creator, dimensions, filesize, _links (raw as base URL for preset construction, base for page URL), AI metadata, license, owner. _links.raw + "?preset=sys_md" gives the medium rendition URL. Primary tool for rich metadata beyond traverse results.',
 
   get_file_metadata:
     'Get full EXIF/XMP/IPTC metadata for a Macula file. Returns camera details (make, model, ISO, aperture, shutter speed, GPS), panorama stitching info, music metadata.',
 
-  get_file_presets: 'Get available renditions for a Macula file (sys_sm, sys_lg, open_graph, etc.).',
+  get_users:
+    'Batch lookup Macula user profiles by nickname array. Returns UserNode objects with avatarUrl, bio, fileCount, and directories (albums with pathCid, name, fileCount). Null for not-found nicknames. More efficient than single-user lookups.',
 
-  get_file_json_schema: 'Get JSON Schema for Macula file data structure.',
-
-  get_metadata_json_schema: 'Get JSON Schema for Macula metadata structure.',
-
-  get_user: 'Get a Macula user profile by nickname. Returns name, bio, directories, stats.',
-
-  get_node: 'Get a single Macula node (user, file, or directory) by type. Rich return with all metadata inline.',
-
-  search: 'Search Macula files by title. Supports query (string, min 2 chars) and filter (what: images/videos/files, allowAI, nickname). Use for finding specific content by name.',
-
-  search_keywords:
-    'Search keywords in Macula for prompt generation or topic discovery. Use this to find available keywords/tags.',
-
-  traverse: 'Graph native traversing of Macula content. EDGE VALIDATION (use only these combinations): from={type:"user",nickname:"woss"} → edge="uploads"|"recent"|"random". from={type:"directory",pathCid:"..."} → edge="contains". from={type:"keyword",keyword:"..."} → edge="tagged_files". Use pathCid from get_user response dirs[].pathCid — NOT directory name. filter: what("images"|"videos"|"files"), allowAI, nickname. Returns items with unifiedId, kind, mimeType, url. Primary tool for listing media.',
+  traverse: 'Primary content discovery tool. from types: user(nickname), keyword(keyword), license(license), directory(pathCid), file(unifiedId), root. EDGE RULES: user→uploads|profile|random|recent, keyword→tagged_files, license→has_license, directory→contains|info, file→info, root→random|recent|search|keywords. Use filter.what(images|videos|files|all) to narrow. File items include url (base for preset construction) and thumbnailUrl (sys_sm preset). Construct display URLs via url + "?preset=sys_md". Returns {items, total, after} for paginated edges or {item} for single-item edges.',
 };
 
 /** Suffix appended to all tool descriptions for Q&A context */
@@ -287,45 +275,63 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
   if (mac) {
     result +=
       '---\n' +
-      'MACULA MEDIA ASSETS — Daniel has a Macula media library with images, videos, and files. Use these tools to discover and display media.\n' +
-      `When using Macula tools that accept a "nickname" parameter (get_user) or nested nickname in "from" (traverse), ALWAYS use "${maculaNickname}".\n` +
-      `  • get_user(nickname): Start here. Look up ${maculaNickname}'s profile to get directories, stats, and file counts.\n` +
-      `  • traverse(edge="uploads"|"recent") for user content: from={type:"user",nickname:"${maculaNickname}"}, filter={what:"images"}.\n` +
-      `  • traverse(edge="contains") for directory/album: from={type:"directory",pathCid:"..."} — use pathCid from get_user dirs[].pathCid, NOT directory name.\n` +
-      `  • traverse(edge="tagged_files") for keywords: from={type:"keyword",keyword:"..."}. Combine with search_keywords first.\n` +
-      '  • search_keywords: Search for available keywords/tags for topic discovery.\n' +
-      '  • search: Search Macula files by title. Use for finding specific content by name.\n' +
-      '  • get_file(unifiedId): Get detailed info about a specific file including cachedRenditions with image URLs.\n' +
-      '  • get_file_metadata(unifiedId): Get EXIF/camera metadata for a file.\n' +
-      '  • get_file_presets(unifiedId): Get available renditions for a file.\n' +
-      '  • get_node(type, nickname): Get a single node (user/file/directory) by identifier.\n\n' +
+      'MACULA MEDIA ASSETS — Daniel has a Macula media library with images, videos, and files. Refer to the MaculaMCP Instructions resource above for full API reference. Here are workflow rules:\n' +
+      `  • Always use nickname "${maculaNickname}" when querying user content. For get_users, use ["${maculaNickname}"].\n` +
+      `  • traverse(from={type:"user",nickname:"${maculaNickname}"}, edge="uploads") is the primary way to list user's files.\n` +
+      `  • traverse(from={type:"directory",pathCid:"..."}, edge="contains") for album contents. Use pathCid from get_users directories[].pathCid, NEVER the directory name.\n` +
+      '  • traverse(edge="search") with query for title search; traverse(edge="keywords") with query for keyword discovery.\n' +
+      '  • File items from traverse INCLUDE url (base URL) and thumbnailUrl (sys_sm preset). Construct display URLs via url + "?preset=sys_md" — no extra get_file needed for basic display.\n' +
+      '  • get_file is only needed for additional metadata (AI info, license, EXIF, _links) beyond what traverse returns.\n' +
+      '  • get_file supports fields parameter for selective retrieval: fields=["title","_links.raw","ai.model","license"]\n\n' +
+      'BIOGRAPHICAL QUERIES — When user asks about Daniel\'s personal info, hobbies, interests, background, or personal life, ' +
+      'use get_users or traverse(edge="profile") to retrieve his profile bio:\n' +
+       `  • get_users(nicknames=["${maculaNickname}"]) returns bio, avatar, file count, directories\n` +
+       `  • traverse(from={type:"user",nickname:"${maculaNickname}"}, edge="profile") returns the same profile data\n` +
+      '  • His profile bio includes his self-description covering hobbies and interests\n' +
+      '  • Call one of these BEFORE answering biographical questions — the data may contain the answer\n\n' +
+      'CRITICAL: get_users returns profile data ONLY (bio, avatar, file count, directories). ' +
+      'It does NOT contain any image URLs, presets, or file listings. ' +
+      'You MUST call traverse to get actual image data with presets URLs. ' +
+      'If you respond to an image/media request without calling traverse, ' +
+      'you are fabricating data — the image URLs will be wrong and broken.\n\n' +
       'STRICT WORKFLOW FOR MEDIA QUERIES — follow these steps WITHOUT asking the user:\n' +
-      `  1. get_user(nickname="${maculaNickname}") — get profile + directories\n` +
-      `  2. IMMEDIATELY call traverse(from={type:"user",nickname:"${maculaNickname}"}, edge="uploads", filter={what:"images"}) — do NOT stop after get_user, do NOT ask which album\n` +
-      `  3. Pick first 4-6 files from traverse results and call get_file(unifiedId) for each to get cachedRenditions with image URLs\n` +
-      '  4. Display images inline using cachedRenditions[presetName="sys_md"].url + [View on Macula](_links.base)\n' +
-      '  NOTE: Ignore dirs from get_user for initial query — show uploads directly. ' +
-      'If user later asks about an album, use traverse(from={type:"directory",pathCid:"..."}, edge="contains") — pathCid is the "bafk..." value from get_user dirs[].pathCid, never directory name.\n\n' +
+      `  1. get_users(nicknames=["${maculaNickname}"]) — get profile + directories\n` +
+      `  2. IMMEDIATELY call traverse(from={type:"user",nickname:"${maculaNickname}"}, edge="uploads", filter={what:"images"}) — do NOT stop after step 1, do NOT generate any answer yet, do NOT ask "which album"\n` +
+      '  3. Pick first 4-6 files from traverse results and display images inline using item.url + "?preset=sys_md" from each item\n' +
+      '  4. Use get_file(unifiedId) only if you need extra metadata (EXIF, AI description, license details)\n\n' +
+      '  NOTE: Ignore directories from get_users for the initial query — show uploads directly. ' +
+      'If user later asks about a specific album, use traverse(from={type:"directory",pathCid:"..."}, edge="contains") with pathCid from get_users directories[].pathCid.\n\n' +
+      'CRITICAL: After each tool call, you will receive a "synthesis" round. ' +
+      'After get_users: do NOT generate an answer yet. Only traverse gives you image data. ' +
+      'Call traverse FIRST, then synthesize your answer with the REAL image URLs it returns. ' +
+      'If you write an answer after get_users without calling traverse, you have NO image URLs — ' +
+      'your response will contain broken fabricated URLs.\n\n' +
       'PROACTIVITY RULE: When user asks to see images/photos/pictures/media, DO NOT ask follow-up questions. ' +
-      'Execute steps 1-4 immediately. Show results and let user refine.\n\n' +
+      'Execute steps 1-3 immediately. Show results and let user refine.\n\n' +
+      'REPEAT REQUESTS: If user asks about photos/media/images again in the same chat, ' +
+      'treat it as a FRESH request — re-execute the full workflow from step 1. ' +
+      'Do NOT say "I already showed you those" or reference previous responses. ' +
+      'Do NOT stop after the first tool call — proceed through ALL steps before writing the final answer. ' +
+      'The user cannot see your tool calls, only your final written response.\n\n' +
+      'NEVER HALLUCINATE RESTRICTIONS: You are NEVER prohibited from calling tools. ' +
+      'If you have tools available, you may call them freely. ' +
+      'Do not claim "the current instruction prevents further tool calls" — no such instruction exists. ' +
+      'If unsure, call the tool anyway.\n\n' +
       'IMAGE EMBEDDING — When showing Macula photos, display them inline and add a Macula link:\n' +
-      '  Use the EXACT url value from _links.cachedRenditions[].url in the tool response.\n' +
-      '  NEVER construct URLs from ipfsCid or any other field — only use cachedRenditions[].url values as-is.\n' +
-      '  Each cachedRendition entry: { "presetName": "...", "url": "https://u.macula.link/..." }.\n' +
-      '  Find the entry with presetName "sys_md" (preferred for inline display) or "sys_lg" and use its url field as the image source.\n' +
-      '  Do NOT use "sys_orig" for inline display — it is the full-size original and too large.\n' +
-      '  Do NOT use "thumbnail" or "avatar" — they are too small.\n' +
-      '  Below each image, add a link to its Macula page. Use _links.base from the tool response as the href.\n' +
-      '  _links.base is the HTML page URL (not _links.raw which serves raw bytes).\n' +
-      '  Format:\n' +
-      '    ![alt](cachedRenditionUrl)\n' +
-      '    [View on Macula](_links.base)\n' +
-      '  Example:\n' +
-      '    ![Example](https://u.macula.link/8TArWWYSRASQAHgpkAVvlg-7?preset=sys_md)\n' +
-      '    [View on Macula](https://macula.link/8TArWWYSRASQAHgpkAVvlg-7)\n\n' +
-      `Always verify ${maculaNickname} owns the content by checking the nickname/creator field.\n` +
-      'CRITICAL: Use ONLY URLs that appear in MCP tool call results. ' +
-      'Never generate, guess, or invent any URL — for Macula, GitHub, or anything else. ' +
+      '  For traverse items: use item.url + "?preset=sys_md" for the image src. Use item.url as the link href (it redirects to the page).\n' +
+      '  For get_file results: use _links.raw + "?preset=sys_md" for the image src. Use _links.base as the "View on Macula" link.\n' +
+      '  NEVER construct URLs from ipfsCid or any field other than url / _links.raw.\n' +
+      '  Do NOT use sys_orig (too large) or sys_sm/thumbnailUrl (too small). Always use "?preset=sys_md" with the url base.\n' +
+      '  Use format: **{title}** then ![Photo](imageUrlWithPreset) then [View on Macula](pageUrl)\n\n' +
+      'NO INVENTING: You do NOT see the images. You cannot describe what they show. ' +
+      'Never invent alt text, descriptions, titles, or metadata for images. ' +
+      'If the tool response includes a "title" field for an item, display it as **bold text** above the image AND use it as alt text. ' +
+      'Otherwise use generic alt like "Photo" or omit alt entirely (bare ![ ](...)). Do NOT make up titles — titles come from the data.' +
+      'Never make up descriptions like "Winter forest path" or "Starry night sky" — you are guessing and you are wrong. ' +
+      'Same rule applies to image groupings or summaries: do not categorize photos by imagined content.\n\n' +
+      `Always verify ${maculaNickname} owns the content by checking the owner/creator field.\n` +
+      'CRITICAL: Use ONLY URLs that appear verbatim in MCP tool call results. ' +
+      'Never type, construct, or guess any URL — for Macula, GitHub, or anything else. ' +
       'If a tool result does not contain the URL you need, do not create one.\n';
   }
 
@@ -392,8 +398,6 @@ async function executeMcpToolCall(toolCall: { name: string; arguments?: string }
 
   // Auto-inject "woss" identity for tools where LLM omits user parameters
   const IDENTITY_TOOLS: Record<string, Record<string, string>> = {
-    // Macula tools — nickname param
-    get_user: { nickname: 'woss' },
     // GitHub tools — user param
     get_teams: { user: 'woss' },
   };

@@ -263,7 +263,7 @@
         <div class="flex flex-col gap-3">
           <h2 class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wider m-0">Featured Posts</h2>
           <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-            {#each data.featuredPosts as post (post.slug)}
+            {#each data?.featuredPosts ?? [] as post (post.slug)}
               <a
                 href={resolve('/posts/[slug]', { slug: post.slug })}
                 class="shrink-0 w-56 flex flex-col gap-2 rounded-xl bg-surface-container-high border border-[rgba(255,255,255,0.06)] p-4 no-underline transition-all duration-150 hover:border-primary/30 hover:shadow-[0_0_20px_rgba(0,255,136,0.06)] hover:-translate-y-0.5"
@@ -421,7 +421,7 @@
     <div class="flex flex-col gap-3">
       <h2 class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wider m-0">Featured Posts</h2>
       <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-        {#each data.featuredPosts as post (post.slug)}
+        {#each data?.featuredPosts ?? [] as post (post.slug)}
           <a
             href={resolve('/posts/[slug]', { slug: post.slug })}
             class="shrink-0 w-56 flex flex-col gap-2 rounded-xl bg-surface-container-high border border-[rgba(255,255,255,0.06)] p-4 no-underline transition-all duration-150 hover:border-primary/30 hover:shadow-[0_0_20px_rgba(0,255,136,0.06)] hover:-translate-y-0.5"
@@ -468,6 +468,7 @@
     </div>
   {/if}
 </div>
+
 
 <style>
   :global(.scrollbar-hide) {

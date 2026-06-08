@@ -12,6 +12,8 @@
   import ContactForm from '$lib/components/ContactForm.svelte';
   import ChatInput from '$lib/components/ChatInput.svelte';
   import { toast } from 'svelte-sonner';
+  import { playPluckSound } from '$lib/utils/sounds';
+  import SoundToggle from '$lib/components/SoundToggle.svelte';
 
   import type { ChatMessage, Chat, ToolCallInfo } from '$lib/chat/types';
   import { sendChatMessage } from '$lib/chat/send';
@@ -22,6 +24,18 @@
   /* ─── Constants ─── */
 
   const USER_ID_KEY = 'woss-io_user-id';
+
+  const ORIGINAL_FAV_HREF = 'https://u.macula.link/@woss/avatar';
+  const LOADING_FAV_SVG = encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="15" fill="#1a1a2e"/>
+      <circle cx="16" cy="16" r="5" fill="#22c55e">
+        <animate attributeName="opacity" values="1;0.2;1" dur="1.5s" repeatCount="indefinite"/>
+        <animate attributeName="r" values="5;7;5" dur="1.5s" repeatCount="indefinite"/>
+      </circle>
+    </svg>`
+  );
+  const LOADING_FAVICON = `data:image/svg+xml,${LOADING_FAV_SVG}`;
 
   /* ─── Route params ─── */
 
@@ -52,6 +66,17 @@
   // Propagate local changes (from sidebar close via bind:) back to store
   $effect(() => {
     showMobileSidebar.set(showMobile);
+  });
+
+  // Pulse green-dot favicon while loading
+  $effect(() => {
+    if (isLoading) {
+      const el = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+      if (el) {
+        el.href = LOADING_FAVICON;
+        return () => { el.href = ORIGINAL_FAV_HREF; };
+      }
+    }
   });
 
   let showDeleteConfirm = $state<string | null>(null);
@@ -566,6 +591,7 @@
       if (isLoading) {
         isLoading = false;
         toast.success('Response complete');
+        if (document.hidden) playPluckSound();
       }
       // Lazy-load tool calls for this message
       if (data.messageId) {
@@ -705,7 +731,7 @@
         </div>
       {:else}
         <!-- Message list -->
-        <div class="flex flex-col gap-3 py-4 max-w-[768px] mx-auto w-full max-md:px-4 max-sm:px-3">
+        <div class="flex flex-col gap-3 py-4 max-w-[80vw] mx-auto w-full max-md:px-4 max-sm:px-3">
           {#each messages as message, i (message.id)}
             <MsgCard
               {message}
@@ -783,8 +809,9 @@
         oncreateChat={createChat}
       />
     {/if}
-    <div class="px-8 pb-4 max-w-300 mx-auto w-full max-md:px-4 max-sm:px-3">
-         <p class="text-xs text-on-surface-variant text-center">AI can make mistakes. Verify important information.</p>
-       </div>
+    <div class="px-8 pb-4 max-w-[80vw] mx-auto w-full max-md:px-4 max-sm:px-3 flex flex-col items-center gap-2">
+      <SoundToggle />
+      <p class="text-xs text-on-surface-variant text-center">AI can make mistakes. Verify important information.</p>
+    </div>
   </div>
 </div>

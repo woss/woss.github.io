@@ -237,29 +237,6 @@
           <div
             class="relative rounded-xl border border-[rgba(255,255,255,0.08)] bg-surface-container-high focus-within:border-primary/50 focus-within:shadow-[0_0_0_1px_rgba(0,255,136,0.15),0_0_20px_rgba(0,255,136,0.05)] transition-all duration-200"
           >
-            <!-- Clear button -->
-            {#if hasMessages && !isLoading}
-              <button
-                class="absolute top-2 right-2 z-10 flex items-center justify-center w-6 h-6 border-0 rounded-md bg-transparent text-outline cursor-pointer transition-colors duration-150 hover:text-on-surface-variant hover:bg-[rgba(255,255,255,0.06)]"
-                onclick={() => oncreateChat()}
-                aria-label="Clear chat"
-                title="Start new chat"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            {/if}
             <!-- Textarea with / indicator -->
             <div class="relative">
               {#if messageText.startsWith('/')}

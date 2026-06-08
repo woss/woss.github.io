@@ -13,6 +13,16 @@
 
   let contactSubmitted = $state(false);
   let contactError = $state('');
+
+  $effect(() => {
+    if (contactSubmitted && browser) {
+      const timer = setTimeout(() => {
+        dismissContactForm();
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  });
+
   let isSubmittingContact = $state(false);
   let contactName = $state('');
   let contactEmail = $state('');

@@ -16,7 +16,7 @@ import {
 import { embedText } from '$lib/server/embed';
 import { buildRagPrompt, chatStream, chatStreamWithTools } from '$lib/server/llm';
 import { checkCache, storeCache } from '$lib/server/llm-cache';
-import { getMcpToolDefs, getMcpResourceContent, getSystemPromptAddition, type McpToolDef } from '$lib/server/mcp/tools';
+import { getMcpToolDefs, getMcpResourceContent, getMcpPromptContent, getSystemPromptAddition, type McpToolDef } from '$lib/server/mcp/tools';
 import type { LLMEvent } from '$lib/server/llm/types';
 import { config } from '$lib/server/config';
 import { CAT, createLogger } from '$lib/server/logger';
@@ -128,7 +128,7 @@ async function needsMaculaTools(text: string, ctxMessages?: { role: string; cont
     if (wc > 6) return false;
   }
   const hasKeyword =
-    /macula|image|photo|picture|video|media|file|asset|keyword|license|metadata|exif|portfolio|art|music|hobbies?|interests?/.test(
+    /macula|image|photo|picture|video|media|file|asset|keyword|license|metadata|exif|portfolio|art|music|hobbies?|interests?|traverse|get_users|album|directory/.test(
       t,
     );
   if (hasKeyword) return true;
@@ -757,7 +757,7 @@ async function streamWithRetry(
       // replace with a fallback message. This catches cases where the LLM outputs tool calls
       // as text (e.g., when tools weren't properly enabled).
       if (
-        /^(?:\s*\n)*(?:get_file|search_files|list_files|search_keywords|get_file_presets|search_code|search_issues|search_pull_requests|list_issues|list_pull_requests|get_file_contents|create_or_update_file)\s*\{/i.test(
+        /^(?:\s*\n)*(?:get_file|search_files|list_files|search_code|search_issues|search_pull_requests|list_issues|list_pull_requests|get_file_contents|create_or_update_file)\s*\{/i.test(
           answerText.trim(),
         )
       ) {
@@ -1104,6 +1104,16 @@ export async function startGeneration(
       }
     }
 
+    // Fetch MCP prompt content for system prompt (macula only)
+    let promptContent = '';
+    if (maculaNeeded) {
+      try {
+        promptContent = await getMcpPromptContent();
+      } catch (err) {
+        log.error`Failed to fetch MCP prompts: ${err}`;
+      }
+    }
+
     if (githubNeeded || maculaNeeded) {
       try {
         const toolDefs = await getMcpToolDefs();
@@ -1114,6 +1124,7 @@ export async function startGeneration(
           if (messages.length > 0 && messages[0].role === 'system') {
             let additions = getSystemPromptAddition({ github: githubNeeded, macula: maculaNeeded });
             if (resourceContent) additions += '\n\n' + resourceContent;
+            if (promptContent) additions += '\n\n' + promptContent;
             messages[0] = {
               ...messages[0],
               content: messages[0].content + '\n\n' + additions,
