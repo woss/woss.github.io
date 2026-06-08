@@ -311,7 +311,7 @@ function chatStreamWithTools(
                           roundToolResults.push(chunk.output);
                         } else if (chunk.output && typeof chunk.output === 'object') {
                           try {
-                            const text = JSON.stringify(chunk.output).slice(0, 2000);
+                            const text = JSON.stringify(chunk.output).slice(0, 10000);
                             roundToolResults.push(text);
                           } catch {
                             /* ignore */
@@ -364,7 +364,7 @@ function chatStreamWithTools(
                             .join('\n\n');
                           currentMessages.push({
                             role: 'user',
-                            content: `The tool returned the following data:\n\n${resultsText}\n\nNow provide a clear, complete answer based on this data. Include specific details from the results. You may call additional tools if needed to complete the data.`,
+                            content: `I have the complete tool data. Here it is:\n\n${resultsText}\n\nNow provide a clear, complete answer showing these results. Do NOT call tools again — the data is already complete.`,
                           });
                         } else {
                           currentMessages.push({
@@ -384,9 +384,9 @@ function chatStreamWithTools(
                             messages: currentMessages,
                             abortSignal: signal,
                             temperature: 0.2,
-                            ...(MAX_TOKENS !== undefined ? { maxOutputTokens: MAX_TOKENS } : {}),
-                            ...(toolSet ? { tools: toolSet, maxSteps: 2 } : {}),
-                            allowSystemInMessages: true,
+                    ...(MAX_TOKENS !== undefined ? { maxOutputTokens: MAX_TOKENS } : {}),
+                    ...(toolSet ? { tools: toolSet, maxSteps: 2 } : {}),
+                    allowSystemInMessages: true,
                             onChunk: ({ chunk }) => {
                               if (aborted) return;
                               switch (chunk.type) {
