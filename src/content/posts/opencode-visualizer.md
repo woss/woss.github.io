@@ -161,6 +161,7 @@ ocv dash --exclude=work-project,internal-tool   # Exclude directories
 ocv sessions <path>                             # Sessions for a directory
 ocv session <id>                                # Single session details
 ocv search <query>                              # Full-text search
+ocv rename --from-dir <old> -d <new>            # Batch-rename session directory
 ocv overview                                    # Per-directory overview table
 ocv stats -o json                               # Any command → JSON with -o json
 ```
