@@ -2,7 +2,7 @@ export const DATA_DIR = './data';
 export const DB_PATH = './data/woss.db';
 export const DB_WAL_PATH = './data/woss.db-wal';
 export const DB_SHM_PATH = './data/woss.db-shm';
-export const VECTOR_INDEX_PATH = './data/vectors.usearch';
+export const VECTOR_INDEX_PATH = './data/woss.usearch';
 
 export function initDatabase(db: import('better-sqlite3').Database): void {
   db.exec(`

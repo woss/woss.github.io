@@ -19,7 +19,7 @@
   import { sendChatMessage } from '$lib/chat/send';
 
 
-  let { data } = $props() as { data: { messages: ChatMessage[] } };
+  let { data } = $props() as { data: { messages: ChatMessage[], locked: boolean } };
 
   /* ─── Constants ─── */
 
@@ -55,7 +55,17 @@
   let bottomSentinelEl: HTMLDivElement | undefined = $state();
   /* ─── Chat state ─── */
 
-  let chats = $state<Chat[]>([]);
+  // Capture SSR data at component init — page params are available here
+  // svelte-ignore state_referenced_locally
+  const ssrLocked = data.locked;
+  // svelte-ignore state_referenced_locally
+  const ssrChatId = (page.params as { id: string }).id;
+
+  let chats = $state<Chat[]>(
+    ssrLocked && ssrChatId
+      ? [{ id: ssrChatId, userId: '', title: '', createdAt: '', messageCount: 0, locked: true }]
+      : []
+  );
   let currentChatId = $derived<string | null>(chatId || null);
   // Local binding proxy for ChatSidebar two-way binding (reacts to store changes)
   let showMobile = $state(false);

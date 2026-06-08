@@ -203,7 +203,7 @@ function buildToolSet(
       execute: async (args: Record<string, unknown>) => {
         const argsStr = args
           ? Object.entries(args)
-              .map(([k, v]) => `${k}=${v}`)
+              .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
               .join(' ')
           : '';
         log.info`⚙ ${tool.name} [${argsStr}]`;

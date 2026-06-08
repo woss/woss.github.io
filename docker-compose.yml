@@ -33,7 +33,7 @@ services:
     env_file: .env
     container_name: woss-search-index-init
     volumes:
-      - ./new-data/:/app/data
+      - ./data/:/app/data
     command: ["pnpm", "run", "build-index"]
     restart: "no"
 
@@ -44,7 +44,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./new-data/:/app/data
+      - ./data/:/app/data
     environment:
       - OPENAI_BASE_URL=http://ollama:11434/v1
       - OPENAI_MODEL=gemma4:e4b

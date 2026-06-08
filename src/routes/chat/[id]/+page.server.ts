@@ -136,6 +136,9 @@ export const load: PageServerLoad = async ({ params }) => {
   if (!chatId) {
     error(400, 'chatId required');
   }
+  const chat = getChat(chatId);
+  if (!chat) error(404, 'This chat is no longer available.');
+
   const storedMessages = getMessages(chatId, 50, 0);
   const messages = storedMessages.map((m) => ({
     id: m.id,
@@ -153,5 +156,5 @@ export const load: PageServerLoad = async ({ params }) => {
     durationMs: m.durationMs || 0,
     deletedAt: m.deletedAt || undefined,
   }));
-  return { messages };
+  return { messages, locked: chat.locked };
 };

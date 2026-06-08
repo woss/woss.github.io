@@ -1,6 +1,6 @@
-# Building a Public MCP Server: From Zero to Production
+# Building a Content Graph MCP Server: Graph-Walk API Design for AI Agents
 
-## How We Built Macula's Unified Link MCP for AI Agents
+## How We Built Macula's Unified Link MCP with a Single Traversal Tool
 
 *Published: March 2026*
 
@@ -8,9 +8,15 @@
 
 ## Introduction
 
-The Model Context Protocol (MCP) is rapidly becoming the standard for connecting AI agents to external data sources. When we decided to expose our Unified Link service through MCP, we faced a unique challenge: creating a **public, read-only MCP server** that could serve AI agents without authentication while maintaining production-grade security.
+Every MCP server exposes a graph. The question is whether you design for it or fight it.
 
-This is the story of how we built it.
+Our Unified Link service connects files, users, directories, keywords, and licenses through named relationships. Files are uploaded by users and tagged with keywords. Directories contain files. Licenses cover files. Users have profiles. These relationships form a **content graph**: nodes connected by typed edges.
+
+The MCP server IS this graph. Its primary operation is walking an edge from a starting node to discover related nodes. Rather than inventing a separate tool per relationship (six tools for six entity types), we built one tool — `traverse` — that navigates the entire graph.
+
+Three leaf-reader tools handle terminal operations: `get_file` reads file details, `get_file_metadata` extracts technical metadata, `get_users` looks up user profiles. Everything else is edge-walking.
+
+This is the story of how we built it and why graph-shaped APIs are a natural fit for LLM agents.
 
 ## The Problem
 
@@ -21,6 +27,46 @@ We had a public API (`unified-link`) that served metadata about files, users, an
 - **Production-ready** — Rate limiting, input validation, SQL injection protection
 - **Scalable** — Should work with multiple server instances
 - **Simple** — Minimal dependencies, maintainable code
+
+## The Content Graph Model
+
+The Unified Link data model forms a directed graph with six node types and ten edge types:
+
+| from \ edge → | uploads | tagged_files | has_license | contains | random | recent | search | keywords | profile | info |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **user** | File[] | — | — | — | — | — | — | — | User | — |
+| **keyword** | — | File[] | — | — | — | — | — | — | — | — |
+| **license** | — | — | File[] | — | — | — | — | — | — | — |
+| **directory** | — | — | — | File[] | — | — | — | — | — | Directory |
+| **root** | — | — | — | — | File[] | File[] | File[] | Keyword[] | — | — |
+| **file** | — | — | — | — | — | — | — | — | — | File |
+
+Six entry points × ten edges = sixty theoretical traversals, fourteen of which produce results. Unsupported combinations return clear errors. The result is a compact, comprehensible API surface: one traversal tool with a small set of validated `from` + `edge` pairs.
+
+## Why Graph > REST
+
+A REST API for the same data requires endpoint discovery and multiple round trips:
+
+**REST approach:**
+```
+GET /user/woss/uploads       → [file IDs]
+  → GET /file/{id}           → file metadata
+  → GET /file/{id}/metadata  → EXIF/XMP data
+```
+
+Three round trips, three different URL patterns, versioned endpoints, and the agent must know the URL structure in advance.
+
+**Graph approach:**
+```javascript
+// One call: walk edge from user to files
+traverse({ from: { type: 'user', nickname: 'woss' }, edge: 'uploads' })
+// Second call only if agent needs deeper metadata
+get_file_metadata({ unifiedId })
+```
+
+Two calls, a single tool, no URL patterns, no versioning. The agent thinks in entities and relationships — the same structure the graph model provides.
+
+Graph-shaped APIs match how LLMs process information: **entity → relationship → entity**. The agent picks a starting node, chooses a relationship (edge), and receives connected nodes. This maps directly onto MCP's tool-calling paradigm without translation layers.
 
 ## Key Design Decisions
 
@@ -98,80 +144,61 @@ We implemented multiple layers of security:
 │  └────────────────────────────────────────────────────────┘   │
 │  ┌────────────────────────────────────────────────────────┐   │
 │  │                       McpServer                          │   │
-│  │                        10 Tools                          │   │
-│  │                       14 Prompts                         │   │
-│  │                       1 Resource                         │   │
+│  │                   1 Tool (traverse)                      │   │
+│  │                   3 Leaf Readers                         │   │
+│  │                   4 Task Prompts                          │   │
+│  │                  2 Resources                             │   │
 │  └────────────────────────────────────────────────────────┘   │
 │                              │                                  │
 │                  ┌───────────┴───────────┐                      │
 │                  ▼                       ▼                      │
-│  ┌──────────────────────┐  ┌──────────────────────┐            │
-│  │        Redis         │  │      PostgreSQL      │            │
-│  │  (cache + limits)    │  │      (Prisma)        │            │
-│  └──────────────────────┘  └──────────────────────┘            │
-└──────────────────────────────────────────────────────────────┘
+│  ┌──────────────────────────────────────┐  ┌──────────────────────┐            │
+│  │        Redis                         │  │      PostgreSQL      │            │
+│  │  (cache + limits)                    │  │      (Prisma)        │            │
+│  └──────────────────────────────────────┘  └──────────────────────┘            │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## The 10 Tools
+## Tools
 
-We exposed 10 read-only tools organized by domain:
+One graph-walk tool + three leaf readers.
 
-### Files (5)
-
-| Tool | Input | Description |
-|------|-------|-------------|
-| `get_file` | `unifiedId` | Full metadata (title, description, creator, links, AI info) |
-| `get_file_metadata` | `unifiedId, a?` | EXIF/XMP metadata |
-| `get_file_presets` | `unifiedId` | Available renditions |
-| `get_file_json_schema` | — | Schema for type-safe code |
-| `get_metadata_json_schema` | — | Metadata schema |
-
-### Node (1)
+`traverse` is the primary navigation tool — it walks edges between graph nodes. `get_file`, `get_file_metadata`, and `get_users` are terminal operations that read leaf data (file details, metadata, user profiles). They terminate the traversal at a node rather than continuing across edges.
 
 | Tool | Input | Description |
 |------|-------|-------------|
-| `get_node` | `type (user\|file\|directory), nickname?, unifiedId?, pathCid?` | Single node by type (user profile, file node, directory) |
+| `traverse` | `from`, `edge`, `filter?`, `limit?`, `after?`, `query?` | Graph walk: navigate from a starting node across a named edge to discover connected nodes. 14 valid `from`-`edge` pairs across 6 node types and 10 edge types. Full-text search via `edge: search` + `query`. Keyword search via `edge: keywords`. User profiles via `edge: profile`. File/directory details via `edge: info`. Cursor pagination via `after`. Filters: what, allowAI, nickname. Images work correctly — `contains` and `tagged_files` follow both direct file and rendition chains. |
+| `get_file` | `unifiedId`, `fields?` | Leaf reader: get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` for JSONPath-based selective field retrieval. |
+| `get_file_metadata` | `unifiedId, a?` | Leaf reader: get full EXIF/XMP/IPTC metadata. Optional `a` for specific metadata fields. |
+| `get_users` | `nicknames` | Leaf reader: batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found. |
 
-### Search (2)
+The `traverse` tool alone replaced seven specialized tools via its 14 valid traversals. The three leaf readers handle everything else.
 
-| Tool | Input | Description |
-|------|-------|-------------|
-| `search_keywords` | `search?, page?, limit?` | Search keywords |
-| `search` | `query, filter?, limit?, after?` | Full-text search over file titles (pg_trgm fuzzy matching) |
+**Replaced 6 tools:** get_file_presets, get_file_json_schema, get_metadata_json_schema, get_node, search_keywords, search were deleted as redundant — `traverse` covers all discovery patterns and `get_file` covers all file queries.
 
-### Navigation (2)
+**Replaced `get_user`:** Single-user lookup replaced by `get_users(nicknames[])` for batch efficiency.
 
-| Tool | Input | Description |
-|------|-------|-------------|
-| `traverse` | `from, edge, filter?, limit?, after?` | Discover content by navigating relationships (user→uploads, keyword→tagged_files, license→has_license, directory→contains, root→random/recent) |
-| (replaces 7 old tools) | | `list_files_by_license`, `list_files_for_ai`, `list_user_files`, `list_random_files`, `list_files_by_keyword`, `get_directory`, `get_directory_files` |
+## The 4 Task Prompts
 
-## The 14 Prompts
+We reduced from 14 specialized prompts to 4 task-oriented prompts. Rather than naming prompts after tool names, each prompt describes a **user goal** — what the agent should accomplish, not which tool it should use.
 
-We built specialized prompts for common agent workflows:
+| Prompt | Description | Wraps |
+|--------|-------------|-------|
+| `browse_user` | Explore a creator's profile, directories, and published files via user → directory → file navigation | `traverse`, `get_users` |
+| `display_media` | Display files (images, video, audio) in markdown with optimal renditions and presets | `get_file` |
+| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns | `traverse` |
+| `inspect_metadata` | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs | `get_file`, `get_file_metadata` |
 
-| Prompt | Description |
-|--------|-------------|
-| `discover_user_content` | Explore a creator's content |
-| `content_analysis` | Analyze file metadata and quality |
-| `search_discovery` | Find content via keywords |
-| `license_discovery` | Find content by license type |
-| `content_curation` | Curate content collections |
-| `rights_audit` | Audit usage rights |
-| `rights_verification` | Verify specific rights |
-| `rendition_optimization` | Find optimal file versions |
-| `creator_ecosystem` | Explore creator's network |
-| `metadata_extraction` | Extract structured metadata |
-| `random_exploration` | Discover random content |
-| `directory_deep_dive` | Explore directory contents |
-| `service_info` | Get service information |
-| `data_mining_discovery` | Find AI-friendly content |
+Key design choice: prompts are named for the **task** not the **tool**. An agent doesn't "call the traverse prompt" — it "browses a user" or "explores a directory." This lowers the activation energy for agents to use the prompts effectively.
 
-## The Resource
+## Resources
 
-| Resource | Description |
-|----------|-------------|
+| Resource URI | Description |
+|-------------|-------------|
 | `instructions` | Service usage guidelines for agents |
+| `/.well-known/mcp.json` | Auto-discovery metadata — returns `{name, url, transport, version, description}` so MCP clients can connect without manual configuration |
+
+The `/.well-known/mcp.json` endpoint implements the [MCP auto-discovery specification](https://modelcontextprotocol.io). MCP-compatible clients can detect our server automatically without manual URL configuration by checking this well-known URI.
 
 ## Security Implementation
 
@@ -235,7 +262,9 @@ await instance.register(fastifyRateLimit, {
 | `limit` | 1-100 |
 | `page` | ≥ 0 or ≥ 1 |
 | `after` | Base64url cursor string |
-| `edge` | Enum: `uploads`, `tagged_files`, `has_license`, `contains`, `random`, `recent` |
+| `edge` | Enum: `uploads`, `tagged_files`, `has_license`, `contains`, `random`, `recent`, `search`, `keywords`, `profile`, `info` |
+| `from.type` file variant | `unifiedId` when `from.type` is `file` |
+| `query` | 2-200 chars (required for `edge: search` or `edge: keywords`) |
 | `from.type` | Enum: `user`, `keyword`, `license`, `directory`, `root` |
 | `filter.what` | Enum: `all`, `images`, `videos`, `files` |
 | `filter.allowAI` | Boolean |
@@ -252,9 +281,9 @@ This allows easy local testing while keeping production secure.
 
 | Metric | Value |
 |--------|-------|
-| Tools | 10 |
-| Prompts | 14 |
-| Resources | 1 |
+| Tools | 1 graph-walk + 3 leaf readers |
+| Prompts | 4 |
+| Resources | 2 |
 | Security layers | 6 |
 | Code complexity | Low |
 | Dependencies | Minimal |
@@ -267,7 +296,7 @@ This allows easy local testing while keeping production secure.
 1. **Stateless mode** — Perfect for public read-only services
 2. **Direct SDK usage** — No abstraction overhead
 3. **Defense in depth** — Multiple security layers
-4. **Graph-shaped API** — Replaced 7 specialized tools with 3 composable ones (traverse, get_node, search), reducing surface area while increasing expressiveness
+4. **Graph-shaped API** — `traverse` alone replaced 7 specialized tools via 6 `from` types × 10 edges, reducing surface area while increasing expressiveness. The graph model maps directly to how LLMs process relationships: start at an entity, follow a relationship, get connected entities. No REST endpoints, no URL patterns, no versioning — just nodes and edges.
 5. **Zod schemas** — Single source of truth for validation and types
 
 ### What We'd Do Differently
@@ -276,11 +305,164 @@ This allows easy local testing while keeping production secure.
 2. **Centralized error handling** — Would have saved time on error responses
 3. **Tool categories** — Grouping tools would help agent discovery
 
+### 6. The Image Rendition Chain
+
+**The Challenge:** We discovered that `PublishedFile.fileId` is null for images — they link through `renditionId → Rendition.imageId → File` instead. Our `contains` and `tagged_files` edges only filtered through the `file` relation, so they returned zero images. A directory that should have had 200+ images returned 3 non-image files. No error, no warning — just wrong results.
+
+**The Fix:** Both edges now check both relation chains via Prisma `OR`:
+
+```typescript
+(where as Record<string, unknown>).OR = [
+  { file: { directory: { pathCid } } },
+  { rendition: { image: { directory: { pathCid } } } },
+];
+```
+
+The serializer also needed a `fileData` fallback to populate metadata from either path:
+
+```typescript
+const fileData = row.file ?? row.rendition?.image ?? null;
+```
+
+Now `leanSelect` includes `rendition.image`, `serializeFileNode` falls back gracefully, and images appear in all traversal results alongside non-image files.
+
+**The Lesson:** Database models with polymorphic relationships (where the FK can live in different places) require the query layer to follow all possible chains. A single-relation filter can silently exclude an entire category of data. If the numbers look too low, look for a missing relation path — the data is probably there, you're just not asking the right question.
+
+### 7. Tool Descriptions Matter for AI Agents
+
+**The Scenario:** We watched an AI agent interact with our MCP server through a chat interface. The agent had access to `get_users` (concrete description: "look up user profiles by nickname") and `traverse` (abstract description: "graph-walk interface: from(node) → edge(relationship) → results").
+
+The agent called `get_users(['woss'])` and got back directory names and file counts — but no actual files, no URLs, no IDs. Instead of calling `traverse` with `edge: 'contains'` to retrieve the real files, it fabricated ten plausible-sounding file URLs like `/@woss/windsurf/sunset-waves-7` with generic titles like "Sunset over the coastline" and "Mountain vista at dawn." The AI hallucinated an entire directory listing.
+
+**The Root Cause:** The `traverse` tool description was written for developers — it used graph theory jargon ("from(node) → edge(relationship) → results", "leaf-reader tools", "terminates the traversal"). An AI agent reading this description couldn't connect "graph-walk interface" to "tool that retrieves files from a directory." The agent defaulted to the tool it understood (`get_users`) and filled the gaps with hallucination.
+
+The agent wasn't lazy — it was making a reasonable choice between a tool it understood and one it didn't.
+
+**The Fix:** We rewrote every tool description to be task-oriented with concrete examples:
+
+- Old traverse: `"Graph-walk interface: from(node) → edge(relationship) → results. Edges returning File[]: uploads, tagged_files, has_license, contains, random, recent, search, info. Non-File edges: profile (User), info from directory (Directory), keywords (Keyword[]). Use filter.what/filter.allowAI/filter.nickname to narrow. Use after cursor for pagination."`
+
+- New traverse: `"Explore files by directory, user uploads, or keyword search. Use edge:'contains' to view files inside a directory (pass pathCid from get_users). Use edge:'uploads' to list a user's recent uploads. Use edge:'tagged_files' to search by keyword. Use edge:'profile' for user info or edge:'info' for directory metadata..."`
+
+We added an explicit cross-reference from `get_users` to `traverse`:
+- Old: `"Get user profiles by nickname array. Returns array of UserNode objects with avatarUrl, bio, fileCount."`
+- New: `"Look up user profiles by nickname. Returns user info... and directory list with pathCid and fileCount per directory. To see actual files inside a directory, use traverse with from:{type:'directory', pathCid:}, edge:'contains'."`
+
+We also rewrote the `browse_user` prompt to lead with `get_users` (matching agent behavior) and added a CRITICAL section: "`get_users` returns directory names and file counts but NOT the actual files. You MUST call `traverse` with `edge: 'contains'` to retrieve file listings from a directory."
+
+**The Lesson:** Tool descriptions are user-facing documentation — but the user is an AI model, not a human developer. Abstract or jargon-heavy descriptions cause AI agents to silently skip tools they don't understand, leading to hallucinated data. Write tool descriptions like task instructions: start with what the tool does in plain language, give concrete examples, and explicitly cross-reference complementary tools. A tool that an AI doesn't understand is a tool that might as well not exist — and worse, it creates a false sense of capability that can mask hallucination.
+
+## Usage Examples
+
+### Directory Traversal (Now Includes Images)
+
+Traverse a directory to find all published files — images and non-images:
+
+```javascript
+const response = await mcpClient.callTool('traverse', {
+  from: { type: 'directory', pathCid: 'QmDirectoryCidHere' },
+  edge: 'contains',
+  limit: 20,
+});
+```
+
+Filter by content type:
+
+```javascript
+// Get only images from a directory
+const images = await mcpClient.callTool('traverse', {
+  from: { type: 'directory', pathCid: 'QmDirectoryCidHere' },
+  edge: 'contains',
+  filter: { what: 'images' },
+  limit: 20,
+});
+
+// Get only videos from a directory
+const videos = await mcpClient.callTool('traverse', {
+  from: { type: 'directory', pathCid: 'QmDirectoryCidHere' },
+  edge: 'contains',
+  filter: { what: 'videos' },
+  limit: 20,
+});
+```
+
+### Keyword-Tagged Files (Now Includes Images)
+
+Find all files tagged with a keyword:
+
+```javascript
+const tagged = await mcpClient.callTool('traverse', {
+  from: { type: 'keyword', keyword: 'sunset' },
+  edge: 'tagged_files',
+  filter: { what: 'images' },
+  limit: 20,
+});
+```
+
+### File Metadata
+
+```javascript
+// Get file info
+const file = await mcpClient.callTool('get_file', {
+  unifiedId: 'someUnifiedId',
+  fields: ['title', 'creator', 'license'],
+});
+
+// Extract technical metadata
+const meta = await mcpClient.callTool('get_file_metadata', {
+  unifiedId: 'someUnifiedId',
+  a: ['exif', 'xmp'],
+});
+```
+
+### Batch User Lookup
+
+```javascript
+const users = await mcpClient.callTool('get_users', {
+  nicknames: ['sarah', 'john', 'alex'],
+});
+```
+
+### Full-Text Search
+
+```javascript
+const results = await mcpClient.callTool('traverse', {
+  from: { type: 'root' },
+  edge: 'search',
+  query: 'mountain landscape',
+  limit: 10,
+});
+```
+
+### Random Discovery
+
+```javascript
+const random = await mcpClient.callTool('traverse', {
+  from: { type: 'root' },
+  edge: 'random',
+  limit: 5,
+});
+```
+
+### User Profile with Directories
+
+The profile edge now returns the user's directories alongside their profile:
+
+```javascript
+const profile = await mcpClient.callTool('traverse', {
+  from: { type: 'user', nickname: 'woss' },
+  edge: 'profile',
+});
+// profile.user.directories → [{ name: 'woss-photo', pathCid: '...', fileCount: 148 }, ...]
+```
+
+This lets agents discover which albums a user has before querying them — no need to guess directory names.
+
 ## Conclusion
 
 Building a public MCP server doesn't require complex authentication or session management. By embracing stateless design, using defense in depth, and leveraging existing tools (Zod, Prisma, Redis), we built a production-ready MCP server that's simple to maintain and scale.
 
-The key insight: **public, read-only MCP servers are fundamentally simpler than authenticated ones**. Don't add complexity you don't need.
+The key insight: **graph-shaped APIs are a natural fit for LLM agents**. A single traversal tool with validated node-edge pairs replaces a proliferation of specialized tools, reduces the learning curve for agents, and maps directly onto how LLMs reason about relationships.
 
 ---
 

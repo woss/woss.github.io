@@ -32,7 +32,7 @@ cd /opt/woss.io
 
 # Create production .env file
 cat > .env << 'EOF'
-WEB_ORIGIN=https://woss.io
+ORIGIN=https://woss.io
 OPENAI_API_KEY=
 OPENAI_BASE_URL=http://ollama:11434/v1
 OPENAI_MODEL=qwen2.5:3b
