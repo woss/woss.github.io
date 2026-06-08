@@ -60,36 +60,38 @@ function tryRenameChat(chatId: string, text: string): void {
 
 function needsGithubTools(text: string, ctxMessages?: { role: string; content: string }[]): boolean {
   const t = text.toLowerCase();
-  const referencesDaniel = /\b(daniel|woss|anagolay|idiyanale|sensio|macula)\b/.test(t);
+  const referencesDaniel = /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|sensio|macula)\b/i.test(t);
   const contextReferencesDaniel =
     !referencesDaniel &&
     ctxMessages?.some(
       (m) =>
-        m.role === 'user' && /\b(daniel|woss|anagolay|idiyanale|sensio|macula)\b/.test((m.content ?? '').toLowerCase()),
+        m.role === 'user' && /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|sensio|macula)\b/i.test((m.content ?? '').toLowerCase()),
     );
+  const hasKeyword = /pr|pull request|commit|issue|repo|repository|github|stars|fork|contrib/.test(t);
+  if (hasKeyword) return true;
   if (!referencesDaniel && !contextReferencesDaniel) {
     const wc = t.split(/\s+/).filter(Boolean).length;
     if (wc > 6) return false;
   }
-  return /pr|pull request|commit|issue|repo|repository|github|stars|fork|contrib/.test(t);
+  return false;
 }
 
 function needsMaculaTools(text: string, ctxMessages?: { role: string; content: string }[]): boolean {
   const t = text.toLowerCase();
-  const referencesDaniel = /\b(daniel|woss|anagolay|idiyanale|sensio|macula)\b/.test(t);
+  const referencesDaniel = /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|sensio|macula)\b/i.test(t);
   const contextReferencesDaniel =
     !referencesDaniel &&
     ctxMessages?.some(
       (m) =>
-        m.role === 'user' && /\b(daniel|woss|anagolay|idiyanale|sensio|macula)\b/.test((m.content ?? '').toLowerCase()),
+        m.role === 'user' && /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|sensio|macula)\b/i.test((m.content ?? '').toLowerCase()),
     );
+  const hasKeyword = /macula|image|photo|picture|video|media|file|asset|keyword|license|metadata|exif|portfolio|art|music|hobbies?|interests?/.test(t);
+  if (hasKeyword) return true;
   if (!referencesDaniel && !contextReferencesDaniel) {
     const wc = t.split(/\s+/).filter(Boolean).length;
     if (wc > 6) return false;
   }
-  return /macula|image|photo|picture|video|media|file|asset|keyword|license|metadata|exif|portfolio|art|music|hobbies?|interests?/.test(
-    t,
-  );
+  return false;
 }
 
 /**

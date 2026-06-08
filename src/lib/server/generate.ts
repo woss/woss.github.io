@@ -16,7 +16,13 @@ import {
 import { embedText } from '$lib/server/embed';
 import { buildRagPrompt, chatStream, chatStreamWithTools } from '$lib/server/llm';
 import { checkCache, storeCache } from '$lib/server/llm-cache';
-import { getMcpToolDefs, getMcpResourceContent, getMcpPromptContent, getSystemPromptAddition, type McpToolDef } from '$lib/server/mcp/tools';
+import {
+  getMcpToolDefs,
+  getMcpResourceContent,
+  getMcpPromptContent,
+  getSystemPromptAddition,
+  type McpToolDef,
+} from '$lib/server/mcp/tools';
 import type { LLMEvent } from '$lib/server/llm/types';
 import { config } from '$lib/server/config';
 import { CAT, createLogger } from '$lib/server/logger';
@@ -95,18 +101,21 @@ function tryRenameChat(chatId: string, text: string): void {
  */
 async function needsGithubTools(text: string, ctxMessages?: { role: string; content: string }[]): Promise<boolean> {
   const t = text.toLowerCase();
-  const referencesDaniel = /\b(daniel|woss|anagolay|idiyanale|macula)\b/.test(t);
+  const referencesDaniel = /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|macula)\b/i.test(t);
   const contextReferencesDaniel =
     !referencesDaniel &&
     ctxMessages?.some(
-      (m) => m.role === 'user' && /\b(daniel|woss|anagolay|idiyanale|macula)\b/.test((m.content ?? '').toLowerCase()),
+      (m) =>
+        m.role === 'user' &&
+        /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|macula)\b/i.test((m.content ?? '').toLowerCase()),
     );
+  const hasKeyword =
+    /pr|pull request|commit|issue|repo|repository|github|stars|fork|contrib|project|built|founded|work/.test(t);
+  if (hasKeyword) return true;
   if (!referencesDaniel && !contextReferencesDaniel) {
     const wc = t.split(/\s+/).filter(Boolean).length;
     if (wc > 6) return false;
   }
-  const hasKeyword = /pr|pull request|commit|issue|repo|repository|github|stars|fork|contrib/.test(t);
-  if (hasKeyword) return true;
   return false;
 }
 
@@ -117,21 +126,21 @@ async function needsGithubTools(text: string, ctxMessages?: { role: string; cont
  */
 async function needsMaculaTools(text: string, ctxMessages?: { role: string; content: string }[]): Promise<boolean> {
   const t = text.toLowerCase();
-  const referencesDaniel = /\b(daniel|woss|macula)\b/.test(t);
+  const referencesDaniel = /\b(daniel(?:'?s)?|woss|macula)\b/i.test(t);
   const contextReferencesDaniel =
     !referencesDaniel &&
     ctxMessages?.some(
-      (m) => m.role === 'user' && /\b(daniel|woss|portfolio|macula)\b/.test((m.content ?? '').toLowerCase()),
+      (m) => m.role === 'user' && /\b(daniel(?:'?s)?|woss|portfolio|macula)\b/i.test((m.content ?? '').toLowerCase()),
     );
-  if (!referencesDaniel && !contextReferencesDaniel) {
-    const wc = t.split(/\s+/).filter(Boolean).length;
-    if (wc > 6) return false;
-  }
   const hasKeyword =
     /macula|image|photo|picture|video|media|file|asset|keyword|license|metadata|exif|portfolio|art|music|hobbies?|interests?|traverse|get_users|album|directory/.test(
       t,
     );
   if (hasKeyword) return true;
+  if (!referencesDaniel && !contextReferencesDaniel) {
+    const wc = t.split(/\s+/).filter(Boolean).length;
+    if (wc > 6) return false;
+  }
   return false;
 }
 
@@ -654,10 +663,10 @@ async function streamWithRetry(
   const db = getDb();
   const msgId = crypto.randomUUID();
   const toolCallStmt = db.prepare(
-    `INSERT INTO tool_calls (id, message_id, name, server_id, tool_input) VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO tool_calls (id, message_id, name, server_id, tool_input, started_at) VALUES (?, ?, ?, ?, ?, datetime('now'))`,
   );
   const toolCallFinishStmt = db.prepare(
-    `UPDATE tool_calls SET finished_at = datetime('now'), result_size = ? WHERE id = ?`,
+    `UPDATE tool_calls SET finished_at = datetime('now'), tool_output = ?, result_size = ? WHERE id = ?`,
   );
 
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -725,9 +734,9 @@ async function streamWithRetry(
                 log.debug`Tool result: ${event.name}`;
                 publishLive(chatId, 'tool_call_end', { id: event.id, name: event.name });
                 try {
-                  const resultSize =
-                    typeof event.result === 'string' ? event.result.length : JSON.stringify(event.result).length;
-                  toolCallFinishStmt.run(resultSize, event.id);
+                  const resultStr = typeof event.result === 'string' ? event.result : JSON.stringify(event.result);
+                  const resultSize = resultStr.length;
+                  toolCallFinishStmt.run(resultStr, resultSize, event.id);
                 } catch (e) {
                   log.error`Failed to record tool result: ${e}`;
                 }
