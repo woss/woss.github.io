@@ -364,13 +364,13 @@ function chatStreamWithTools(
                             .join('\n\n');
                           currentMessages.push({
                             role: 'user',
-                            content: `The tool returned the following data:\n\n${resultsText}\n\nNow provide a clear, complete answer based on this data. Include specific details from the results. Do NOT call any more tools.`,
+                            content: `The tool returned the following data:\n\n${resultsText}\n\nNow provide a clear, complete answer based on this data. Include specific details from the results. You may call additional tools if needed to complete the data.`,
                           });
                         } else {
                           currentMessages.push({
                             role: 'user',
                             content:
-                              'You just called tools. Now produce a clear answer based on the tool results you received. Do NOT call tools — just write the answer.',
+                              'You just called tools. Now produce a clear answer based on the tool results you received. You may call additional tools if needed to complete the data.',
                           });
                         }
 
@@ -385,14 +385,28 @@ function chatStreamWithTools(
                             abortSignal: signal,
                             temperature: 0.2,
                             ...(MAX_TOKENS !== undefined ? { maxOutputTokens: MAX_TOKENS } : {}),
+                            ...(toolSet ? { tools: toolSet, maxSteps: 2 } : {}),
                             allowSystemInMessages: true,
                             onChunk: ({ chunk }) => {
                               if (aborted) return;
-                              if (chunk.type === 'text-delta') {
-                                roundTextLength += chunk.text.length;
-                                emit.single(textDeltaEvent(chunk.text));
-                              } else if (chunk.type === 'reasoning-delta') {
-                                emit.single(reasoningDeltaEvent(chunk.text));
+                              switch (chunk.type) {
+                                case 'text-delta':
+                                  roundTextLength += chunk.text.length;
+                                  emit.single(textDeltaEvent(chunk.text));
+                                  break;
+                                case 'reasoning-delta':
+                                  emit.single(reasoningDeltaEvent(chunk.text));
+                                  break;
+                                case 'tool-call':
+                                  emit.single(toolCallEvent(chunk.toolCallId, chunk.toolName, chunk.input));
+                                  break;
+                                case 'tool-result':
+                                  log.debug`[synth-tool-result] name=${chunk.toolName}, resultType=${typeof chunk.output}`;
+                                  emit.single(toolResultEvent(chunk.toolCallId, chunk.toolName, chunk.output));
+                                  break;
+                                case 'tool-input-delta':
+                                  emit.single(toolInputDeltaEvent(chunk.id, '', chunk.delta));
+                                  break;
                               }
                             },
                             onError: ({ error: err }: { error: unknown }) => {
