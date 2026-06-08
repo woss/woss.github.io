@@ -34,6 +34,7 @@
 
   let chats = $state<Chat[]>([]);
   let showDeleteConfirm = $state<string | null>(null);
+  let deleting = $state(false);
   let hasChats = $derived(chats.length > 0);
   let canCreateChat = $derived(chats.length < config.public.maxChats);
 
@@ -55,6 +56,8 @@
   }
 
   async function deleteChat(chatId: string): Promise<void> {
+    if (deleting) return;
+    deleting = true;
     showDeleteConfirm = null;
     if (!userId) return;
     try {
@@ -67,6 +70,7 @@
         chats = chats.filter(c => c.id !== chatId);
       }
     } catch { /* ignore */ }
+    deleting = false;
   }
 
   function enhanceContact({ formData, cancel }: {

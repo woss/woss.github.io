@@ -90,6 +90,7 @@
   });
 
   let showDeleteConfirm = $state<string | null>(null);
+  let deleting = $state(false);
   let showContactForm = $state(false);
   let contactDismissed = $state(false);
 
@@ -202,6 +203,8 @@
   }
 
   async function deleteChat(chatId: string): Promise<void> {
+    if (deleting) return;
+    deleting = true;
     showDeleteConfirm = null;
     if (!userId) return;
     try {
@@ -223,6 +226,7 @@
     } catch {
       /* ignore */
     }
+    deleting = false;
   }
 
   async function sendMessage(text: string): Promise<void> {

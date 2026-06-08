@@ -5,7 +5,6 @@ import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import GithubSlugger from 'github-slugger';
 import { Index, MetricKind, ScalarKind } from 'usearch';
-// @ts-expect-error no types for better-sqlite3
 import Database from 'better-sqlite3';
 import { parseFrontmatter } from '../content/index.ts';
 import { getDb, closeDb } from '../lib/server/db.ts';

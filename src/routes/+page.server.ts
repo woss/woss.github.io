@@ -188,6 +188,7 @@ export const actions = {
       if (chat.userId !== userId) return fail(403, { error: 'Forbidden' });
 
       deleteChat(chatId);
+      callWebhook({ type: 'chatDeleted', chatId }).catch((e) => log.warn`Webhook failed: ${e}`);
       return { success: true, chatId };
     } catch (e) {
       log.error`Failed to delete chat: ${e}`;

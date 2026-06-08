@@ -1,5 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
+  import { slide } from 'svelte/transition';
   import type { Chat } from '$lib/chat/types';
   import { config } from '$lib/config';
 
@@ -54,7 +55,7 @@
   <!-- Chat list -->
   <div class="flex-1 overflow-y-auto p-3 space-y-1">
     {#each chats as chat (chat.id)}
-      <div class="relative group flex items-center gap-1">
+      <div class="relative group flex items-center gap-1" transition:slide={{ duration: 200 }}>
         <a
           href={resolve(`/chat/${chat.id}`)}
           class="flex-1 flex items-center gap-2 px-3 py-2 rounded-md text-left transition-colors duration-150 min-w-0 no-underline {chat.locked ? 'opacity-60 ' : ''}{currentChatId !== null && currentChatId === chat.id ? 'bg-surface-container-high text-on-surface' : 'text-on-surface-variant hover:bg-surface-container-high/50 hover:text-on-surface'}"
@@ -73,9 +74,9 @@
         </a>
 
         {#if showDeleteConfirm === chat.id}
-          <div class="absolute right-0 top-0 bottom-0 flex items-center gap-1 pr-2 bg-surface-container-high rounded-r-md">
-            <button class="text-xs font-medium text-secondary px-2 py-1 rounded transition-colors hover:bg-secondary/20 cursor-pointer" onclick={() => ondeleteChat(chat.id)}>Delete</button>
-            <button class="text-xs text-on-surface-variant px-1.5 py-1 rounded transition-colors hover:bg-white/10 cursor-pointer" onclick={oncancelDelete}>Cancel</button>
+          <div class="flex items-center gap-1 shrink-0">
+            <button class="shrink-0 text-xs font-medium text-secondary px-2 py-1 rounded transition-colors hover:bg-secondary/20 cursor-pointer" onclick={() => ondeleteChat(chat.id)}>Delete</button>
+            <button class="shrink-0 text-xs text-on-surface-variant px-1.5 py-1 rounded transition-colors hover:bg-white/10 cursor-pointer" onclick={oncancelDelete}>Cancel</button>
           </div>
         {:else}
           <button

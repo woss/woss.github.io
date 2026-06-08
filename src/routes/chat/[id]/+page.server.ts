@@ -11,6 +11,7 @@ import {
   getChat,
 } from '$lib/server/db';
 import { config as clientConfig } from '$lib/config';
+import { callWebhook } from '$lib/server/webhooks';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { isAvailable } from '$lib/server/llm';
 import { startGeneration } from '$lib/server/generate';
@@ -91,11 +92,10 @@ export const actions: Actions = {
   },
 
   delete: async (event) => {
-    const chatId = event.params.id;
-    if (!chatId) return fail(400, { error: 'chatId required' });
-
     const fd = await event.request.formData();
+    const chatId = String(fd.get('chatId') ?? '');
     const userId = String(fd.get('userId') ?? '');
+    if (!chatId) return fail(400, { error: 'chatId required' });
     if (!userId) return fail(400, { error: 'userId required' });
 
     const chat = getChat(chatId);
@@ -103,6 +103,7 @@ export const actions: Actions = {
     if (chat.userId !== userId) return fail(403, { error: 'Not authorized' });
 
     deleteChat(chatId);
+    callWebhook({ type: 'chatDeleted', chatId });
 
     return { success: true, chatId };
   },
