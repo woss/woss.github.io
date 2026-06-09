@@ -297,7 +297,7 @@ function chatStreamWithTools(
                   abortSignal: signal,
                   temperature: 0.2,
                   ...(MAX_TOKENS !== undefined ? { maxTokens: MAX_TOKENS } : {}),
-                  ...(toolSet ? { tools: toolSet, maxSteps: 1 } : {}),
+                  ...(toolSet ? { tools: toolSet, maxSteps: 3 } : {}),
                   onChunk: ({ chunk }) => {
                     if (aborted) return;
                     switch (chunk.type) {
@@ -364,7 +364,7 @@ function chatStreamWithTools(
                         ),
                       );
 
-                      if (roundToolCalls > 0 && round < MAX_ROUNDS) {
+                      if (roundToolCalls > 0 && roundTextLength === 0 && round < MAX_ROUNDS) {
                         log.info`[synthesis-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round with results`;
 
                         // Append tool results so the model has the data in context
