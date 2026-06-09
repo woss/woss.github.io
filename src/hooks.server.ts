@@ -2,6 +2,8 @@ import { config } from '$lib/server/config';
 import { initLogger, CAT, createLogger } from '$lib/server/logger';
 import type { Handle } from '@sveltejs/kit';
 
+import { env } from '$env/dynamic/private';
+
 const APP_ORIGIN = config().app.origin;
 
 let logInitialized = false;
@@ -10,7 +12,7 @@ export const handle: Handle = async ({ event, resolve }) => {
   // Init logger on first request
   if (!logInitialized) {
     logInitialized = true;
-    await initLogger();
+    await initLogger((env.LOG_LEVEL as 'trace' | 'debug' | 'info' | 'warning' | 'error') || 'info');
     const log = createLogger(CAT.hooks);
     log.info(`Logger initialized. App origin: ${APP_ORIGIN}`);
   }

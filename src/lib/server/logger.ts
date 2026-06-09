@@ -42,7 +42,7 @@ const INIT_KEY = '__woss_log_initialized';
  * Called once from hooks.server.ts on first request.
  * Safe to call multiple times — subsequent calls are no-ops.
  */
-export async function initLogger(): Promise<void> {
+export async function initLogger(logLevel: 'trace' | 'debug' | 'info' | 'warning' | 'error' = 'info'): Promise<void> {
   const g = globalThis as Record<string, unknown>;
   if (g[INIT_KEY]) return;
   g[INIT_KEY] = true;
@@ -70,7 +70,7 @@ export async function initLogger(): Promise<void> {
     loggers: [
       {
         category: ['woss'],
-        lowestLevel: 'debug',
+        lowestLevel: logLevel,
         sinks: ['console', 'file'],
       },
       {
