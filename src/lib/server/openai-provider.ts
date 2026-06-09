@@ -125,7 +125,8 @@ interface ChatMessage {
 const BASE_URL = config().openai.baseUrl;
 const MODEL = config().openai.model;
 const MAX_TOKENS = config().openai.maxTokens;
-const MAX_STEPS = config().openai.maxSteps;
+const FIRST_ROUND_MAX_STEPS = config().openai.firstRoundMaxSteps;
+const SYNTHESIS_MAX_STEPS = config().openai.synthesisMaxSteps;
 
 log.debug`[openai-provider] BASE_URL: ${BASE_URL} | MODEL: ${MODEL}`;
 
@@ -297,7 +298,7 @@ function chatStreamWithTools(
                   abortSignal: signal,
                   temperature: 0.2,
                   ...(MAX_TOKENS !== undefined ? { maxTokens: MAX_TOKENS } : {}),
-                  ...(toolSet ? { tools: toolSet, maxSteps: 3 } : {}),
+                  ...(toolSet ? { tools: toolSet, maxSteps: FIRST_ROUND_MAX_STEPS } : {}),
                   onChunk: ({ chunk }) => {
                     if (aborted) return;
                     switch (chunk.type) {
@@ -397,7 +398,7 @@ function chatStreamWithTools(
                             abortSignal: signal,
                             temperature: 0.1,
                             ...(MAX_TOKENS !== undefined ? { maxOutputTokens: MAX_TOKENS } : {}),
-                            ...(toolSet ? { tools: toolSet, maxSteps: MAX_STEPS } : {}),
+                            ...(toolSet ? { tools: toolSet, maxSteps: SYNTHESIS_MAX_STEPS } : {}),
                             allowSystemInMessages: true,
                             onChunk: ({ chunk }) => {
                               if (aborted) return;
