@@ -95,11 +95,11 @@ class McpClient {
     }
   }
 
-  async readResource(uri: string): Promise<McpResourceContent | null> {
+  async readResource(uri: string, serverId?: string): Promise<McpResourceContent | null> {
     if (config().mcp.servers.length === 0) return null;
     try {
       await this.initialize();
-      return await getManager().readResource(uri);
+      return await getManager().readResource(uri, serverId);
     } catch (err) {
       log.debug`ERROR: readResource(${uri}) failed: ${err}`;
       return null;
@@ -117,11 +117,11 @@ class McpClient {
     }
   }
 
-  async getPrompt(name: string): Promise<McpPromptMessage[]> {
+  async getPrompt(name: string, serverId?: string): Promise<McpPromptMessage[]> {
     if (config().mcp.servers.length === 0) return [];
     try {
       await this.initialize();
-      return await getManager().getPrompt(name);
+      return await getManager().getPrompt(name, serverId);
     } catch (err) {
       log.debug`ERROR: getPrompt(${name}) failed: ${err}`;
       return [];

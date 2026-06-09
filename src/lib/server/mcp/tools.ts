@@ -240,7 +240,7 @@ async function getMcpResourceContent(serverId?: string): Promise<string> {
   const filtered = serverId ? resources.filter((r) => r.serverId === serverId) : resources;
   const parts: string[] = [];
   for (const resource of filtered) {
-    const content = await mcp.readResource(resource.uri);
+    const content = await mcp.readResource(resource.uri, resource.serverId);
     if (content && content.text) {
       parts.push(`=== ${resource.uri} ===\n${content.text}`);
     }
@@ -261,7 +261,7 @@ async function getMcpPromptContent(): Promise<string> {
   const prompts = await mcp.listPrompts();
   const parts: string[] = [];
   for (const prompt of prompts) {
-    const messages = await mcp.getPrompt(prompt.name);
+    const messages = await mcp.getPrompt(prompt.name, prompt.serverId);
     if (messages.length > 0) {
       const text = messages.map((m) => m.text).join('\n');
       parts.push(`=== PROMPT: ${prompt.name} ===\n${text}`);

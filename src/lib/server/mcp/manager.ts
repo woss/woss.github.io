@@ -242,8 +242,23 @@ export class McpManager {
     return all;
   }
 
-  async readResource(uri: string): Promise<McpResourceContent | null> {
-    for (const [serverId, { client }] of this.connections) {
+  async readResource(uri: string, serverId?: string): Promise<McpResourceContent | null> {
+    if (serverId) {
+      const conn = this.connections.get(serverId);
+      if (!conn) return null;
+      try {
+        const result = await conn.client.readResource({ uri });
+        for (const content of result.contents) {
+          if ('text' in content) {
+            return { uri: content.uri, text: content.text, mimeType: content.mimeType };
+          }
+        }
+      } catch (err) {
+        log.debug`readResource failed for ${uri} on ${serverId}: ${err instanceof Error ? err.message : String(err)}`;
+      }
+      return null;
+    }
+    for (const [sid, { client }] of this.connections) {
       try {
         const result = await client.readResource({ uri });
         for (const content of result.contents) {
@@ -252,7 +267,7 @@ export class McpManager {
           }
         }
       } catch (err) {
-        log.debug`readResource failed for ${uri} on ${serverId}: ${err instanceof Error ? err.message : String(err)}`;
+        log.debug`readResource failed for ${uri} on ${sid}: ${err instanceof Error ? err.message : String(err)}`;
       }
     }
     return null;
@@ -279,8 +294,22 @@ export class McpManager {
     return all;
   }
 
-  async getPrompt(name: string): Promise<McpPromptMessage[]> {
-    for (const [serverId, { client }] of this.connections) {
+  async getPrompt(name: string, serverId?: string): Promise<McpPromptMessage[]> {
+    if (serverId) {
+      const conn = this.connections.get(serverId);
+      if (!conn) return [];
+      try {
+        const result = await conn.client.getPrompt({ name });
+        return result.messages.map((m) => ({
+          role: m.role,
+          text: m.content.type === 'text' ? m.content.text : '',
+        }));
+      } catch (err) {
+        log.debug`getPrompt failed for ${name} on ${serverId}: ${err instanceof Error ? err.message : String(err)}`;
+      }
+      return [];
+    }
+    for (const [sid, { client }] of this.connections) {
       try {
         const result = await client.getPrompt({ name });
         return result.messages.map((m) => ({
@@ -288,7 +317,7 @@ export class McpManager {
           text: m.content.type === 'text' ? m.content.text : '',
         }));
       } catch (err) {
-        log.debug`getPrompt failed for ${name} on ${serverId}: ${err instanceof Error ? err.message : String(err)}`;
+        log.debug`getPrompt failed for ${name} on ${sid}: ${err instanceof Error ? err.message : String(err)}`;
       }
     }
     return [];
