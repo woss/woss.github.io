@@ -1,7 +1,7 @@
 /**
  * Unified OpenAI-compatible LLM provider.
  * Uses Vercel AI SDK streamText + Effect.ts Stream for typed event streaming.
- * 
+ *
  * Type safety: Uses LLMEvent factory functions instead of type assertions.
  * Primitive values extracted via String()/Number() instead of `as string`/`as number`.
  */
@@ -39,12 +39,7 @@ function toolInputDeltaEvent(id: string, name: string, text: string): LLMEvent {
   return { type: 'tool-input-delta', id, name, text };
 }
 
-function stepFinishEvent(
-  reason: FinishReason,
-  toolCalls: number,
-  textProduced: boolean,
-  usage?: TokenUsage,
-): LLMEvent {
+function stepFinishEvent(reason: FinishReason, toolCalls: number, textProduced: boolean, usage?: TokenUsage): LLMEvent {
   return usage !== undefined
     ? { type: 'step-finish', reason, toolCalls, textProduced, usage }
     : { type: 'step-finish', reason, toolCalls, textProduced };
@@ -88,7 +83,14 @@ function toModelMessages(messages: ChatMessage[]): Array<ModelMessage> {
       case 'tool':
         result.push({
           role: 'tool',
-          content: [{ type: 'tool-result', toolCallId: m.tool_call_id ?? '', toolName: '', output: { type: 'text', value: m.content } }],
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: m.tool_call_id ?? '',
+              toolName: '',
+              output: { type: 'text', value: m.content },
+            },
+          ],
         });
         break;
     }
@@ -123,6 +125,7 @@ interface ChatMessage {
 const BASE_URL = config().openai.baseUrl;
 const MODEL = config().openai.model;
 const MAX_TOKENS = config().openai.maxTokens;
+const MAX_STEPS = config().openai.maxSteps;
 
 log.debug`[openai-provider] BASE_URL: ${BASE_URL} | MODEL: ${MODEL}`;
 
@@ -201,24 +204,29 @@ function buildToolSet(
       description: tool.description,
       inputSchema: jsonSchema(tool.inputSchema ?? { type: 'object', properties: {} }),
       execute: async (args: Record<string, unknown>) => {
-        const argsStr = args
-          ? Object.entries(args)
-              .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
-              .join(' ')
-          : '';
-        log.info`⚙ ${tool.name} [${argsStr}]`;
-        const result = await executeFn({
-          name: tool.name,
-          arguments: JSON.stringify(args),
-        });
-        const toolResult = result.content.map((item) => item.text ?? '').join('');
-        log.debug`[buildToolSet] ${tool.name} execute result length=${toolResult.length}, first 200 chars="${toolResult.slice(0, 200)}"`;
-        const maxResultLength = config().openai.maxResultsLength;
-        const truncated =
-          toolResult.length > maxResultLength
-            ? toolResult.slice(0, maxResultLength) + '\n\n[... truncated: full output too large]'
-            : toolResult;
-        return truncated;
+        try {
+          const argsStr = args
+            ? Object.entries(args)
+                .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+                .join(' ')
+            : '';
+          log.info`⚙ ${tool.name} [${argsStr}]`;
+          const result = await executeFn({
+            name: tool.name,
+            arguments: JSON.stringify(args),
+          });
+          const toolResult = result.content.map((item) => item.text ?? '').join('');
+          log.debug`[buildToolSet] ${tool.name} execute result length=${toolResult.length}, first 200 chars="${toolResult.slice(0, 200)}"`;
+          const maxResultLength = config().openai.maxResultsLength;
+          const truncated =
+            toolResult.length > maxResultLength
+              ? toolResult.slice(0, maxResultLength) + '\n\n[... truncated: full output too large]'
+              : toolResult;
+          return truncated;
+        } catch (err) {
+          log.error`[buildToolSet] ${tool.name} execute failed: ${err instanceof Error ? err.message : String(err)} stack=${err instanceof Error ? err.stack : 'N/A'}`;
+          return `Error executing ${tool.name}: ${err instanceof Error ? err.message : String(err)}`;
+        }
       },
     };
   }
@@ -271,7 +279,7 @@ function chatStreamWithTools(
           let lastFinishReason: string = 'stop';
           let actualModelName: string = config().openai.model;
 
-          const MAX_ROUNDS = 3;
+          const MAX_ROUNDS = config().openai.maxRounds;
 
           async function runRound(round: number): Promise<void> {
             if (aborted) return;
@@ -335,7 +343,9 @@ function chatStreamWithTools(
                       aggregatedUsage = {
                         inputTokens: (aggregatedUsage?.inputTokens ?? 0) + Number(event.usage.inputTokens ?? 0),
                         outputTokens: (aggregatedUsage?.outputTokens ?? 0) + Number(event.usage.outputTokens ?? 0),
-                        totalTokens: (aggregatedUsage?.totalTokens ?? 0) + Number((event.usage.inputTokens ?? 0) + (event.usage.outputTokens ?? 0)),
+                        totalTokens:
+                          (aggregatedUsage?.totalTokens ?? 0) +
+                          Number((event.usage.inputTokens ?? 0) + (event.usage.outputTokens ?? 0)),
                       };
                     }
                   },
@@ -364,7 +374,7 @@ function chatStreamWithTools(
                             .join('\n\n');
                           currentMessages.push({
                             role: 'user',
-                            content: `I have the complete tool data. Here it is:\n\n${resultsText}\n\nNow provide a clear, complete answer showing these results. Do NOT call tools again — the data is already complete.`,
+                            content: `I have the complete tool data. Here it is:\n\n${resultsText}\n\nNow provide a clear, complete answer using the data above.`,
                           });
                         } else {
                           currentMessages.push({
@@ -374,7 +384,9 @@ function chatStreamWithTools(
                           });
                         }
 
-                        // Run synthesis round WITHOUT tools
+                        log.info`[synthesis-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}, lastMsgPreview=${(currentMessages[currentMessages.length - 1]?.content ?? '').slice(0, 300)}`;
+
+                        // Run synthesis round (tools available if toolSet provided)
                         roundToolCalls = 0;
                         roundTextLength = 0;
 
@@ -383,10 +395,10 @@ function chatStreamWithTools(
                             model: provider(modelName),
                             messages: currentMessages,
                             abortSignal: signal,
-                            temperature: 0.2,
-                    ...(MAX_TOKENS !== undefined ? { maxOutputTokens: MAX_TOKENS } : {}),
-                    ...(toolSet ? { tools: toolSet, maxSteps: 2 } : {}),
-                    allowSystemInMessages: true,
+                            temperature: 0.1,
+                            ...(MAX_TOKENS !== undefined ? { maxOutputTokens: MAX_TOKENS } : {}),
+                            ...(toolSet ? { tools: toolSet, maxSteps: MAX_STEPS } : {}),
+                            allowSystemInMessages: true,
                             onChunk: ({ chunk }) => {
                               if (aborted) return;
                               switch (chunk.type) {
@@ -398,6 +410,8 @@ function chatStreamWithTools(
                                   emit.single(reasoningDeltaEvent(chunk.text));
                                   break;
                                 case 'tool-call':
+                                  roundToolCalls++;
+                                  log.info`[synth-tool-call] name=${chunk.toolName}, inputPreview=${JSON.stringify(chunk.input).slice(0, 200)}`;
                                   emit.single(toolCallEvent(chunk.toolCallId, chunk.toolName, chunk.input));
                                   break;
                                 case 'tool-result':
@@ -421,8 +435,9 @@ function chatStreamWithTools(
                           Promise.resolve(forcedResult.text)
                             .then(() => {
                               try {
+                                log.info`[synthesis-done] textChars=${roundTextLength}, toolCalls=${roundToolCalls}`;
                                 // Emit real step-finish reflecting synthesis outcome
-                                emit.single(stepFinishEvent('stop', 0, roundTextLength > 0));
+                                emit.single(stepFinishEvent('stop', roundToolCalls, roundTextLength > 0));
                                 resolve();
                               } catch (e: unknown) {
                                 reject(e);
@@ -476,7 +491,10 @@ function chatStreamWithTools(
             .catch((err: unknown) => {
               if (aborted) return;
               aborted = true;
-              if ((err instanceof DOMException || err instanceof Error) && (err.name === 'AbortError' || err.name === 'TimeoutError')) {
+              if (
+                (err instanceof DOMException || err instanceof Error) &&
+                (err.name === 'AbortError' || err.name === 'TimeoutError')
+              ) {
                 emit.end();
               } else {
                 emit.fail(err instanceof Error ? err : new Error(String(err)));

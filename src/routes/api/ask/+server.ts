@@ -17,7 +17,7 @@ import { embedText } from '$lib/server/embed';
 import { buildRagPrompt, chatStream, chatStreamWithTools, isAvailable } from '$lib/server/llm';
 import { checkCache, storeCache } from '$lib/server/llm-cache';
 import { checkRateLimit } from '$lib/server/rate-limiter';
-import { getMcpToolDefs, getMcpResourceContent, getSystemPromptAddition } from '$lib/server/mcp/tools';
+import { getMcpToolDefs, getMcpResourceContent, getSystemPromptAddition, type McpToolDef } from '$lib/server/mcp/tools';
 import { config } from '$lib/server/config';
 import { config as clientConfig } from '$lib/config';
 import type { RequestEvent } from '@sveltejs/kit';
@@ -65,9 +65,11 @@ function needsGithubTools(text: string, ctxMessages?: { role: string; content: s
     !referencesDaniel &&
     ctxMessages?.some(
       (m) =>
-        m.role === 'user' && /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|sensio|macula)\b/i.test((m.content ?? '').toLowerCase()),
+        m.role === 'user' &&
+        /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|sensio|macula)\b/i.test((m.content ?? '').toLowerCase()),
     );
-  const hasKeyword = /pr|pull request|commit|issue|repo|repository|github|stars|fork|contrib/.test(t);
+  const hasKeyword =
+    /pr|pull request|commit|issue|repo|repository|github|stars|fork|contrib|project|built|founded|work/.test(t);
   if (hasKeyword) return true;
   if (!referencesDaniel && !contextReferencesDaniel) {
     const wc = t.split(/\s+/).filter(Boolean).length;
@@ -83,9 +85,13 @@ function needsMaculaTools(text: string, ctxMessages?: { role: string; content: s
     !referencesDaniel &&
     ctxMessages?.some(
       (m) =>
-        m.role === 'user' && /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|sensio|macula)\b/i.test((m.content ?? '').toLowerCase()),
+        m.role === 'user' &&
+        /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|sensio|macula)\b/i.test((m.content ?? '').toLowerCase()),
     );
-  const hasKeyword = /macula|image|photo|picture|video|media|file|asset|keyword|license|metadata|exif|portfolio|art|music|hobbies?|interests?/.test(t);
+  const hasKeyword =
+    /macula|image|photo|picture|video|media|file|asset|keyword|license|metadata|exif|portfolio|art|music|hobbies?|interests?/.test(
+      t,
+    );
   if (hasKeyword) return true;
   if (!referencesDaniel && !contextReferencesDaniel) {
     const wc = t.split(/\s+/).filter(Boolean).length;
@@ -610,7 +616,7 @@ async function startGeneration(
     const messages = buildRagPrompt(text, ragChunks, history);
 
     // 6b. Conditionally load MCP tools — detect which tool categories are needed
-    let mcpToolDefs: any[] | null = null;
+    let mcpToolDefs: McpToolDef[] | null = null;
     const githubNeeded = needsGithubTools(text, ctxMessages);
     const maculaNeeded = needsMaculaTools(text, ctxMessages);
 
@@ -629,7 +635,7 @@ async function startGeneration(
         const toolDefs = await getMcpToolDefs();
         if (toolDefs.length > 0) {
           mcpToolDefs = toolDefs;
-          log.info`🔧 tools: ${toolDefs.map((t: any) => t.name).join(', ')}`;
+          log.info`🔧 tools: ${toolDefs.map((t) => t.name).join(', ')}`;
           // Inject tool awareness into system prompt (always first message)
           if (messages.length > 0 && messages[0].role === 'system') {
             let additions = getSystemPromptAddition({ github: githubNeeded, macula: maculaNeeded });
@@ -674,10 +680,10 @@ async function startGeneration(
     const db = getDb();
     const msgId = crypto.randomUUID();
     const toolCallStmt = db.prepare(
-      `INSERT INTO tool_calls (id, message_id, name, server_id, tool_input) VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO tool_calls (id, message_id, name, server_id, tool_input, started_at) VALUES (?, ?, ?, ?, ?, datetime('now'))`,
     );
     const toolCallFinishStmt = db.prepare(
-      `UPDATE tool_calls SET finished_at = datetime('now'), result_size = ? WHERE id = ?`,
+      `UPDATE tool_calls SET finished_at = datetime('now'), tool_output = ?, result_size = ? WHERE id = ?`,
     );
 
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -689,7 +695,7 @@ async function startGeneration(
         const streamStartTime = performance.now();
 
         await Effect.runPromise(
-          Stream.runForEach(llmStream, (event: any) =>
+          Stream.runForEach(llmStream, (event) =>
             Effect.sync(() => {
               switch (event.type) {
                 case 'text-delta':
@@ -739,9 +745,9 @@ async function startGeneration(
                 case 'tool-result':
                   log.debug`Tool result: ${event.name}`;
                   try {
-                    const resultSize =
-                      typeof event.result === 'string' ? event.result.length : JSON.stringify(event.result).length;
-                    toolCallFinishStmt.run(resultSize, event.id);
+                    const resultStr = typeof event.result === 'string' ? event.result : JSON.stringify(event.result);
+                    const resultSize = resultStr.length;
+                    toolCallFinishStmt.run(resultStr, resultSize, event.id);
                   } catch (e) {
                     log.error`Failed to record tool result: ${e}`;
                   }
@@ -749,7 +755,10 @@ async function startGeneration(
               }
             }),
           ),
-        );
+        ).catch((err) => {
+          log.error`[stream-crash] ${err instanceof Error ? err.message : String(err)} stack=${err instanceof Error ? err.stack : 'N/A'}`;
+          throw err;
+        });
         log.debug`RAW_LLM_OUTPUT:\n${answerText}`;
 
         // Post-stream: convert GitHub PR/issue references to clickable markdown links

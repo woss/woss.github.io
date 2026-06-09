@@ -9,28 +9,41 @@
  */
 
 import { parseMcpServers, type McpServerConfig } from './mcp/config.ts';
-import {
-  ORIGIN,
-  OPENAI_API_KEY,
-  OPENAI_BASE_URL,
-  OPENAI_MODEL,
-  OPENAI_MAX_TOKENS,
-  MCP_SERVERS,
-  LLM_CACHE_ENABLED,
-  WOSS_USER_WEBHOOK_URL,
-  WOSS_USER_WEBHOOK_TOKEN,
-} from '$env/static/private';
+import { env } from '$env/dynamic/private';
 type DeepReadonly<T> = { readonly [K in keyof T]: T[K] extends object ? DeepReadonly<T[K]> : T[K] };
 
 type Config = DeepReadonly<{
   maculaNickname: string;
   app: { origin: string };
-  openai: { apiKey: string; baseUrl: string; model: string; maxTokens: number | undefined; maxResultsLength: number };
+  openai: {
+    apiKey: string;
+    baseUrl: string;
+    model: string;
+    maxTokens: number | undefined;
+    maxResultsLength: number;
+    maxSteps: number;
+    maxRounds: number;
+  };
   mcp: { servers: McpServerConfig[] };
   llmCache: { enabled: boolean };
   report: { webhookUrl: string; webhookToken: string };
   prompts: { system: string };
 }>;
+
+const {
+  ORIGIN,
+  OPENAI_API_KEY,
+  OPENAI_BASE_URL,
+  OPENAI_MODEL,
+  OPENAI_MAX_TOKENS,
+  OPENAI_MAX_STEPS,
+  OPENAI_MAX_ROUNDS,
+  MCP_SERVERS,
+  LLM_CACHE_ENABLED,
+  WOSS_USER_WEBHOOK_URL,
+  WOSS_USER_WEBHOOK_TOKEN,
+  OPENAI_MAX_RESULTS_LENGTH,
+} = env;
 
 let _config: Config | null = null;
 
@@ -44,11 +57,13 @@ function loadConfig(): Config {
       origin: ORIGIN ?? 'http://localhost:5173',
     },
     openai: {
-      apiKey: OPENAI_API_KEY ?? '',
-      baseUrl: (OPENAI_BASE_URL ?? 'http://localhost:11434/v1').replace(/\/+$/, ''),
+      apiKey: OPENAI_API_KEY ?? 'public',
+      baseUrl: (OPENAI_BASE_URL ?? 'http://localhost:1234/v1').replace(/\/+$/, ''),
       model: OPENAI_MODEL ?? 'mistralai/ministral-3-3b',
-      maxTokens: Number(OPENAI_MAX_TOKENS) > 0 ? Number(OPENAI_MAX_TOKENS) : undefined,
-      maxResultsLength: Number(OPENAI_MAX_TOKENS) > 0 ? Number(OPENAI_MAX_TOKENS) : 32000,
+      maxTokens: Number(OPENAI_MAX_TOKENS) > 0 ? Number(OPENAI_MAX_TOKENS) : 10000,
+      maxSteps: Number(OPENAI_MAX_STEPS) > 0 ? Number(OPENAI_MAX_STEPS) : 7,
+      maxRounds: Number(OPENAI_MAX_ROUNDS) > 0 ? Number(OPENAI_MAX_ROUNDS) : 3,
+      maxResultsLength: Number(OPENAI_MAX_RESULTS_LENGTH) > 0 ? Number(OPENAI_MAX_RESULTS_LENGTH) : 64000,
     },
     mcp: {
       servers: mcpServers,
