@@ -46,6 +46,67 @@ interface ChatCompletionResponse {
 const log = createLogger(CAT.chat);
 
 /**
+ * Streaming text filter that removes <tool_calls>...</tool_calls> XML blocks.
+ *
+ * State machine handles blocks that span multiple streamed chunks:
+ * - Opening tag in chunk N, closing tag in chunk N+M
+ * - Both tags in the same chunk
+ *
+ * Designed as a reusable class — instantiate per LLM stream, call `next(chunk)`
+ * for each text-delta to get the filtered text.
+ *
+ * Uses regex matching to handle prefixed variants like <||DMSL||tool_calls>
+ * that some LLMs spontaneously generate as self-obfuscation.
+ *
+ * Edge case not handled: tag split across token boundaries (e.g. `<tool_` + `calls>`)
+ * is extremely rare with LLM tokenizers and would only leak partial text briefly.
+ */
+class ToolCallXmlStripper {
+  #inBlock = false;
+  #openRe = /<[^>]*tool_calls[^>]*>/i;
+  #closeRe = /<\/[^>]*tool_calls[^>]*>/i;
+
+  /** Process a text chunk and return only text NOT inside <tool_calls> blocks. */
+  next(chunk: string): string {
+    if (this.#inBlock) return this.#drain(chunk);
+    return this.#fill(chunk);
+  }
+
+  /** True when currently inside a <tool_calls> block. */
+  get isInside(): boolean {
+    return this.#inBlock;
+  }
+
+  // --- private ---
+
+  #fill(chunk: string): string {
+    const match = chunk.match(this.#openRe);
+    if (!match) return chunk;
+
+    this.#inBlock = true;
+    const before = chunk.slice(0, match.index!);
+    const after = chunk.slice(match.index! + match[0].length);
+
+    // Closing tag could be in same chunk
+    const closeMatch = after.match(this.#closeRe);
+    if (closeMatch) {
+      this.#inBlock = false;
+      return before + after.slice(closeMatch.index! + closeMatch[0].length);
+    }
+
+    return before;
+  }
+
+  #drain(chunk: string): string {
+    const match = chunk.match(this.#closeRe);
+    if (!match) return '';
+
+    this.#inBlock = false;
+    return chunk.slice(match.index! + match[0].length);
+  }
+}
+
+/**
  * LLM-based tool-needs classifier for short ambiguous follow-ups like 'yup do it' or '3 more?'.
  * Keyword-based checks can't determine intent for these, so we ask the LLM what tools are needed.
  *
@@ -446,6 +507,7 @@ async function streamWithRetry(
   log.debug`mcpToolDefs: ${mcpToolDefs?.map((t) => t.name).join(', ') ?? 'none'}`;
 
   let anyStepHadToolCalls = false;
+  let anySuccessfulToolCalls = false;
 
   // Pre-generate message ID for tool-call FK tracking
   const db = getDb();
@@ -460,6 +522,7 @@ async function streamWithRetry(
   // change from 3 to 10 attempts after adding retry-on-doom-loop logic, to give the model more chances to recover with tools disabled
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
+      const xmlStripper = new ToolCallXmlStripper();
       const llmStream = mcpToolDefs
         ? chatStreamWithTools(messages, mcpToolDefs, abortController.signal)
         : chatStream(messages, abortController.signal);
@@ -472,7 +535,12 @@ async function streamWithRetry(
             switch (event.type) {
               case 'text-delta':
                 answerText += event.text;
-                publishLive(chatId, 'token', { token: event.text });
+                {
+                  const filtered = xmlStripper.next(event.text);
+                  if (filtered) {
+                    publishLive(chatId, 'token', { token: filtered });
+                  }
+                }
                 break;
               case 'reasoning-delta':
                 reasoningText += event.text;
@@ -526,6 +594,10 @@ async function streamWithRetry(
                   const resultStr = typeof event.result === 'string' ? event.result : JSON.stringify(event.result);
                   const resultSize = resultStr.length;
                   toolCallFinishStmt.run(resultStr, resultSize, event.id);
+                  // Track successful (non-error) tool results for doom loop detection
+                  if (!resultStr.includes('Tool returned an error')) {
+                    anySuccessfulToolCalls = true;
+                  }
                 } catch (e) {
                   log.error`Failed to record tool result: ${e}`;
                 }
@@ -563,10 +635,17 @@ async function streamWithRetry(
         answerText = "I'm sorry, I encountered a tool configuration issue. Please try asking your question again.";
       }
 
+      // Safety net: strip XML tool call artifacts (e.g. <tool_calls><invoke name="traverse">...</invoke></tool_calls>)
+      const xmlPattern = /<[^>]*tool_calls[^>]*>[\s\S]*?<\/[^>]*tool_calls[^>]*>/i;
+      if (xmlPattern.test(answerText)) {
+        log.warn`XML tool call pattern detected in LLM output — stripping`;
+        answerText = answerText.replace(xmlPattern, '').trim();
+      }
+
       lastError = null;
 
       // Retry if answer is empty or doom loop detected (tools called but no text produced)
-      const isDoomLoop = anyStepHadToolCalls && answerText.trim().length === 0;
+      const isDoomLoop = anySuccessfulToolCalls && answerText.trim().length === 0;
       if (answerText.trim().length === 0 || isDoomLoop) {
         log.warn`${answerText.trim().length === 0 ? 'Empty answer' : 'Doom loop'} detected, retrying (attempt ${attempt + 1})`;
         if (messages.length > 0 && messages[0].role === 'system') {
@@ -857,6 +936,9 @@ export async function startGeneration(
         }));
     }
 
+    // Auto-rename "New Chat" to user's first message (all paths)
+    tryRenameChat(chatId, text);
+
     // For /summarize, use all unique sources from conversation history instead of RAG results.
     // RAG search on "/summarize" returns chunks unrelated to the conversation topics.
     if (text.startsWith('/summarize')) {
@@ -879,12 +961,9 @@ export async function startGeneration(
         }));
 
       // Replace user message with a summarization prompt
-      tryRenameChat(chatId, text);
       text =
         'Provide a concise summary of the above conversation covering the key topics, projects, and experience discussed.';
     }
-
-    // tryRenameChat was moved above — now called with original user text before override
 
     // 6. Build RAG prompt
     const messages = buildRagPrompt(text, ragChunks, history);

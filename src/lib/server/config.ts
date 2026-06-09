@@ -63,7 +63,7 @@ function loadConfig(): Config {
       baseUrl: (OPENAI_BASE_URL ?? 'http://localhost:1234/v1').replace(/\/+$/, ''),
       model: OPENAI_MODEL ?? 'mistralai/ministral-3-3b',
       maxTokens: Number(OPENAI_MAX_TOKENS) > 0 ? Number(OPENAI_MAX_TOKENS) : 10000,
-      firstRoundMaxSteps: Number(OPENAI_FIRST_ROUND_MAX_STEPS) > 0 ? Number(OPENAI_FIRST_ROUND_MAX_STEPS) : 2,
+      firstRoundMaxSteps: Number(OPENAI_FIRST_ROUND_MAX_STEPS) > 0 ? Number(OPENAI_FIRST_ROUND_MAX_STEPS) : 10,
       synthesisMaxSteps: Number(OPENAI_SYNTHESIS_MAX_STEPS) > 0 ? Number(OPENAI_SYNTHESIS_MAX_STEPS) : 7,
       maxRounds: Number(OPENAI_MAX_ROUNDS) > 0 ? Number(OPENAI_MAX_ROUNDS) : 3,
       maxResultsLength: Number(OPENAI_MAX_RESULTS_LENGTH) > 0 ? Number(OPENAI_MAX_RESULTS_LENGTH) : 64000,

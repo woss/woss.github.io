@@ -12,7 +12,7 @@ const log = createLogger(CAT.mcp);
 /** Description overrides for tools needing critical LLM usage hints */
 const TOOL_DESCRIPTION_OVERRIDES: Record<string, string> = {
   traverse:
-    'Primary content discovery tool. from types: user(nickname), keyword(keyword), license(license), directory(pathCid), file(unifiedId), root. EDGE RULES: user→uploads|profile|random|recent, keyword→tagged_files, license→has_license, directory→contains|info, file→info, root→random|recent|search|keywords. Use filter.what(images|videos|files|all) to narrow. File fields: id, title, kind, mimeType, rawDataUrl (+ "?preset=sys_*" for renditions), htmlPageUrl, buyPageUrl, thumbnailUrl, fileSize, publishedAt, license, owner (nickname, displayName, avatarUrl), keywords[], directory (pathCid, name), dataMining. Returns {items, total, after} for paginated edges or {item} for single-item edges. CRITICAL: directory pathCid MUST come from get_users directories[].pathCid. Fabricated CIDs return 0 items.',
+    'Primary content discovery tool. from types: user(nickname), keyword(keyword), license(license), directory(pathCid), file(unifiedId), root. EDGE RULES: user→uploads|profile, keyword→tagged_files, license→has_license, directory→contains|info, file→info, root→random|recent|search|keywords. Use filter.what(images|videos|files|all) to narrow. File fields: id, title, kind, mimeType, rawDataUrl (+ "?preset=sys_*" for renditions), htmlPageUrl, buyPageUrl, thumbnailUrl, fileSize, publishedAt, license, owner (nickname, displayName, avatarUrl), keywords[], directory (pathCid, name), dataMining. Returns {items, total, after} for paginated edges or {item} for single-item edges. CRITICAL: directory pathCid MUST come from get_users directories[].pathCid. Fabricated CIDs return 0 items. CRITICAL: only root supports random|recent edges. NEVER use recent or random edge with user — those only work with root and will return an error.',
   get_users:
     'Batch lookup Macula user profiles by nickname array. Returns UserNode with avatarUrl, bio, fileCount, and directories (albums with pathCid, name, fileCount). Null for not-found nicknames. Use this to get REAL directory pathCids before calling traverse(directory→contains).',
 
@@ -147,18 +147,76 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
       '  • Display images: item.rawDataUrl + "?preset=sys_md" for src (not sys_orig or sys_sm). item.htmlPageUrl for page link, item.buyPageUrl for purchase.\n' +
       '  • Extra metadata (EXIF, AI, _links): get_file(unifiedId).\n' +
       '  • Biographical info: get_users or user→profile edge — bio in response.\n\n' +
+      '  • CRITICAL: NEVER use edge="recent" or edge="random" on user — those edges only work with root and will ERROR. Use uploads for listing user\'s media.\n' +
       'MEDIA QUERY WORKFLOW (immutable):\n' +
       `  1. get_users(["${maculaNickname}"]) → profile + directories (get pathCids).\n` +
       '  2. traverse(user→uploads, filter=images) or traverse(directory→contains) with pathCid from step 1.\n' +
       '  3. Display up to 15 images inline with rawDataUrl + "?preset=sys_md".\n' +
       '  4. (Optional) get_file(unifiedId) when user needs EXIF, AI metadata, copyright, license, or _links beyond rawDataUrl/htmlPageUrl/buyPageUrl.\n' +
-      '  NEVER skip step 1. NEVER fabricate pathCids. After get_users, do NOT answer — call traverse FIRST.\n\n' +
+      '  NEVER skip step 1. NEVER fabricate pathCids. NEVER construct image URLs from CIDs — only use rawDataUrl from traverse results. After get_users, do NOT answer — call traverse FIRST.\n\n' +
       'IMAGE RULES:\n' +
       '  • Format: **{title}** (from data, never invented) then ![Photo]({rawDataUrl}?preset=sys_md) then [View on Macula]({htmlPageUrl}).\n' +
-      '  • Each file object from traverse has a "rawDataUrl" field — use that exact value with "?preset=sys_md" appended for display (e.g. https://u.macula.link/abc123?preset=sys_md). Never modify or guess these URLs.\n' +
+      '  • Each file object from traverse has a "rawDataUrl" field — use that exact value with "?preset=sys_md" appended for display (e.g. https://u.macula.link/abc123?preset=sys_md). Never modify or guess these URLs. Do NOT construct image URLs from directory listing CIDs — rawDataUrl from traverse is the ONLY valid source.\n' +
       '  • Repeat requests = fresh workflow from step 1. Never say "already showed you."\n' +
       '  • When tools available, call them freely. Treat empty traverse results as signal to re-check tools.\n' +
       '  • PRECEDENCE: The MEDIA QUERY WORKFLOW and IMAGE RULES above override any MCP prompt templates that conflict.\n';
+  }
+
+  if (gh || mac) {
+    result += '---\n\n';
+  }
+
+  result +=
+    'IMPORTANT: After you receive results from any tool call, you MUST produce readable text ' +
+    'that synthesizes the data into a clear answer. Never end your response silently after a tool call. ' +
+    'Always write at least 2-3 sentences summarizing what the tool returned.\n' +
+    'IMPORTANT: Never output tool call JSON as text. If you cannot call a tool, say so in plain language.';
+
+  return result;
+}
+
+/**
+ * Synthesis-phase system prompt.
+ * Removes MEDIA QUERY WORKFLOW + IMAGE RULES that tell the model
+ * to keep calling tools instead of producing a final answer.
+ * Keeps tool capability info so model CAN call tools if needed.
+ */
+function getSynthesisSystemPrompt(options?: SystemPromptOptions): string {
+  const gh = options?.github ?? true;
+  const mac = options?.macula ?? true;
+
+  let result =
+    'You are in the SYNTHESIS PHASE — produce a complete final answer now.\n' +
+    'You have already received data from tool calls. Synthesize what you have into a finished response.\n' +
+    'Do NOT repeat the media query workflow steps — the data is already available in conversation.\n' +
+    'If you need additional detail that is clearly missing, you may call ONE more tool, but prioritize writing the final answer with what you have.\n\n';
+
+  if (gh) {
+    result +=
+      'GITHUB — Daniel Maricic (woss). Available tools:\n' +
+      '  1. search_issues — find issues by keyword.\n' +
+      '  2. list_issues / issue_read — browse and read issues.\n' +
+      '  3. list_pull_requests / pull_request_read — browse and read PRs.\n' +
+      '  4. search_repositories — discover repos by name/keyword/topic. Essential for verifying repo existence.\n' +
+      '  5. get_tag — look up git tags.\n' +
+      '  6. get_me — get authenticated user info.\n\n' +
+      'All GitHub tools: use username "woss" (not "Daniel" or "Daniel Maricic").\n\n';
+  }
+  const maculaNickname = config().maculaNickname;
+  if (mac) {
+    result +=
+      'MACULA — Daniel\'s media library. Available operations:\n' +
+      `  • Profile + directories: get_users(["${maculaNickname}"]). Get REAL pathCid from directories[].pathCid.\n` +
+      `  • List images: traverse(user→uploads, filter={what:"images"}).\n` +
+      `  • Album contents: traverse(directory→contains). REQUIRES pathCid from get_users.\n` +
+      '  • Title search: traverse(search, query="..."); keyword discovery: traverse(keywords, query="...").\n' +
+      '  • Display images: item.rawDataUrl + "?preset=sys_md" for src. item.htmlPageUrl for page link, item.buyPageUrl for purchase.\n' +
+      '  • Extra metadata (EXIF, AI, _links): get_file(unifiedId).\n' +
+      '  • Biographical info: get_users or user→profile edge — bio in response.\n\n' +
+      '  • CRITICAL: NEVER use edge="recent" or edge="random" on user — those edges only work with root and will ERROR. Use uploads for listing user\'s media.\n' +
+      'IMAGE FORMAT:\n' +
+      '  • Format: **{title}** (from data, never invented) then ![Photo]({rawDataUrl}?preset=sys_md) then [View on Macula]({htmlPageUrl}).\n' +
+      '  • Each file object from traverse has a "rawDataUrl" field — use that exact value with "?preset=sys_md" appended for display (e.g. https://u.macula.link/abc123?preset=sys_md).\n';
   }
 
   if (gh || mac) {
@@ -227,7 +285,16 @@ async function getMcpToolDefs(): Promise<McpToolDef[]> {
 async function executeMcpToolCall(toolCall: { name: string; arguments?: string }): Promise<McpToolCallResult> {
   const args = parseRecord(toolCall.arguments);
   log.debug`Tool call: ${toolCall.name}(${JSON.stringify(args)})`;
-  return await mcp.callTool(toolCall.name, args);
+  const result = await mcp.callTool(toolCall.name, args);
+  // Check if any content item indicates a tool error
+  const errorText = (result.content ?? [])
+    .filter((c: { type?: string; text?: string }) => c.type === 'text' && c.text?.startsWith('Tool returned an error'))
+    .map((c: { text?: string }) => c.text)
+    .join(' | ');
+  if (errorText) {
+    log.warn`Tool ${toolCall.name} returned error: ${errorText}`;
+  }
+  return result;
 }
 
 /**
@@ -288,6 +355,7 @@ export {
   getMcpPromptContent,
   getOpenAiTools,
   getSystemPromptAddition,
+  getSynthesisSystemPrompt,
   resetMcpToolDefsCache,
   resetMcpResourceContent,
   resetMcpPromptContent,

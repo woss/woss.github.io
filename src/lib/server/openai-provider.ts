@@ -14,6 +14,7 @@ import { provider, modelName } from './llm/provider';
 import type { LLMEvent, FinishReason, TokenUsage } from './llm/types';
 import type { ModelMessage, ToolSet } from 'ai';
 import type { McpToolCallResult } from './mcp/client';
+import { getSynthesisSystemPrompt } from './mcp/tools';
 
 /* ------------------------------------------------------------------ */
 /*  LLMEvent Factory Functions (type-safe constructors)                */
@@ -372,31 +373,49 @@ function chatStreamWithTools(
                       if (roundToolCalls > 0 && round < MAX_ROUNDS) {
                         log.info`[synthesis-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round with results`;
 
-                        // Push tool calls + results as proper assistant/tool message pairs
+                        // Push assistant's text + tool calls as a single assistant message
+                        currentMessages.push({
+                          role: 'assistant',
+                          content: [
+                            ...(roundText ? [{ type: 'text' as const, text: roundText }] : []),
+                            ...roundToolCallRecords.map(tc => ({
+                              type: 'tool-call' as const,
+                              toolCallId: tc.toolCallId,
+                              toolName: tc.toolName,
+                              input: tc.input,
+                            })),
+                          ] as Array<{ type: 'text'; text: string } | { type: 'tool-call'; toolCallId: string; toolName: string; input: unknown }>,
+                        });
+                        // Push tool results
                         for (let i = 0; i < roundToolCallRecords.length; i++) {
                           const tc = roundToolCallRecords[i];
                           const result = roundToolResults[i] ?? '';
                           currentMessages.push({
-                            role: 'assistant',
-                            content: [{
-                              type: 'tool-call',
-                              toolCallId: tc.toolCallId,
-                              toolName: tc.toolName,
-                              input: tc.input,
-                            }] as Array<{ type: 'tool-call'; toolCallId: string; toolName: string; input: unknown }>,
-                          });
-                          currentMessages.push({
                             role: 'tool',
                             content: [{
-                              type: 'tool-result',
+                              type: 'tool-result' as const,
                               toolCallId: tc.toolCallId,
                               toolName: tc.toolName,
-                              output: { type: 'text', value: result },
+                              output: { type: 'text' as const, value: result },
                             }],
                           });
                         }
 
                         log.info`[synthesis-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}`;
+
+                        // Replace last system message with synthesis-specific prompt
+                        // (removes MEDIA QUERY WORKFLOW that tells model to keep calling tools)
+                        for (let i = currentMessages.length - 1; i >= 0; i--) {
+                          if (currentMessages[i].role === 'system') {
+                            if (typeof currentMessages[i].content === 'string') {
+                              currentMessages[i] = {
+                                role: 'system',
+                                content: currentMessages[i].content + '\n\n---\n' + getSynthesisSystemPrompt(),
+                              };
+                            }
+                            break;
+                          }
+                        }
 
                         // Run synthesis round with tools but maxSteps=1 so model can call ONE more tool if needed, then answer
                         roundToolCalls = 0;
@@ -411,7 +430,7 @@ function chatStreamWithTools(
                             abortSignal: signal,
                             temperature: 0.1,
                             ...(MAX_TOKENS !== undefined ? { maxTokens: MAX_TOKENS } : {}),
-                            ...(toolSet ? { tools: toolSet, maxSteps: 2 } : {}),
+                             ...(toolSet ? { tools: toolSet, maxSteps: SYNTHESIS_MAX_STEPS } : {}),
                             allowSystemInMessages: true,
                             onChunk: ({ chunk }) => {
                               if (aborted) return;
@@ -443,7 +462,9 @@ function chatStreamWithTools(
                                 emit.fail(err instanceof Error ? err : new Error(String(err)));
                               }
                             },
-                            onFinish: () => {},
+                            onFinish: (event) => {
+                              lastFinishReason = String(event.finishReason);
+                            },
                           });
 
                           Promise.resolve(forcedResult.text)

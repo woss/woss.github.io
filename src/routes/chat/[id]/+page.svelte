@@ -391,6 +391,7 @@
   // Separate from queryText so replaceState doesn't trigger re-run
   $effect(() => {
     if (!browser || !userId || !chatId) return;
+    if (chats.length > 0) return;
     loadChats();
   });
 
@@ -532,7 +533,7 @@
           }
           isLoading = false;
         }
-      }, 45000);
+      }, 120000);
     };
     resetSseTimeout();
 
@@ -819,6 +820,8 @@
         {completedToolCount}
         {currentStatus}
         bind:inputEl
+        {userId}
+        chatId={currentChatId ?? ""}
         onsend={(text: string) => sendMessage(text)}
         oncreateChat={createChat}
       />
