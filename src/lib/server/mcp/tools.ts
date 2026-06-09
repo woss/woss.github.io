@@ -9,27 +9,19 @@ import { config } from '../config.ts';
 
 const log = createLogger(CAT.mcp);
 
-/** Tools explicitly blocked — write ops, dangerous actions, cross-repo search */
-const TOOL_DENY_SET = new Set([
-  'create_or_update_file', 'delete_file', 'push_files',
-  'create_repository', 'fork_repository',
-  'create_pull_request', 'merge_pull_request', 'update_pull_request',
-  'pull_request_review_write', 'sub_issue_write', 'issue_write',
-  'add_issue_comment', 'add_reply_to_pull_request_comment',
-  'add_comment_to_pending_review', 'create_branch',
-  'update_pull_request_branch', 'request_copilot_review',
-  'cross_repo_search',
-  'apply_refactor', 'build_or_update_graph', 'run_postprocess',
-  'generate_wiki',
-]);
-
 /** Description overrides for tools needing critical LLM usage hints */
 const TOOL_DESCRIPTION_OVERRIDES: Record<string, string> = {
-  traverse: 'Primary content discovery tool. from types: user(nickname), keyword(keyword), license(license), directory(pathCid), file(unifiedId), root. EDGE RULES: user→uploads|profile|random|recent, keyword→tagged_files, license→has_license, directory→contains|info, file→info, root→random|recent|search|keywords. Use filter.what(images|videos|files|all) to narrow. File items include url (base for preset construction) and thumbnailUrl (sys_sm preset). Construct display URLs via url + "?preset=sys_md". Returns {items, total, after} for paginated edges or {item} for single-item edges. CRITICAL: directory pathCid MUST come from get_users directories[].pathCid. Fabricated CIDs return 0 items.',
-  get_users: 'Batch lookup Macula user profiles by nickname array. Returns UserNode with avatarUrl, bio, fileCount, and directories (albums with pathCid, name, fileCount). Null for not-found nicknames. Use this to get REAL directory pathCids before calling traverse(directory→contains).',
-  search_pull_requests: 'Search for pull requests across GitHub. Provide a query string with optional owner/repo scope. Results are server-sorted: merged first, then open, then draft, then closed. Within each state, repos are prioritized: anagolay, rushstack, libvips first.',
-  get_file: 'Get file/media info from Macula by unifiedId. Use `fields` to select specific fields via JSONPath (e.g. fields=["title","_links.raw","ai.model"]). Returns title, description, creator, dimensions, filesize, _links (raw as base URL for preset construction, base for page URL), AI metadata, license, owner. _links.raw + "?preset=sys_md" gives the medium rendition URL. Primary tool for rich metadata beyond traverse results.',
-  get_file_metadata: 'Get full EXIF/XMP/IPTC metadata for a Macula file. Returns camera details (make, model, ISO, aperture, shutter speed, GPS), panorama stitching info, music metadata.',
+  traverse:
+    'Primary content discovery tool. from types: user(nickname), keyword(keyword), license(license), directory(pathCid), file(unifiedId), root. EDGE RULES: user→uploads|profile|random|recent, keyword→tagged_files, license→has_license, directory→contains|info, file→info, root→random|recent|search|keywords. Use filter.what(images|videos|files|all) to narrow. File fields: id, title, kind, mimeType, rawDataUrl (+ "?preset=sys_*" for renditions), htmlPageUrl, buyPageUrl, thumbnailUrl, fileSize, publishedAt, license, owner (nickname, displayName, avatarUrl), keywords[], directory (pathCid, name), dataMining. Returns {items, total, after} for paginated edges or {item} for single-item edges. CRITICAL: directory pathCid MUST come from get_users directories[].pathCid. Fabricated CIDs return 0 items.',
+  get_users:
+    'Batch lookup Macula user profiles by nickname array. Returns UserNode with avatarUrl, bio, fileCount, and directories (albums with pathCid, name, fileCount). Null for not-found nicknames. Use this to get REAL directory pathCids before calling traverse(directory→contains).',
+
+  get_file:
+    'Get file/media info from Macula by unifiedId. Use `fields` to select specific fields via JSONPath (e.g. fields=["title","_links.raw","ai.model"]). Returns title, description, creator, dimensions, filesize, _links (raw, base, buy, json, jsonLd, metadata, copyright, webStatement, license), AI metadata, license, owner. _links.raw + "?preset=sys_md" gives the medium rendition URL. Use get_file when you need EXIF, AI metadata, copyright, or _links details beyond rawDataUrl/htmlPageUrl/buyPageUrl. Primary tool for rich metadata beyond traverse results.',
+  get_file_metadata:
+    'Get full EXIF/XMP/IPTC metadata for a Macula file. Returns camera details (make, model, ISO, aperture, shutter speed, GPS), panorama stitching info, music metadata.',
+  search_repositories:
+    "Discover GitHub repositories by name, description, topic, or README content. Essential for verifying repo existence and finding Daniel Maricic's projects. Always use when asked about a specific repo to confirm it exists before answering. Supports advanced qualifiers: repo:owner/name, user:woss, language:typescript, topic:react, etc.",
 };
 
 /** Suffix appended to all tool descriptions for Q&A context */
@@ -115,76 +107,6 @@ function toOpenAiTool(tool: McpToolDefinition): OpenAiTool {
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Public API                                                        */
-/* ------------------------------------------------------------------ */
-
-/* ------------------------------------------------------------------ */
-/*  Pull Request Reordering                                            */
-/* ------------------------------------------------------------------ */
-
-interface GitHubSearchPrItem {
-  state: string;
-  draft?: boolean;
-  pull_request?: { merged_at?: string | null };
-  repository_url: string;
-  number: number;
-}
-
-const STATE_PRIORITY: Record<string, number> = { merged: 0, open: 1, draft: 2, closed: 3 };
-
-function getPullRequestState(item: GitHubSearchPrItem): string {
-  const state = item.state;
-  if (!state) return 'closed';
-  if (state === 'closed' && item.pull_request?.merged_at) return 'merged';
-  if (state === 'open' && item.draft === true) return 'draft';
-  return state;
-}
-
-function getRepoFullName(item: GitHubSearchPrItem): string {
-  const url: string = item.repository_url || '';
-  const m = url.match(/\/repos\/([^/]+\/[^/]+)/);
-  if (m) return m[1].toLowerCase();
-  return '';
-}
-
-function getRepoPriority(repo: string): number {
-  if (repo.includes('anagolay')) return 0;
-  if (repo.includes('rushstack')) return 1;
-  if (repo.includes('libvips') || repo.includes('sharp')) return 2;
-  return 99;
-}
-
-/**
- * Sort PR items by state priority (merged→open→draft→closed)
- * then by repo priority (anagolay→rushstack→libvips→rest),
- * then by PR number descending (newest first).
- */
-function reorderPullRequestResults(text: string): string {
-  try {
-    const parsed = JSON.parse(text);
-    if (!parsed.items || !Array.isArray(parsed.items)) return text;
-
-    parsed.items.sort((a: GitHubSearchPrItem, b: GitHubSearchPrItem) => {
-      const sa = STATE_PRIORITY[getPullRequestState(a)] ?? 99;
-      const sb = STATE_PRIORITY[getPullRequestState(b)] ?? 99;
-      if (sa !== sb) return sa - sb;
-
-      const ra = getRepoFullName(a);
-      const rb = getRepoFullName(b);
-      const pa = getRepoPriority(ra);
-      const pb = getRepoPriority(rb);
-      if (pa !== pb) return pa - pb;
-
-      return (b.number || 0) - (a.number || 0);
-    });
-
-    return JSON.stringify(parsed);
-  } catch {
-    return text;
-  }
-}
-
 interface SystemPromptOptions {
   github?: boolean;
   macula?: boolean;
@@ -204,43 +126,39 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
 
   if (gh) {
     result +=
-      'GITHUB — Daniel Maricic (woss). Tool priority:\n' +
-      '  1. search_code (with repo:owner/repo qualifier) — find files/issues first.\n' +
-      '  2. get_file_contents — read specific files by owner+repo+path.\n' +
-      '  3. search_issues — find issues/PRs by keyword.\n' +
-      '  4. list_issues / issue_read — browse known repos.\n' +
-      '  5. list_pull_requests / pull_request_read — browse known PRs.\n' +
-      '  6. list_commits / get_commit — find commits.\n' +
-      '  7. search_repositories — discover repos (last resort).\n\n' +
-      'PR SEARCH (Daniel\'s contributions):\n' +
-      '  • Run MULTIPLE queries: each prioritized repo with "repo:owner/name author:woss"\n' +
-      '    PLUS broad "author:woss" for repos outside list.\n' +
-      '  • Answer order: merged FIRST, then open, draft, closed.\n' +
-      '  • Priority: microsoft/rushstack, lovell/sharp-libvips, woss/dali, woss/opencode-visualizer.\n' +
-      '  • Consolidate dupes: "repo (multiple)" for >1 PR in same repo.\n\n' +
+      'GITHUB — Daniel Maricic (woss). Available tools:\n' +
+      '  1. search_issues — find issues by keyword.\n' +
+      '  2. list_issues / issue_read — browse and read issues.\n' +
+      '  3. list_pull_requests / pull_request_read — browse and read PRs.\n' +
+      '  4. search_repositories — discover repos by name/keyword/topic. Essential for verifying repo existence.\n' +
+      '  5. get_tag — look up git tags.\n' +
+      '  6. get_me — get authenticated user info.\n\n' +
       'All GitHub tools: use username "woss" (not "Daniel" or "Daniel Maricic").\n\n';
   }
   const maculaNickname = config().maculaNickname;
   if (mac) {
     result +=
       '---\n' +
-      'MACULA — Daniel\'s media library. Rules:\n' +
+      "MACULA — Daniel's media library. Rules:\n" +
       `  • Profile + directories: get_users(["${maculaNickname}"]). Get REAL pathCid from directories[].pathCid.\n` +
       `  • List images: traverse(user→uploads, filter={what:"images"}).\n` +
       `  • Album contents: traverse(directory→contains). REQUIRES pathCid from get_users. Fabricated pathCids return 0 items — ALWAYS call get_users FIRST.\n` +
       '  • Title search: traverse(search, query="..."); keyword discovery: traverse(keywords, query="...").\n' +
-      '  • Display images: item.url + "?preset=sys_md" for src (not sys_orig or sys_sm). item.url for page link.\n' +
+      '  • Display images: item.rawDataUrl + "?preset=sys_md" for src (not sys_orig or sys_sm). item.htmlPageUrl for page link, item.buyPageUrl for purchase.\n' +
       '  • Extra metadata (EXIF, AI, _links): get_file(unifiedId).\n' +
       '  • Biographical info: get_users or user→profile edge — bio in response.\n\n' +
       'MEDIA QUERY WORKFLOW (immutable):\n' +
       `  1. get_users(["${maculaNickname}"]) → profile + directories (get pathCids).\n` +
       '  2. traverse(user→uploads, filter=images) or traverse(directory→contains) with pathCid from step 1.\n' +
-      '  3. Display 4-6 images inline with sys_md preset.\n' +
+      '  3. Display up to 15 images inline with rawDataUrl + "?preset=sys_md".\n' +
+      '  4. (Optional) get_file(unifiedId) when user needs EXIF, AI metadata, copyright, license, or _links beyond rawDataUrl/htmlPageUrl/buyPageUrl.\n' +
       '  NEVER skip step 1. NEVER fabricate pathCids. After get_users, do NOT answer — call traverse FIRST.\n\n' +
       'IMAGE RULES:\n' +
-      '  • Format: **{title}** (from data, never invented) then ![Photo](url?preset=sys_md) then [View on Macula](url).\n' +
+      '  • Format: **{title}** (from data, never invented) then ![Photo]({rawDataUrl}?preset=sys_md) then [View on Macula]({htmlPageUrl}).\n' +
+      '  • Each file object from traverse has a "rawDataUrl" field — use that exact value with "?preset=sys_md" appended for display (e.g. https://u.macula.link/abc123?preset=sys_md). Never modify or guess these URLs.\n' +
       '  • Repeat requests = fresh workflow from step 1. Never say "already showed you."\n' +
-      '  • When tools available, call them freely. Treat empty traverse results as signal to re-check tools.\n';
+      '  • When tools available, call them freely. Treat empty traverse results as signal to re-check tools.\n' +
+      '  • PRECEDENCE: The MEDIA QUERY WORKFLOW and IMAGE RULES above override any MCP prompt templates that conflict.\n';
   }
 
   if (gh || mac) {
@@ -272,14 +190,14 @@ async function getOpenAiTools(): Promise<OpenAiTool[]> {
   if (_openAiToolsCache) return _openAiToolsCache;
 
   const tools = await mcp.listTools();
-  const mapped = tools
-    .filter((t) => !TOOL_DENY_SET.has(t.name))
-    .map((t) => toOpenAiTool({
-      name: t.name,
-      serverId: t.serverId,
-      description: (TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? '') + TOOL_ONLY_HINT,
-      inputSchema: toRecord(t.inputSchema),
-    }));
+  const mapped = tools.map((t) =>
+      toOpenAiTool({
+        name: t.name,
+        serverId: t.serverId,
+        description: (TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? '') + TOOL_ONLY_HINT,
+        inputSchema: toRecord(t.inputSchema),
+      }),
+    );
   _openAiToolsCache = mapped;
   return mapped;
 }
@@ -291,9 +209,7 @@ async function getOpenAiTools(): Promise<OpenAiTool[]> {
 async function getMcpToolDefs(): Promise<McpToolDef[]> {
   if (_mcpToolDefsCache) return _mcpToolDefsCache;
   const tools = await mcp.listTools();
-  const mapped = tools
-    .filter((t) => !TOOL_DENY_SET.has(t.name))
-    .map((t) => ({
+  const mapped = tools.map((t) => ({
       name: t.name,
       serverId: t.serverId,
       description: (TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? '') + TOOL_ONLY_HINT,
@@ -310,36 +226,8 @@ async function getMcpToolDefs(): Promise<McpToolDef[]> {
  */
 async function executeMcpToolCall(toolCall: { name: string; arguments?: string }): Promise<McpToolCallResult> {
   const args = parseRecord(toolCall.arguments);
-
-  // Auto-inject "woss" identity for tools where LLM omits user parameters
-  const IDENTITY_TOOLS: Record<string, Record<string, string>> = {
-    // GitHub tools — user param
-    get_teams: { user: 'woss' },
-  };
-  const identity = IDENTITY_TOOLS[toolCall.name];
-  if (identity) {
-    for (const [key, val] of Object.entries(identity)) {
-      if (!(key in args) || args[key] === null || args[key] === undefined || args[key] === '') {
-        args[key] = val;
-      }
-    }
-  }
-
   log.debug`Tool call: ${toolCall.name}(${JSON.stringify(args)})`;
-
-  const result = await mcp.callTool(toolCall.name, args);
-
-  // Reorder search_pull_requests results server-side before LLM sees them
-  if (toolCall.name === 'search_pull_requests') {
-    result.content = result.content.map((item) => {
-      if (item.type === 'text' && item.text) {
-        return { ...item, text: reorderPullRequestResults(item.text) };
-      }
-      return item;
-    });
-  }
-
-  return result;
+  return await mcp.callTool(toolCall.name, args);
 }
 
 /**

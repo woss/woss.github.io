@@ -22,6 +22,8 @@ export type McpServerConfig = {
   label?: string;
   /** Homepage URL (e.g. for linking) */
   homepage?: string;
+  /** Comma-separated list of tool names to expose (X-MCP-Tools header). If unset, all tools loaded. */
+  tools?: string;
 };
 
 /**

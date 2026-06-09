@@ -142,6 +142,9 @@ export class McpManager {
         if (cfg.readonly) {
           headers['X-MCP-Readonly'] = 'true';
         }
+        if (cfg.tools) {
+          headers['X-MCP-Tools'] = cfg.tools;
+        }
 
         const transport = new StreamableHTTPClientTransport(new URL(cfg.url), {
           requestInit: { headers },
