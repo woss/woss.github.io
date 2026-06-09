@@ -287,7 +287,9 @@ function chatStreamWithTools(
 
             let roundToolCalls = 0;
             let roundTextLength = 0;
+            let roundText = '';
             const roundToolResults: string[] = [];
+            let roundToolCallRecords: Array<{toolCallId: string; toolName: string; input: unknown}> = [];
 
             return new Promise<void>((resolve, reject) => {
               try {
@@ -303,6 +305,7 @@ function chatStreamWithTools(
                     if (aborted) return;
                     switch (chunk.type) {
                       case 'text-delta':
+                        roundText += chunk.text;
                         roundTextLength += chunk.text.length;
                         emit.single(textDeltaEvent(chunk.text));
                         break;
@@ -311,6 +314,7 @@ function chatStreamWithTools(
                         break;
                       case 'tool-call':
                         roundToolCalls++;
+                        roundToolCallRecords.push({toolCallId: chunk.toolCallId, toolName: chunk.toolName, input: chunk.input});
                         emit.single(toolCallEvent(chunk.toolCallId, chunk.toolName, chunk.input));
                         break;
                       case 'tool-result':
@@ -365,31 +369,40 @@ function chatStreamWithTools(
                         ),
                       );
 
-                      if (roundToolCalls > 0 && roundTextLength === 0 && round < MAX_ROUNDS) {
+                      if (roundToolCalls > 0 && round < MAX_ROUNDS) {
                         log.info`[synthesis-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round with results`;
 
-                        // Append tool results so the model has the data in context
-                        if (roundToolResults.length > 0) {
-                          const resultsText = roundToolResults
-                            .map((r, i) => `[Tool result ${i + 1}]: ${r}`)
-                            .join('\n\n');
+                        // Push tool calls + results as proper assistant/tool message pairs
+                        for (let i = 0; i < roundToolCallRecords.length; i++) {
+                          const tc = roundToolCallRecords[i];
+                          const result = roundToolResults[i] ?? '';
                           currentMessages.push({
-                            role: 'user',
-                            content: `I have the complete tool data. Here it is:\n\n${resultsText}\n\nNow provide a clear, complete answer using the data above.`,
+                            role: 'assistant',
+                            content: [{
+                              type: 'tool-call',
+                              toolCallId: tc.toolCallId,
+                              toolName: tc.toolName,
+                              input: tc.input,
+                            }] as Array<{ type: 'tool-call'; toolCallId: string; toolName: string; input: unknown }>,
                           });
-                        } else {
                           currentMessages.push({
-                            role: 'user',
-                            content:
-                              'You just called tools. Now produce a clear answer based on the tool results you received. You may call additional tools if needed to complete the data.',
+                            role: 'tool',
+                            content: [{
+                              type: 'tool-result',
+                              toolCallId: tc.toolCallId,
+                              toolName: tc.toolName,
+                              output: { type: 'text', value: result },
+                            }],
                           });
                         }
 
-                        log.info`[synthesis-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}, lastMsgPreview=${(currentMessages[currentMessages.length - 1]?.content ?? '').slice(0, 300)}`;
+                        log.info`[synthesis-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}`;
 
-                        // Run synthesis round (tools available if toolSet provided)
+                        // Run synthesis round with tools but maxSteps=1 so model can call ONE more tool if needed, then answer
                         roundToolCalls = 0;
                         roundTextLength = 0;
+                        roundText = '';
+                        roundToolCallRecords = [];
 
                         try {
                           const forcedResult = streamText({
@@ -397,8 +410,8 @@ function chatStreamWithTools(
                             messages: currentMessages,
                             abortSignal: signal,
                             temperature: 0.1,
-                            ...(MAX_TOKENS !== undefined ? { maxOutputTokens: MAX_TOKENS } : {}),
-                            ...(toolSet ? { tools: toolSet, maxSteps: SYNTHESIS_MAX_STEPS } : {}),
+                            ...(MAX_TOKENS !== undefined ? { maxTokens: MAX_TOKENS } : {}),
+                            ...(toolSet ? { tools: toolSet, maxSteps: 2 } : {}),
                             allowSystemInMessages: true,
                             onChunk: ({ chunk }) => {
                               if (aborted) return;

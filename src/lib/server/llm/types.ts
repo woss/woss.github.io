@@ -7,7 +7,6 @@ export type LLMEvent =
   | { type: 'tool-input-delta'; id: string; name: string; text: string }
   | { type: 'tool-call'; id: string; name: string; input: unknown }
   | { type: 'tool-result'; id: string; name: string; result: unknown }
-  | { type: 'tool-error'; id: string; name: string; message: string }
   | { type: 'step-finish'; reason: FinishReason; toolCalls: number; textProduced: boolean; usage?: TokenUsage }
   | {
       type: 'finish';

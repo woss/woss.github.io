@@ -3,12 +3,10 @@ import { callWebhook } from '$lib/server/webhooks';
 import {
   addMessage,
   ensureModel,
-  getChat,
   getChatMessageCount,
   getDb,
   getMessages,
   lockChat,
-  renameChat,
   searchChunks,
   type StoredMessage,
 } from '$lib/server/db';
@@ -30,199 +28,22 @@ import { classifyQuery } from '$lib/query-classifier';
 import type { QueryClass } from '$lib/query-classifier';
 import { Effect, Stream } from 'effect';
 import type { ChatMessage } from '$lib/server/openai-provider';
+import {
+  tryRenameChat,
+  needsGithubTools,
+  needsMaculaTools,
+  isRelevant,
+  generatePoliteResponse,
+  parseToolClass,
+  parseSources,
+} from '$lib/server/chat-helpers';
 
 /** Shape of a chat-completion API response. */
 interface ChatCompletionResponse {
   choices?: { message?: { content?: string; reasoning_content?: string } }[];
 }
 
-/**
- * Source info parsed from JSON storage.
- */
-interface RawSource {
-  title: string;
-  score: number;
-  slug?: string;
-  url?: string;
-}
-
-/**
- * Parse a tool classification string into the union type.
- * Invalid values fall back to 'none'.
- */
-function parseToolClass(value: string): 'none' | 'github' | 'macula' | 'both' {
-  if (value === 'github' || value === 'macula' || value === 'both' || value === 'none') return value;
-  return 'none';
-}
-
-/**
- * Parse a sources JSON string into a typed array.
- * Malformed JSON or non-arrays return [].
- */
-function parseSources(json: string): RawSource[] {
-  try {
-    const parsed = JSON.parse(json);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((item: unknown) => {
-      if (typeof item !== 'object' || item === null) return { title: '', score: 0 };
-      const src = item as Record<string, unknown>;
-      return {
-        title: typeof src.title === 'string' ? src.title : '',
-        score: typeof src.score === 'number' ? src.score : 0,
-        slug: typeof src.slug === 'string' ? src.slug : undefined,
-        url: typeof src.url === 'string' ? src.url : undefined,
-      };
-    });
-  } catch {
-    return [];
-  }
-}
-
 const log = createLogger(CAT.chat);
-
-/**
- * Auto-rename "New Chat" to the user's first message (truncated to 40 chars).
- * Best-effort — failures are logged but never surface to the user.
- */
-function tryRenameChat(chatId: string, text: string): void {
-  try {
-    const chat = getChat(chatId);
-    if (chat && chat.title === 'New Chat') renameChat(chatId, text.slice(0, 40));
-  } catch (err) {
-    log.error`auto-rename failed: ${err}`;
-  }
-}
-
-/**
- * Keyword-based check: does the message need GitHub MCP tools?
- * Fast path (no LLM call). Short ambiguous messages (≤6 words) without explicit
- * Daniel/project references fall through to the LLM-based classifyToolNeeds fallback
- * in handleEarlyGates instead of returning false immediately.
- */
-async function needsGithubTools(text: string, ctxMessages?: { role: string; content: string }[]): Promise<boolean> {
-  const t = text.toLowerCase();
-  const referencesDaniel = /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|macula)\b/i.test(t);
-  const contextReferencesDaniel =
-    !referencesDaniel &&
-    ctxMessages?.some(
-      (m) =>
-        m.role === 'user' &&
-        /\b(daniel(?:'?s)?|woss|anagolay|idiyanale|macula)\b/i.test((m.content ?? '').toLowerCase()),
-    );
-  const hasKeyword =
-    /pr|pull request|commit|issue|repo|repository|github|stars|fork|contrib|project|built|founded|work/.test(t);
-  if (hasKeyword) return true;
-  if (!referencesDaniel && !contextReferencesDaniel) {
-    const wc = t.split(/\s+/).filter(Boolean).length;
-    if (wc > 6) return false;
-  }
-  return false;
-}
-
-/**
- * Keyword-based check: does the message need Macula MCP tools (photos, media, files)?
- * Same fast-path pattern as needsGithubTools — short messages without Daniel/project
- * references fall through to classifyToolNeeds in handleEarlyGates.
- */
-async function needsMaculaTools(text: string, ctxMessages?: { role: string; content: string }[]): Promise<boolean> {
-  const t = text.toLowerCase();
-  const referencesDaniel = /\b(daniel(?:'?s)?|woss|macula)\b/i.test(t);
-  const contextReferencesDaniel =
-    !referencesDaniel &&
-    ctxMessages?.some(
-      (m) => m.role === 'user' && /\b(daniel(?:'?s)?|woss|portfolio|macula)\b/i.test((m.content ?? '').toLowerCase()),
-    );
-  const hasKeyword =
-    /macula|image|photo|picture|video|media|file|asset|keyword|license|metadata|exif|portfolio|art|music|hobbies?|interests?|traverse|get_users|album|directory/.test(
-      t,
-    );
-  if (hasKeyword) return true;
-  if (!referencesDaniel && !contextReferencesDaniel) {
-    const wc = t.split(/\s+/).filter(Boolean).length;
-    if (wc > 6) return false;
-  }
-  return false;
-}
-
-/**
- * Fast binary relevance check via a lightweight LLM call (temperature=0, 5s timeout).
- * Is this message about Daniel Maricic's professional portfolio?
- *
- * Polite closings, gratitude, contact requests are always relevant — bypasses LLM.
- * Fail-open: returns true on any error/timeout so legitimate queries aren't blocked.
- * Slash commands and messages with tool intent skip this gate entirely.
- */
-async function isRelevant(
-  question: string,
-  history: { role: string; content: string }[],
-  signal?: AbortSignal,
-): Promise<boolean> {
-  // Fast bypass for polite closings, gratitude, contact requests — always relevant
-  const politePattern =
-    /^(thank(s| you|you!)|thanks|cheers|ty|thx|great|awesome|perfect|got it|ok|okay|sure|nice|good|cool|that('s| is) all|that helps|bye|have a good|contact|hire|reach out|get in touch|talk to|speak with)/i;
-  if (politePattern.test(question.trim())) {
-    return true;
-  }
-
-  const context = history
-    .slice(-2)
-    .map((m) => `${m.role}: ${m.content}`)
-    .join('\n');
-
-  try {
-    const content =
-      "Is this message about Daniel Maricic's professional portfolio, " +
-      'skills, experience, projects, or career history?' +
-      (context ? `\n\nPrevious context:\n${context}` : '') +
-      `\n\nMessage: ${question}`;
-    const response = await fetch(`${config().openai.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config().openai.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-
-      body: JSON.stringify({
-        model: config().openai.model,
-        // OpenRouter: hide reasoning
-        provider: { reasoning_type: 'hidden' },
-        // Fallback for other APIs
-        extra_body: { reasoning_effort: 'none' },
-        messages: [
-          {
-            role: 'system',
-            content: `You are a classifier for a professional portfolio website. Determine if the user's message is relevant to Daniel Maricic's work. Answer exactly one word: yes or no.
-
-RELEVANT (answer yes): Questions about his skills, experience, projects, career history. Expressions of gratitude (thank you, thanks, appreciate it). Requests to contact, hire, or collaborate. Polite conversation closings. Follow-ups continuing an already-relevant topic. Messages with his name or project names.
-
-NOT RELEVANT (answer no): Questions about politics, sports, entertainment, weather, general knowledge, math, coding help not related to his projects, or anything completely unrelated to Daniel Maricic's professional portfolio.
-
-Respond only with "yes" or "no".`,
-          },
-          {
-            role: 'user',
-            content,
-          },
-        ],
-        temperature: 0,
-        max_tokens: 5000,
-      }),
-      signal: signal ?? AbortSignal.timeout(5000),
-    });
-    if (!response.ok) {
-      log.warn`Relevance check HTTP ${response.status} — allowing query (fail-open)`;
-      return true;
-    }
-
-    const body = (await response.json()) as ChatCompletionResponse;
-    const msg = body.choices?.[0]?.message;
-    const answer = (msg?.content || msg?.reasoning_content || '').trim().toLowerCase();
-    return answer === 'yes';
-  } catch (err) {
-    log.warn`Relevance check failed: ${err} — allowing query (fail-open)`;
-    return true;
-  }
-}
 
 /**
  * LLM-based tool-needs classifier for short ambiguous follow-ups like 'yup do it' or '3 more?'.
@@ -257,7 +78,6 @@ async function classifyToolNeeds(
       '- User says "yup do it" after assistant offered to search GitHub → github\n' +
       '- User says "3 more?" after assistant showed photos → macula\n' +
       '- User says "thanks!" → none\n' +
-      '- User asks "what experience do you have with React" → none\n\n' +
       (context ? `Conversation so far:\n${context}\n\n` : '') +
       `User's latest message: ${question}`;
     log.info`🔍 classifyToolNeeds prompt:\n${content}`;
@@ -278,7 +98,7 @@ async function classifyToolNeeds(
 
 GITHUB (answer: github): User wants to search code, list issues, pull requests, repos, stars, forks, commits — GitHub operations.
 
-MACULA (answer: macula): User wants to view, search, or list photos, images, videos, files, media, keywords, licenses — Macula media/asset operations.
+MACULA (answer: macula): User wants to view, search, or list photos, images, videos, files, media, keywords, licenses — Macula media/asset operations or view portfolio content.
 
 BOTH (answer: both): The message requires both GitHub and Macula tools.
 
@@ -328,40 +148,6 @@ Respond with exactly one word: github, macula, both, or none.`,
 }
 
 /**
- * Generate a warm natural-language response for polite-only messages (thanks, positive feedback).
- * No RAG, no tools, no portfolio info — just a friendly 1-2 sentence reply.
- * Used by handleEarlyGates polite-only path. Falls back to a hardcoded string if this fails.
- */
-async function generatePoliteResponse(message: string, signal?: AbortSignal): Promise<string> {
-  const response = await fetch(`${config().openai.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config().openai.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: config().openai.model,
-      provider: { reasoning_type: 'hidden' },
-      extra_body: { reasoning_effort: 'none' },
-      messages: [
-        {
-          role: 'system',
-          content: `You are Daniel Maricic's friendly AI assistant. The user has sent a polite message or positive feedback. Respond warmly, naturally, and briefly (1-2 sentences). Do NOT mention specific projects, skills, or portfolio items. Keep it light and friendly.`,
-        },
-        { role: 'user', content: message },
-      ],
-      temperature: 0.7,
-      max_tokens: 100,
-    }),
-    signal: signal ?? AbortSignal.timeout(5000),
-  });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const body = (await response.json()) as ChatCompletionResponse;
-  const msg = body.choices?.[0]?.message;
-  return (msg?.content || msg?.reasoning_content || '').trim();
-}
-
-/**
  * Pre-generation gates that run before the LLM is called:
  *
  * 1. Relevance check (isRelevant) — rejects off-topic questions, locks the chat
@@ -393,6 +179,7 @@ async function handleEarlyGates(
       classifyResult?: Awaited<ReturnType<typeof classifyToolNeeds>>;
     }
 > {
+  // should get max messages from config. unification
   const ctxMessages = getMessages(chatId, 50);
   const history = ctxMessages.map((m) => ({ role: m.role, content: m.content }));
 
@@ -548,7 +335,8 @@ async function handleEarlyGates(
     try {
       const ce = await embedText(cacheText);
       cacheEmbeddingData = ce.data;
-    } catch {
+    } catch (error) {
+      console.error('Failed to generate composite embedding', error);
       /* fallback */
     }
   }
@@ -669,7 +457,8 @@ async function streamWithRetry(
     `UPDATE tool_calls SET finished_at = datetime('now'), tool_output = ?, result_size = ? WHERE id = ?`,
   );
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  // change from 3 to 10 attempts after adding retry-on-doom-loop logic, to give the model more chances to recover with tools disabled
+  for (let attempt = 0; attempt < 10; attempt++) {
     try {
       const llmStream = mcpToolDefs
         ? chatStreamWithTools(messages, mcpToolDefs, abortController.signal)
@@ -1041,7 +830,10 @@ export async function startGeneration(
 
     if (queryType !== 'tool') {
       publishLive(chatId, 'status', { step: 'searching' });
-      const results = searchChunks(embedding.data, maxChunks);
+      const typeFilter = /\b(blog|post|article|writing|tutorial|guide)\b/i.test(text)
+        ? ('post' as const)
+        : ('experience' as const);
+      const results = searchChunks(embedding.data, maxChunks, typeFilter);
       const filtered = results.filter((r) => r.score < 1.5).slice(0, maxChunks);
 
       ragChunks = filtered.map((r) => ({
@@ -1087,11 +879,12 @@ export async function startGeneration(
         }));
 
       // Replace user message with a summarization prompt
+      tryRenameChat(chatId, text);
       text =
         'Provide a concise summary of the above conversation covering the key topics, projects, and experience discussed.';
     }
 
-    tryRenameChat(chatId, text);
+    // tryRenameChat was moved above — now called with original user text before override
 
     // 6. Build RAG prompt
     const messages = buildRagPrompt(text, ragChunks, history);
