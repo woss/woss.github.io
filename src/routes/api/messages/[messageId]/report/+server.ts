@@ -2,6 +2,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import { callWebhook } from '$lib/server/webhooks';
 import { lookupCountry } from '$lib/server/geo';
 import { CAT, createLogger } from '$lib/server/logger';
+import { setReaction, softDeleteMessage } from '$lib/server/db';
 
 const log = createLogger(CAT.chat);
 
@@ -41,6 +42,9 @@ export async function POST(event: RequestEvent): Promise<Response> {
         headers: JSON_HEADERS,
       });
     }
+
+    setReaction(messageId, body.userId, 'down', body.reason);
+    softDeleteMessage(messageId);
 
     const ua = event.request.headers.get('user-agent') ?? 'unknown';
     const ip = getClientIP(event);

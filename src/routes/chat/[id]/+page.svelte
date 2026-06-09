@@ -735,7 +735,7 @@
       <div class="w-7"></div>
     </div>
 
-    <div class="flex-1 overflow-y-auto min-h-0 relative" bind:this={messageListEl}>
+    <div class="flex-1 overflow-y-auto p-8 min-h-0 relative" bind:this={messageListEl}>
       {#if !hasMessages && !isLoading}
         <!-- Empty state with suggested questions -->
         <div class="flex flex-col items-center justify-center gap-8 px-8 max-md:px-4 h-full">

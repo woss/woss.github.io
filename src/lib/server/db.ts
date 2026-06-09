@@ -387,6 +387,14 @@ function deleteChat(chatId: string): void {
 }
 
 /**
+ * Soft-delete a message by setting its deleted_at timestamp.
+ */
+function softDeleteMessage(messageId: string): void {
+  const db = getDb();
+  db.prepare("UPDATE messages SET deleted_at = datetime('now') WHERE id = ?").run(messageId);
+}
+
+/**
  * Rename a chat. Title is truncated to 100 chars.
  */
 function renameChat(chatId: string, title: string): void {
@@ -827,6 +835,7 @@ export {
   setReaction,
   getReaction,
   deleteReaction,
+  softDeleteMessage,
   getPosts,
   getExperience,
   createChat,
