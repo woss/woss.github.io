@@ -48,7 +48,7 @@ export async function needsGithubTools(
       (m) => m.role === 'user' && /\b(daniel(?:'?s)?|woss|anagolay|macula)\b/i.test((m.content ?? '').toLowerCase()),
     );
   const hasKeyword =
-    /pr|pull request|commit|issue|repo|repository|github|stars|fork|contrib|project|built|founded|work/.test(t);
+    /pr|pull request|commit|issue|repo|repository|github|stars|fork|contrib|project|built|founded|work|portfolio/.test(t);
   if (hasKeyword) return true;
   if (!referencesDaniel && !contextReferencesDaniel) {
     const wc = t.split(/\s+/).filter(Boolean).length;

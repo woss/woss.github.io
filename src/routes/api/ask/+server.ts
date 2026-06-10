@@ -3,6 +3,7 @@ import { callWebhook } from '$lib/server/webhooks';
 import {
   addMessage,
   ensureModel,
+  getChat,
   getChatMessageCount,
   getDb,
   getMessages,
@@ -136,6 +137,17 @@ export async function POST(event: RequestEvent): Promise<Response> {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // Enforce ownership for existing chats
+  if (body.chatId) {
+    const chat = getChat(body.chatId);
+    if (chat && chat.userId !== body.userId) {
+      return new Response(JSON.stringify({ error: 'Not authorized' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
   }
 
   // Save user message immediately

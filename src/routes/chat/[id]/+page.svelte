@@ -19,7 +19,7 @@
   import { sendChatMessage } from '$lib/chat/send';
 
 
-  let { data } = $props() as { data: { messages: ChatMessage[], locked: boolean } };
+  let { data } = $props() as { data: { messages: ChatMessage[], locked: boolean, chatOwnerId?: string } };
 
   /* ─── Constants ─── */
 
@@ -359,22 +359,26 @@
 
   /* ─── Effects ─── */
 
-  // Load userId from localStorage
+  // Load userId from localStorage and determine ownership
   $effect(() => {
-    if (!browser) return;
+    if (!browser || !chatId || !data?.chatOwnerId) return;
+    let id: string;
     try {
       const stored = localStorage.getItem(USER_ID_KEY);
       if (stored) {
-        userId = stored;
+        id = stored;
       } else {
-        const id = crypto.randomUUID();
+        id = crypto.randomUUID();
         localStorage.setItem(USER_ID_KEY, id);
-        userId = id;
       }
     } catch {
-      userId = crypto.randomUUID();
+      id = crypto.randomUUID();
     }
+    userId = id;
+    isOwner = id === data.chatOwnerId;
   });
+
+  let isOwner = $state<boolean | undefined>(undefined);
 
   // Track dismissed chats — reactive to chatId changes
   $effect(() => {
@@ -797,34 +801,41 @@
     {/if}
 
     <!-- Max messages reached or Input bar -->
-    {#if maxMessagesReached && !isLoading}
-      <div class="text-center py-4 px-4 border-t border-[rgba(255,255,255,0.08)]">
-        <p class="text-sm text-on-surface-variant">
-          This chat has reached the maximum of {config.public.maxMessages} messages. <button
-            class="text-primary underline bg-transparent border-0 cursor-pointer"
-            onclick={createChat}>Start a new chat</button
-          >
-        </p>
-      </div>
-    {:else}
-      <ChatInput
-        bind:messageText
-        {isLoading}
-        {canSend}
-        {hasMessages}
-        {currentChat}
-        {maxMessagesReached}
-        messagesCount={userMessageCount}
-        maxMessages={config.public.maxMessages}
-        {activeToolCount}
-        {completedToolCount}
-        {currentStatus}
-        bind:inputEl
-        {userId}
-        chatId={currentChatId ?? ""}
-        onsend={(text: string) => sendMessage(text)}
-        oncreateChat={createChat}
-      />
+    {#if isOwner !== undefined}
+      {#if maxMessagesReached && !isLoading}
+        <div class="text-center py-4 px-4 border-t border-[rgba(255,255,255,0.08)]">
+          <p class="text-sm text-on-surface-variant">
+            This chat has reached the maximum of {config.public.maxMessages} messages. <button
+              class="text-primary underline bg-transparent border-0 cursor-pointer"
+              onclick={createChat}>Start a new chat</button
+            >
+          </p>
+        </div>
+      {:else if isOwner}
+        <ChatInput
+          bind:messageText
+          {isLoading}
+          {canSend}
+          {currentChat}
+          {maxMessagesReached}
+          messagesCount={userMessageCount}
+          maxMessages={config.public.maxMessages}
+          {activeToolCount}
+          {completedToolCount}
+          {currentStatus}
+          bind:inputEl
+          {userId}
+          onsend={(text: string) => sendMessage(text)}
+          oncreateChat={createChat}
+        />
+      {:else}
+        <!-- Read-only banner for non-owners -->
+        <div class="border-t border-[rgba(255,255,255,0.08)] px-4 py-6 text-center">
+          <p class="text-sm text-on-surface-variant">
+            This chat is shared in read-only mode.
+          </p>
+        </div>
+      {/if}
     {/if}
     <div class="px-8 pb-4 max-w-[80vw] mx-auto w-full max-md:px-4 max-sm:px-3 flex flex-col items-center gap-2">
       <SoundToggle />

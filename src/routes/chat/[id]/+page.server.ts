@@ -68,6 +68,10 @@ export const actions: Actions = {
 
     if (isChatLocked(chatId)) return fail(400, { error: 'This chat has been locked', locked: true });
 
+    const chat = getChat(chatId);
+    if (!chat) return fail(404, { error: 'Chat not found' });
+    if (chat.userId !== userId) return fail(403, { error: 'Not authorized' });
+
     addMessage(
       userId,
       'user',
@@ -157,5 +161,5 @@ export const load: PageServerLoad = async ({ params }) => {
     durationMs: m.durationMs || 0,
     deletedAt: m.deletedAt || undefined,
   }));
-  return { messages, locked: chat.locked };
+  return { messages, locked: chat.locked, chatOwnerId: chat.userId };
 };
