@@ -5,6 +5,7 @@ import remarkRehype from 'remark-rehype';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSlug from 'rehype-slug';
 import rehypeStringify from 'rehype-stringify';
+import { rehypeMermaidTabs } from './rehype-mermaid-tabs.ts';
 import matter from 'gray-matter';
 
 function createProcessor() {
@@ -13,6 +14,7 @@ function createProcessor() {
     .use(remarkFrontmatter, ['yaml', 'toml'])
     .use(remarkRehype, { allowDangerousHtml: false })
     .use(rehypeHighlight)
+    .use(rehypeMermaidTabs)
     .use(rehypeSlug)
     .use(rehypeStringify);
 }

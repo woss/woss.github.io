@@ -159,6 +159,12 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
       '  • Each file object from traverse has a "rawDataUrl" field — use that exact value with "?preset=sys_md" appended for display (e.g. https://u.macula.link/abc123?preset=sys_md). Never modify or guess these URLs. Do NOT construct image URLs from directory listing CIDs — rawDataUrl from traverse is the ONLY valid source.\n' +
       '  • Repeat requests = fresh workflow from step 1. Never say "already showed you."\n' +
       '  • When tools available, call them freely. Treat empty traverse results as signal to re-check tools.\n' +
+      '  • PROACTIVE SEARCH: When users ask about Daniel\'s personal interests, hobbies, lifestyle, photos, music, art, or non-professional topics — do NOT rely on keyword search (edge="tagged_files") which often returns empty for these topics. Instead, use this DIRECT BROWSING workflow:\n' +
+      '    1. Call get_users(["woss"]) first — this returns his bio ("hobby photographer, software engineer, and cook") and a list of directory names (e.g. woss-photo, food, ai-generated, eyes, stars, abstract, flowers, textures, animals, urban, architecture, shadows, light) that directly reveal his interests and what content exists.\n' +
+      '    2. Browse user uploads directly via traverse(from={"type":"user","nickname":"woss"}, edge="uploads") to see actual photos. This always returns content — Daniel has 337 photos across 13 directories. Do NOT skip this step.\n' +
+      '    3. Based on directory names from step 1, browse specific directories that match the user\'s question using traverse(from={"type":"directory","pathCid":"<pathCid>"}, edge="contains"). The pathCid comes from the get_users result.\n' +
+      '    4. Use the bio from get_users as a signal — it explicitly mentions photography, software, and cooking. If the user asks about food, browse the "food" directory. If they ask about photography, browse "woss-photo" or other photo directories.\n' +
+      '    Never respond "no information available" without first browsing user uploads directly. Keyword search (tagged_files) often returns nothing for personal topics; user upload browsing is the reliable path that always yields results.\n' +
       '  • PRECEDENCE: The MEDIA QUERY WORKFLOW and IMAGE RULES above override any MCP prompt templates that conflict.\n';
   }
 

@@ -56,8 +56,19 @@ services:
         condition: service_completed_successfully
       search-index-init:
         condition: service_completed_successfully
+      mermaid:
+        condition: service_started
     restart: unless-stopped
     command: ["node", "build/index.js"]
+
+  mermaid:
+    image: woss/drakov09-mermaid-server:latest
+    env_file: .env
+    expose:
+      - "8080"
+    ports:
+      - "8121:8080"
+    restart: unless-stopped
 
 volumes:
   ollama_data:

@@ -15,8 +15,8 @@ function queryRow<T>(stmt: Database.Statement, ...params: unknown[]): T | undefi
   return stmt.get(...params) as T | undefined;
 }
 
-function validateRowType(value: unknown): 'post' | 'experience' {
-  if (value === 'post' || value === 'experience') return value;
+function validateRowType(value: unknown): 'about' | 'post' | 'experience' {
+  if (value === 'about' || value === 'post' || value === 'experience') return value;
   return 'post';
 }
 
@@ -44,7 +44,7 @@ interface StoredChunk {
   section: string;
   slug: string;
   embedding: number[];
-  type: 'post' | 'experience';
+  type: 'about' | 'post' | 'experience';
 }
 
 /** Result of a vector similarity search. */
@@ -156,7 +156,7 @@ function getIndex(): Index {
  * Search chunks by cosine similarity to the given embedding.
  * Uses USearch for KNN search, then looks up metadata from SQLite.
  */
-function searchChunks(embedding: number[], limit: number = 10, typeFilter?: 'post' | 'experience'): SearchResult[] {
+function searchChunks(embedding: number[], limit: number = 10, typeFilter?: 'about' | 'post' | 'experience'): SearchResult[] {
   const db = getDb();
   const idx = getIndex();
 
@@ -820,6 +820,40 @@ function getToolCallsByMessageId(messageId: string): ToolCallRecord[] {
   }));
 }
 
+/**
+ * Batch fetch tool calls for multiple message IDs.
+ * Returns a record keyed by message ID.
+ */
+function getToolCallsForMessages(messageIds: string[]): Record<string, ToolCallRecord[]> {
+  if (messageIds.length === 0) return {};
+  const db = getDb();
+  const placeholders = messageIds.map(() => '?').join(',');
+  const rows = queryRows<Record<string, unknown>>(
+    db.prepare(
+      `SELECT id, message_id, name, server_id, started_at, finished_at,
+        CASE WHEN finished_at IS NOT NULL THEN
+          (julianday(finished_at) - julianday(started_at)) * 86400000
+        ELSE NULL END as duration_ms
+      FROM tool_calls WHERE message_id IN (${placeholders}) ORDER BY started_at ASC`,
+    ),
+    ...messageIds,
+  );
+  const map: Record<string, ToolCallRecord[]> = {};
+  for (const row of rows) {
+    const msgId = String(row.message_id);
+    if (!map[msgId]) map[msgId] = [];
+    map[msgId].push({
+      id: String(row.id),
+      name: String(row.name),
+      serverId: String(row.server_id),
+      startedAt: String(row.started_at),
+      finishedAt: row.finished_at ? String(row.finished_at) : null,
+      durationMs: row.duration_ms != null ? Math.round(Number(row.duration_ms)) : null,
+    });
+  }
+  return map;
+}
+
 export {
   getDb,
   searchChunks,
@@ -827,6 +861,7 @@ export {
   addMessage,
   getMessages,
   getToolCallsByMessageId,
+  getToolCallsForMessages,
   getMessagesByUserId,
   clearChatMessages,
   ensureModel,

@@ -33,6 +33,7 @@ import {
   tryRenameChat,
 } from '$lib/server/chat-helpers';
 import { startGeneration } from '$lib/server/generate';
+import { dev } from '$app/environment';
 
 const log = createLogger(CAT.chat);
 
@@ -142,7 +143,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
   // Enforce ownership for existing chats
   if (body.chatId) {
     const chat = getChat(body.chatId);
-    if (chat && chat.userId !== body.userId) {
+    if (!dev && chat && chat.userId !== body.userId) {
       return new Response(JSON.stringify({ error: 'Not authorized' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },

@@ -121,6 +121,85 @@
 
     return () => cancelAnimationFrame(raf);
   });
+  // Mermaid tab switching — lazy-loads SVG on first "Diagram" click
+  $effect(() => {
+    void data.html;
+    const controllers: AbortController[] = [];
+    const raf = requestAnimationFrame(() => {
+      const containers = document.querySelectorAll<HTMLElement>('.mermaid-tabs');
+      if (containers.length === 0) return;
+      containers.forEach(container => {
+        const ac = new AbortController();
+        controllers.push(ac);
+        const sourceBtn = container.querySelector<HTMLButtonElement>('[data-tab="source"]');
+        const diagramBtn = container.querySelector<HTMLButtonElement>('[data-tab="diagram"]');
+        const sourceTab = container.querySelector<HTMLElement>('.source-tab');
+        const diagramTab = container.querySelector<HTMLElement>('.diagram-tab');
+        if (!sourceBtn || !diagramBtn || !sourceTab || !diagramTab) return;
+
+        sourceBtn.addEventListener('click', () => {
+          sourceTab.classList.remove('hidden');
+          diagramTab.classList.add('hidden');
+          sourceBtn.classList.remove('text-slate-400', 'border-transparent');
+          sourceBtn.classList.add('text-green-400', 'border-green-400');
+          diagramBtn.classList.remove('text-green-400', 'border-green-400');
+          diagramBtn.classList.add('text-slate-400', 'border-transparent');
+        }, { signal: ac.signal });
+        diagramBtn.addEventListener('click', () => {
+          sourceTab.classList.add('hidden');
+          diagramTab.classList.remove('hidden');
+          diagramBtn.classList.remove('text-slate-400', 'border-transparent');
+          diagramBtn.classList.add('text-green-400', 'border-green-400');
+          sourceBtn.classList.remove('text-green-400', 'border-green-400');
+          sourceBtn.classList.add('text-slate-400', 'border-transparent');
+          diagramTab.innerHTML = `<div class="flex items-center justify-center p-8" style="min-height:100px">
+    <svg viewBox="0 0 400 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full max-w-sm">
+      <!-- Remote server (left) -->
+      <rect x="30" y="35" width="60" height="50" rx="6" stroke="currentColor" stroke-width="2" class="text-cyan-400" fill="none"/>
+      <circle cx="50" cy="72" r="4" fill="currentColor" class="text-cyan-400"/>
+      <circle cx="70" cy="72" r="4" fill="currentColor" class="text-cyan-400"/>
+      <line x1="45" y1="45" x2="75" y2="45" stroke="currentColor" stroke-width="2" class="text-cyan-400"/>
+      <line x1="45" y1="52" x2="65" y2="52" stroke="currentColor" stroke-width="2" class="text-cyan-400" stroke-dasharray="3 2"/>
+
+      <!-- Animated dashed arrow -->
+      <line x1="95" y1="60" x2="175" y2="60" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4" class="text-green-400">
+        <animate attributeName="stroke-dashoffset" from="0" to="-20" dur="1s" repeatCount="indefinite"/>
+      </line>
+      <polygon points="175,54 185,60 175,66" fill="currentColor" class="text-green-400"/>
+
+      <!-- Light beams from data -->
+      <line x1="50" y1="35" x2="50" y2="22" stroke="currentColor" stroke-width="1.5" class="text-green-400/60">
+        <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite"/>
+      </line>
+      <line x1="70" y1="35" x2="70" y2="22" stroke="currentColor" stroke-width="1.5" class="text-green-400/60">
+        <animate attributeName="opacity" values="0.3;1;0.3" dur="1.5s" begin="0.5s" repeatCount="indefinite"/>
+      </line>
+
+      <!-- Diagram panel (right) -->
+      <rect x="200" y="35" width="80" height="50" rx="6" stroke="currentColor" stroke-width="2" class="text-cyan-300" fill="none"/>
+      <circle cx="225" cy="55" r="8" stroke="currentColor" stroke-width="1.5" class="text-cyan-300" fill="none"/>
+      <rect x="238" y="48" width="32" height="14" rx="2" stroke="currentColor" stroke-width="1.5" class="text-cyan-300" fill="none"/>
+      <line x1="220" y1="70" x2="260" y2="70" stroke="currentColor" stroke-width="1.5" class="text-cyan-300" stroke-dasharray="2 2"/>
+      <line x1="220" y1="76" x2="250" y2="76" stroke="currentColor" stroke-width="1.5" class="text-cyan-300" stroke-dasharray="2 2"/>
+
+      <!-- Spinner at diagram end -->
+      <circle cx="330" cy="60" r="12" stroke="currentColor" stroke-width="2" class="text-green-400" fill="none" stroke-dasharray="18 38">
+        <animateTransform attributeName="transform" type="rotate" from="0 330 60" to="360 330 60" dur="1.2s" repeatCount="indefinite"/>
+      </circle>
+
+      <!-- Text -->
+      <text x="200" y="110" text-anchor="middle" font-family="monospace" font-size="12" fill="currentColor" class="text-slate-400">remote diagram rendering — coming soon</text>
+    </svg>
+</div>`;
+        }, { signal: ac.signal });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      controllers.forEach(ac => ac.abort());
+    };
+  });
+
 </script>
 
 <Seo

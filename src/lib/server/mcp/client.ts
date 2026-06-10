@@ -32,17 +32,21 @@ function getManager(): McpManager {
 /* ── Client Wrapper ── */
 
 class McpClient {
-  private initialized = false;
+  private initPromise: Promise<void> | null = null;
 
   async initialize(): Promise<void> {
-    if (this.initialized) return;
+    if (this.initPromise) return this.initPromise;
+    this.initPromise = this._doInit();
+    return this.initPromise;
+  }
+
+  private async _doInit(): Promise<void> {
     if (config().mcp.servers.length === 0) {
       log.debug`initialize: no MCP servers configured`;
       return;
     }
     try {
       await getManager().init();
-      this.initialized = true;
       log.debug`initialized with ${config().mcp.servers.length} servers`;
     } catch (err) {
       log.debug`ERROR: initialize failed: ${err}`;

@@ -909,10 +909,7 @@ export async function startGeneration(
 
     if (queryType !== 'tool') {
       publishLive(chatId, 'status', { step: 'searching' });
-      const typeFilter = /\b(blog|post|article|writing|tutorial|guide)\b/i.test(text)
-        ? ('post' as const)
-        : ('experience' as const);
-      const results = searchChunks(embedding.data, maxChunks, typeFilter);
+      const results = searchChunks(embedding.data, maxChunks);
       const filtered = results.filter((r) => r.score < 1.5).slice(0, maxChunks);
 
       ragChunks = filtered.map((r) => ({
@@ -932,7 +929,12 @@ export async function startGeneration(
           title: r.chunk.title,
           score: r.score,
           slug: r.chunk.slug,
-          url: r.chunk.type === 'post' ? `/posts/${r.chunk.slug}` : `/experience/${r.chunk.slug}`,
+          url: r.chunk.type === 'post'
+            ? `/posts/${r.chunk.slug}`
+            : r.chunk.type === 'about'
+              ? `/about`
+              : `/experience/${r.chunk.slug}`,
+          type: r.chunk.type,
         }));
     }
 

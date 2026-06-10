@@ -91,7 +91,6 @@
       finishedAt?: number;
     }>,
     now = Date.now(),
-    toolCallsMap = {} as Record<string, ToolCallInfo[]>,
     userId = '',
     onretry = () => {},
     onreport = () => {},
@@ -114,6 +113,19 @@
     if (score < 0.4) return 'var(--color-primary)';
     if (score < 0.55) return 'var(--color-yellow, #eab308)';
     return 'var(--color-secondary)';
+  }
+
+  const sourceTypeMap: Record<string, string> = {
+    post: 'P',
+    experience: 'E',
+    about: 'A',
+  };
+
+  function sourceTypeColor(type: string): string {
+    if (type === 'post') return 'var(--color-primary)';
+    if (type === 'experience') return 'var(--color-secondary)';
+    if (type === 'about') return 'var(--color-yellow, #eab308)';
+    return 'var(--color-on-surface-variant, #8090a0)';
   }
 
   function groupToolCalls(tools: ToolCallInfo[]): ToolCallGroup[] {
@@ -595,6 +607,7 @@
               title={source.title}
             >
               <span class="source-dot" aria-hidden="true"></span>
+              <span class="source-type-badge" style="--type-color: {sourceTypeColor(source.type)}">{sourceTypeMap[source.type]}</span>
               <span class="source-title">{source.title}</span>
               <span class="source-score">{source.score.toFixed(2)}</span>
               <svg
@@ -640,10 +653,10 @@
     {/if}
 
     <!-- Tool calls -->
-    {#if message.role === 'assistant' && toolCallsMap[message.id]?.length}
+    {#if message.role === 'assistant' && message.toolCalls?.length}
       <div class="mt-3 pt-2 border-t border-[rgba(255,255,255,0.06)]">
         <div class="flex flex-wrap gap-2">
-          {#each groupToolCalls(toolCallsMap[message.id]) as group (group.key)}
+          {#each groupToolCalls(message.toolCalls || []) as group (group.key)}
             <span
               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high border border-[rgba(255,255,255,0.08)] text-xs font-mono text-on-surface-variant"
             >
@@ -746,6 +759,23 @@
 
   .source-pill:hover .source-ext {
     opacity: 1;
+  }
+
+  .source-type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--type-color, var(--color-on-surface-variant));
+    background: color-mix(in srgb, var(--type-color, var(--color-on-surface-variant)) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--type-color, var(--color-on-surface-variant)) 30%, transparent);
+    flex-shrink: 0;
   }
 
   .reaction-btn {

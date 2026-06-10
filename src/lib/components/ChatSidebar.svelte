@@ -4,6 +4,7 @@
   import type { Chat } from '$lib/chat/types';
   import { config } from '$lib/config';
 
+  import SoundToggle from '$lib/components/SoundToggle.svelte';
   let {
     chats,
     currentChatId = null,
@@ -91,6 +92,14 @@
     {#if chats.length === 0}
       <p class="text-on-surface-variant text-sm text-center py-8">No chats yet</p>
     {/if}
+  </div>
+
+  <!-- Sound toggle -->
+  <div class="border-t border-[rgba(255,255,255,0.08)] px-3 py-2.5">
+    <div class="flex items-center justify-between">
+      <span class="text-xs text-on-surface-variant font-body">Sound</span>
+      <SoundToggle />
+    </div>
   </div>
 
   <!-- MCP server status -->

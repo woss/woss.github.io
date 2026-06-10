@@ -13,7 +13,6 @@
   import ChatInput from '$lib/components/ChatInput.svelte';
   import { toast } from 'svelte-sonner';
   import { playPluckSound } from '$lib/utils/sounds';
-  import SoundToggle from '$lib/components/SoundToggle.svelte';
 
   import type { ChatMessage, Chat, ToolCallInfo } from '$lib/chat/types';
   import { sendChatMessage } from '$lib/chat/send';
@@ -66,6 +65,7 @@
       ? [{ id: ssrChatId, userId: '', title: '', createdAt: '', messageCount: 0, locked: true }]
       : []
   );
+  let chatsLoaded = $state(false);
   let currentChatId = $derived<string | null>(chatId || null);
   // Local binding proxy for ChatSidebar two-way binding (reacts to store changes)
   let showMobile = $state(false);
@@ -96,7 +96,6 @@
 
   /* ─── Tool call state ─── */
 
-  let toolCallsMap = $state<Record<string, ToolCallInfo[]>>({});
 
   /* ─── Streaming state (SSE events) ─── */
 
@@ -136,6 +135,7 @@
     } catch {
       /* ignore */
     }
+    chatsLoaded = true;
   }
 
   async function loadMessages(): Promise<void> {
@@ -164,6 +164,7 @@
           tokensOut: (m.tokensOut as number) || 0,
           durationMs: (m.durationMs as number) || 0,
           deletedAt: m.deletedAt as string | undefined,
+          toolCalls: m.toolCalls as ToolCallInfo[] || [],
         }));
 
         // Load reactions for assistant messages in parallel
@@ -325,18 +326,6 @@
     }
   }
 
-  async function fetchToolCalls(messageId: string): Promise<void> {
-    if (!messageId || toolCallsMap[messageId]) return;
-    try {
-      const res = await fetch(`/api/chat/${chatId}/messages/${messageId}/tool-calls`);
-      if (res.ok) {
-        const data = await res.json();
-        toolCallsMap = { ...toolCallsMap, [messageId]: data.toolCalls };
-      }
-    } catch {
-      /* ignore */
-    }
-  }
 
   async function fetchReaction(messageId: string): Promise<{ type: 'up' | 'down' | 'heart'; reason: string } | null> {
     try {
@@ -375,7 +364,7 @@
       id = crypto.randomUUID();
     }
     userId = id;
-    isOwner = id === data.chatOwnerId;
+    isOwner = import.meta.env.DEV || id === data.chatOwnerId;
   });
 
   let isOwner = $state<boolean | undefined>(undefined);
@@ -395,7 +384,11 @@
   // Separate from queryText so replaceState doesn't trigger re-run
   $effect(() => {
     if (!browser || !userId || !chatId) return;
-    if (chats.length > 0) return;
+    if (chatsLoaded) return;
+    if (chats.length > 0) {
+      chatsLoaded = true;
+      return;
+    }
     loadChats();
   });
 
@@ -493,17 +486,6 @@
     return () => window.removeEventListener('hashchange', scrollToHash);
   });
 
-  // Fetch tool calls for assistant messages loaded from DB (SSR or API refresh)
-  $effect(() => {
-    if (!browser || !chatId) return;
-    for (const msg of messages) {
-      // Skip the currently streaming message — done handler fetches it
-      if (msg === messages[messages.length - 1] && msg.role === 'assistant' && isLoading) continue;
-      if (msg.role === 'assistant' && msg.id && !toolCallsMap[msg.id]) {
-        fetchToolCalls(msg.id);
-      }
-    }
-  });
 
   // Connect to SSE event source for real-time generation updates
   $effect(() => {
@@ -576,6 +558,14 @@
       if (messages.some((m) => m.id === messageId)) return;
 
       const last = messages[messages.length - 1];
+      const completedToolCalls = Object.values(streamingToolCalls).map(tc => ({
+        id: tc.id,
+        name: tc.name,
+        serverId: tc.serverId,
+        startedAt: new Date(tc.startedAt).toISOString(),
+        finishedAt: tc.finishedAt ? new Date(tc.finishedAt).toISOString() : null,
+        durationMs: tc.finishedAt ? tc.finishedAt - tc.startedAt : null,
+      }));
       if (last?.role !== 'assistant') {
         // Reconnect case: generation completed between page load and EventSource
         messages = [
@@ -587,6 +577,7 @@
             timestamp: Date.now(),
             createdAt: '',
             sources: data.sources || [],
+            toolCalls: completedToolCalls,
           },
         ];
       } else {
@@ -601,6 +592,7 @@
           tokensIn: data.usage?.tokensIn || 0,
           tokensOut: data.usage?.tokensOut || 0,
           durationMs: data.usage?.durationMs || 0,
+          toolCalls: completedToolCalls,
         };
         // Update URL hash if it still points to old placeholder ID from streaming
         if (data.messageId && window.location.hash === `#msg-${oldPlaceholderId}`) {
@@ -612,12 +604,10 @@
         toast.success('Response complete');
         if (document.hidden) playPluckSound();
       }
-      // Lazy-load tool calls for this message
+      // Reset streaming state for next message
       if (data.messageId) {
-        fetchToolCalls(data.messageId as string);
-        // Reset streaming state for next message
         streamingToolCalls = {};
-        currentStatus = '';
+        currentStatus = "";
       }
     });
 
@@ -758,7 +748,6 @@
               isLast={i === messages.length - 1}
               {streamingToolValues}
               {now}
-              {toolCallsMap}
               {userId}
               onretry={retry}
               onreport={handleReport}
@@ -838,7 +827,6 @@
       {/if}
     {/if}
     <div class="px-8 pb-4 max-w-[80vw] mx-auto w-full max-md:px-4 max-sm:px-3 flex flex-col items-center gap-2">
-      <SoundToggle />
       <p class="text-xs text-on-surface-variant text-center">AI can make mistakes. Verify important information.</p>
     </div>
   </div>
