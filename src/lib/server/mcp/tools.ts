@@ -175,62 +175,6 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
   return result;
 }
 
-/**
- * Synthesis-phase system prompt.
- * Removes MEDIA QUERY WORKFLOW + IMAGE RULES that tell the model
- * to keep calling tools instead of producing a final answer.
- * Keeps tool capability info so model CAN call tools if needed.
- */
-function getSynthesisSystemPrompt(options?: SystemPromptOptions): string {
-  const gh = options?.github ?? true;
-  const mac = options?.macula ?? true;
-
-  let result =
-    'You are in the SYNTHESIS PHASE — produce a complete final answer now.\n' +
-    'You have already received data from tool calls. Synthesize what you have into a finished response.\n' +
-    'Do NOT repeat the media query workflow steps — the data is already available in conversation.\n' +
-    'If you need additional detail that is clearly missing, you may call ONE more tool, but prioritize writing the final answer with what you have.\n\n';
-
-  if (gh) {
-    result +=
-      'GITHUB — Daniel Maricic (woss). Available tools:\n' +
-      '  1. search_issues — find issues by keyword.\n' +
-      '  2. list_issues / issue_read — browse and read issues.\n' +
-      '  3. list_pull_requests / pull_request_read — browse and read PRs.\n' +
-      '  4. search_repositories — discover repos by name/keyword/topic. Essential for verifying repo existence.\n' +
-      '  5. get_tag — look up git tags.\n' +
-      '  6. get_me — get authenticated user info.\n\n' +
-      'All GitHub tools: use username "woss" (not "Daniel" or "Daniel Maricic").\n\n';
-  }
-  const maculaNickname = config().maculaNickname;
-  if (mac) {
-    result +=
-      'MACULA — Daniel\'s media library. Available operations:\n' +
-      `  • Profile + directories: get_users(["${maculaNickname}"]). Get REAL pathCid from directories[].pathCid.\n` +
-      `  • List images: traverse(user→uploads, filter={what:"images"}).\n` +
-      `  • Album contents: traverse(directory→contains). REQUIRES pathCid from get_users.\n` +
-      '  • Title search: traverse(search, query="..."); keyword discovery: traverse(keywords, query="...").\n' +
-      '  • Display images: item.rawDataUrl + "?preset=sys_md" for src. item.htmlPageUrl for page link, item.buyPageUrl for purchase.\n' +
-      '  • Extra metadata (EXIF, AI, _links): get_file(unifiedId).\n' +
-      '  • Biographical info: get_users or user→profile edge — bio in response.\n\n' +
-      '  • CRITICAL: NEVER use edge="recent" or edge="random" on user — those edges only work with root and will ERROR. Use uploads for listing user\'s media.\n' +
-      'IMAGE FORMAT:\n' +
-      '  • Format: **{title}** (from data, never invented) then ![Photo]({rawDataUrl}?preset=sys_md) then [View on Macula]({htmlPageUrl}).\n' +
-      '  • Each file object from traverse has a "rawDataUrl" field — use that exact value with "?preset=sys_md" appended for display (e.g. https://u.macula.link/abc123?preset=sys_md).\n';
-  }
-
-  if (gh || mac) {
-    result += '---\n\n';
-  }
-
-  result +=
-    'IMPORTANT: After you receive results from any tool call, you MUST produce readable text ' +
-    'that synthesizes the data into a clear answer. Never end your response silently after a tool call. ' +
-    'Always write at least 2-3 sentences summarizing what the tool returned.\n' +
-    'IMPORTANT: Never output tool call JSON as text. If you cannot call a tool, say so in plain language.';
-
-  return result;
-}
 
 function resetMcpToolDefsCache(): void {
   _mcpToolDefsCache = null;
@@ -355,7 +299,6 @@ export {
   getMcpPromptContent,
   getOpenAiTools,
   getSystemPromptAddition,
-  getSynthesisSystemPrompt,
   resetMcpToolDefsCache,
   resetMcpResourceContent,
   resetMcpPromptContent,

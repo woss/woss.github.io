@@ -22,7 +22,6 @@ type Config = DeepReadonly<{
     maxTokens: number | undefined;
     maxResultsLength: number;
     firstRoundMaxSteps: number;
-    synthesisMaxSteps: number;
     maxRounds: number;
   };
   mcp: { servers: McpServerConfig[] };
@@ -38,7 +37,6 @@ const {
   OPENAI_MODEL,
   OPENAI_MAX_TOKENS,
   OPENAI_FIRST_ROUND_MAX_STEPS,
-  OPENAI_SYNTHESIS_MAX_STEPS,
   OPENAI_MAX_ROUNDS,
   MCP_SERVERS,
   LLM_CACHE_ENABLED,
@@ -64,7 +62,6 @@ function loadConfig(): Config {
       model: OPENAI_MODEL ?? 'mistralai/ministral-3-3b',
       maxTokens: Number(OPENAI_MAX_TOKENS) > 0 ? Number(OPENAI_MAX_TOKENS) : 10000,
       firstRoundMaxSteps: Number(OPENAI_FIRST_ROUND_MAX_STEPS) > 0 ? Number(OPENAI_FIRST_ROUND_MAX_STEPS) : 10,
-      synthesisMaxSteps: Number(OPENAI_SYNTHESIS_MAX_STEPS) > 0 ? Number(OPENAI_SYNTHESIS_MAX_STEPS) : 7,
       maxRounds: Number(OPENAI_MAX_ROUNDS) > 0 ? Number(OPENAI_MAX_ROUNDS) : 3,
       maxResultsLength: Number(OPENAI_MAX_RESULTS_LENGTH) > 0 ? Number(OPENAI_MAX_RESULTS_LENGTH) : 64000,
     },

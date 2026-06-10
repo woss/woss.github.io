@@ -14,7 +14,6 @@ import { provider, modelName } from './llm/provider';
 import type { LLMEvent, FinishReason, TokenUsage } from './llm/types';
 import type { ModelMessage, ToolSet } from 'ai';
 import type { McpToolCallResult } from './mcp/client';
-import { getSynthesisSystemPrompt } from './mcp/tools';
 
 /* ------------------------------------------------------------------ */
 /*  LLMEvent Factory Functions (type-safe constructors)                */
@@ -127,7 +126,6 @@ const BASE_URL = config().openai.baseUrl;
 const MODEL = config().openai.model;
 const MAX_TOKENS = config().openai.maxTokens;
 const FIRST_ROUND_MAX_STEPS = config().openai.firstRoundMaxSteps;
-const SYNTHESIS_MAX_STEPS = config().openai.synthesisMaxSteps;
 
 log.debug`[openai-provider] BASE_URL: ${BASE_URL} | MODEL: ${MODEL}`;
 
@@ -403,93 +401,14 @@ function chatStreamWithTools(
 
                         log.info`[synthesis-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}`;
 
-                        // Replace last system message with synthesis-specific prompt
-                        // (removes MEDIA QUERY WORKFLOW that tells model to keep calling tools)
-                        for (let i = currentMessages.length - 1; i >= 0; i--) {
-                          if (currentMessages[i].role === 'system') {
-                            if (typeof currentMessages[i].content === 'string') {
-                              currentMessages[i] = {
-                                role: 'system',
-                                content: currentMessages[i].content + '\n\n---\n' + getSynthesisSystemPrompt(),
-                              };
-                            }
-                            break;
-                          }
+                        // Ensure text continuity between rounds
+                        if (roundTextLength > 0 && !/\s$/.test(roundText)) {
+                          emit.single(textDeltaEvent('\n\n'));
                         }
 
-                        // Run synthesis round with tools but maxSteps=1 so model can call ONE more tool if needed, then answer
-                        roundToolCalls = 0;
-                        roundTextLength = 0;
-                        roundText = '';
-                        roundToolCallRecords = [];
-
-                        try {
-                          const forcedResult = streamText({
-                            model: provider(modelName),
-                            messages: currentMessages,
-                            abortSignal: signal,
-                            temperature: 0.1,
-                            ...(MAX_TOKENS !== undefined ? { maxTokens: MAX_TOKENS } : {}),
-                             ...(toolSet ? { tools: toolSet, maxSteps: SYNTHESIS_MAX_STEPS } : {}),
-                            allowSystemInMessages: true,
-                            onChunk: ({ chunk }) => {
-                              if (aborted) return;
-                              switch (chunk.type) {
-                                case 'text-delta':
-                                  roundTextLength += chunk.text.length;
-                                  emit.single(textDeltaEvent(chunk.text));
-                                  break;
-                                case 'reasoning-delta':
-                                  emit.single(reasoningDeltaEvent(chunk.text));
-                                  break;
-                                case 'tool-call':
-                                  roundToolCalls++;
-                                  log.info`[synth-tool-call] name=${chunk.toolName}, inputPreview=${JSON.stringify(chunk.input).slice(0, 200)}`;
-                                  emit.single(toolCallEvent(chunk.toolCallId, chunk.toolName, chunk.input));
-                                  break;
-                                case 'tool-result':
-                                  log.debug`[synth-tool-result] name=${chunk.toolName}, resultType=${typeof chunk.output}`;
-                                  emit.single(toolResultEvent(chunk.toolCallId, chunk.toolName, chunk.output));
-                                  break;
-                                case 'tool-input-delta':
-                                  emit.single(toolInputDeltaEvent(chunk.id, '', chunk.delta));
-                                  break;
-                              }
-                            },
-                            onError: ({ error: err }: { error: unknown }) => {
-                              log.error`[synthesis-stream-error] ${err instanceof Error ? err.message : String(err)}`;
-                              if (!aborted) {
-                                emit.fail(err instanceof Error ? err : new Error(String(err)));
-                              }
-                            },
-                            onFinish: (event) => {
-                              lastFinishReason = String(event.finishReason);
-                            },
-                          });
-
-                          Promise.resolve(forcedResult.text)
-                            .then(() => {
-                              try {
-                                log.info`[synthesis-done] textChars=${roundTextLength}, toolCalls=${roundToolCalls}`;
-                                // Emit real step-finish reflecting synthesis outcome
-                                emit.single(stepFinishEvent('stop', roundToolCalls, roundTextLength > 0));
-                                resolve();
-                              } catch (e: unknown) {
-                                reject(e);
-                              }
-                            })
-                            .catch((err: unknown) => {
-                              if (aborted) return resolve();
-                              const errorMsg = err instanceof Error ? err.message : String(err);
-                              const errorStack = err instanceof Error ? err.stack : new Error().stack;
-                              const errorName = err instanceof Error ? err.name : typeof err;
-                              log.error`[synthesis-crash] errorName=${errorName} message=${errorMsg} code=N/A`;
-                              log.error`[synthesis-crash-stack] ${errorStack}`;
-                              reject(err);
-                            });
-                        } catch (err: unknown) {
-                          reject(err);
-                        }
+                        // Recurse runRound instead of a separate synthesis round
+                        // All rounds have identical tools and system prompts
+                        runRound(round + 1).then(resolve).catch(reject);
                       } else {
                         resolve();
                       }
