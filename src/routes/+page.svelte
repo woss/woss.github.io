@@ -131,8 +131,8 @@
     }
   });
 
-  $effect(() => {
-    if (!browser || !userId) return;
+  onMount(() => {
+    if (!userId) return;
     fetch(`/api/chat?userId=${encodeURIComponent(userId)}`)
       .then(r => r.json())
       .then(data => {

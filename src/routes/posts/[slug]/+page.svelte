@@ -5,6 +5,7 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import Seo from '$lib/components/Seo.svelte';
+  import { onMount } from 'svelte';
 
   type Post = { slug: string; title: string; date: string | null; tags: string[]; excerpt: string; headerImage: { alt: string; url: string } | null; toc: { id: string; text: string; level: number }[] };
   type NavLink = { slug: string; title: string } | null;
@@ -19,7 +20,7 @@
 
   let meta: { title?: string; creator?: string; license?: string; licenseShort?: string; dataMiningFull?: string; unifiedId?: string; _links?: { raw?: string } } | null = $state(null);
 
-  $effect(() => {
+  onMount(() => {
     if (!data.post?.headerImage?.url) return;
     const id = data.post.headerImage.url.match(/u\.macula\.link\/([a-zA-Z0-9_-]+)/)?.[1];
     if (!id) return;

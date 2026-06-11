@@ -1,6 +1,7 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import { slide } from 'svelte/transition';
+  import { onMount } from 'svelte';
   import type { Chat } from '$lib/chat/types';
   import { config } from '$lib/config';
   import { SLASH_COMMANDS } from '$lib/chat/slash-commands';
@@ -31,7 +32,7 @@
   // ── MCP connection status ──
   let mcpServers: Array<{ id: string; label?: string; connected: boolean; homepage?: string }> = $state([]);
 
-  $effect(() => {
+  onMount(() => {
     fetch('/api/mcp/status')
       .then(r => r.json())
       .then(data => { mcpServers = data.servers; })
