@@ -5,32 +5,22 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import Seo from '$lib/components/Seo.svelte';
-  import { onMount } from 'svelte';
 
   type Post = { slug: string; title: string; date: string | null; tags: string[]; excerpt: string; headerImage: { alt: string; url: string } | null; toc: { id: string; text: string; level: number }[] };
   type NavLink = { slug: string; title: string } | null;
+  type ImageMeta = {
+    title?: string; creator?: string; license?: string;
+    licenseShort?: string; dataMiningFull?: string;
+    unifiedId?: string; _links?: { raw?: string }
+  } | null;
 
   let {
     data
   }: {
-    data: { post: Post; html: string; nav: { prev: NavLink; next: NavLink } };
+    data: { post: Post; html: string; nav: { prev: NavLink; next: NavLink }; imageMeta: ImageMeta | null };
   } = $props();
 
   let activeId = $state<string | null>(null);
-
-  let meta: { title?: string; creator?: string; license?: string; licenseShort?: string; dataMiningFull?: string; unifiedId?: string; _links?: { raw?: string } } | null = $state(null);
-
-  onMount(() => {
-    if (!data.post?.headerImage?.url) return;
-    const id = data.post.headerImage.url.match(/u\.macula\.link\/([a-zA-Z0-9_-]+)/)?.[1];
-    if (!id) return;
-    const ctrl = new AbortController();
-    fetch(`https://u.macula.link/${id}.json`, { signal: ctrl.signal })
-      .then(r => r.ok ? r.json() : null)
-      .then(j => { if (j) meta = j; })
-      .catch(() => {});
-    return () => ctrl.abort();
-  });
 
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '';
@@ -236,13 +226,13 @@
           {:else}
             <img src={data.post.headerImage.url} alt={data.post.headerImage.alt} class="w-full object-cover aspect-2/1" loading="eager" />
           {/if}
-          {#if meta}
+          {#if data.imageMeta}
             <ImageAttribution
-              title={meta.title ?? data.post.headerImage.alt}
-              creator={meta.creator}
-              license={meta.licenseShort ?? meta.license}
-              dataMining={meta.dataMiningFull}
-              maculaUrl={meta._links?.raw ? `https://macula.link/${meta.unifiedId}` : ''}
+              title={data.imageMeta.title ?? data.post.headerImage.alt}
+              creator={data.imageMeta.creator}
+              license={data.imageMeta.licenseShort ?? data.imageMeta.license}
+              dataMining={data.imageMeta.dataMiningFull}
+              maculaUrl={data.imageMeta._links?.raw ? `https://macula.link/${data.imageMeta.unifiedId}` : ''}
             />
           {/if}
         </figure>
@@ -343,4 +333,3 @@
     opacity: 1;
   }
 </style>
-

@@ -4,6 +4,12 @@ import { renderMarkdown } from '$lib/server/markdown';
 
 type HeaderImage = { alt: string; url: string } | null;
 
+type ImageMeta = {
+  title?: string; creator?: string; license?: string;
+  licenseShort?: string; dataMiningFull?: string;
+  unifiedId?: string; _links?: { raw?: string }
+} | null;
+
 export async function load({ params }: { params: Record<string, string> }) {
   const { slug } = params;
 
@@ -14,6 +20,17 @@ export async function load({ params }: { params: Record<string, string> }) {
   }
 
   const headerImage: HeaderImage = currentRaw.headerImage;
+
+  let imageMeta: ImageMeta = null;
+  if (headerImage?.url) {
+    const match = headerImage.url.match(/u\.macula\.link\/([a-zA-Z0-9_-]+)/);
+    if (match) {
+      try {
+        const res = await fetch(`https://u.macula.link/${match[1]}.json`);
+        if (res.ok) imageMeta = await res.json();
+      } catch { /* ignore */ }
+    }
+  }
 
   const current = {
     slug: currentRaw.slug,
@@ -65,5 +82,6 @@ export async function load({ params }: { params: Record<string, string> }) {
     },
     html: h1Stripped,
     nav,
+    imageMeta,
   };
 }
