@@ -3,8 +3,12 @@
   "compilerOptions": {
     "rewriteRelativeImportExtensions": true,
     // "paths": {
-    //   "$lib": ["./src/lib"],
-    //   "$lib/*": ["./src/lib/*"]
+    //   "$lib": [
+    //     "./src/lib"
+    //   ],
+    //   "$lib/*": [
+    //     "./src/lib/*"
+    //   ]
     // },
     "allowJs": true,
     "checkJs": true,

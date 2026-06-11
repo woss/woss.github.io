@@ -117,7 +117,7 @@ interface SystemPromptOptions {
  */
 function getSystemPromptAddition(options?: SystemPromptOptions): string {
   const gh = options?.github ?? true;
-  const mac = options?.macula ?? true;
+  const macula = options?.macula ?? true;
 
   let result =
     'You have access to external data via tools. When context does not contain the answer, ' +
@@ -138,7 +138,7 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
       '';
   }
   const maculaNickname = config().maculaNickname;
-  if (mac) {
+  if (macula) {
     result +=
       '---\n' +
       "MACULA — Daniel's media library. Rules:\n" +
@@ -170,20 +170,20 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
       '  • PRECEDENCE: The MEDIA QUERY WORKFLOW and IMAGE RULES above override any MCP prompt templates that conflict.\n';
   }
 
-  if (gh || mac) {
+  if (gh || macula) {
     result += '---\n\n';
   }
 
   result +=
+    'CRITICAL — USE EXACT VALUES: When displaying tool results, use the exact numbers, names, and data from the tool output. Do not approximate, round, estimate, or invent values. If a repo has 1 star, display "1" — not "≈ 12" or "~1" or "a few". Never add qualifiers like "≈", "~", "about", "around", "nearly" to tool result data. Exactness is mandatory.\n' +
     'IMPORTANT: After you receive results from any tool call, you MUST produce readable text ' +
     'that synthesizes the data into a clear answer. Never end your response silently after a tool call. ' +
     'Always write at least 2-3 sentences summarizing what the tool returned.\n' +
-    'IMPORTANT: If a tool call returns an error, re-read that tool\'s description and call it again with corrected arguments. Errors usually mean you used an invalid parameter value — check the valid options in the tool description.\n' +
+    "IMPORTANT: If a tool call returns an error, re-read that tool's description and call it again with corrected arguments. Errors usually mean you used an invalid parameter value — check the valid options in the tool description.\n" +
     'IMPORTANT: Never output tool call JSON as text. If you cannot call a tool, say so in plain language.';
 
   return result;
 }
-
 
 function resetMcpToolDefsCache(): void {
   _mcpToolDefsCache = null;
@@ -202,13 +202,13 @@ async function getOpenAiTools(): Promise<OpenAiTool[]> {
 
   const tools = await mcp.listTools();
   const mapped = tools.map((t) =>
-      toOpenAiTool({
-        name: t.name,
-        serverId: t.serverId,
-        description: (TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? ''),
-        inputSchema: toRecord(t.inputSchema),
-      }),
-    );
+    toOpenAiTool({
+      name: t.name,
+      serverId: t.serverId,
+      description: TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? '',
+      inputSchema: toRecord(t.inputSchema),
+    }),
+  );
   _openAiToolsCache = mapped;
   return mapped;
 }
@@ -221,11 +221,11 @@ async function getMcpToolDefs(): Promise<McpToolDef[]> {
   if (_mcpToolDefsCache) return _mcpToolDefsCache;
   const tools = await mcp.listTools();
   const mapped = tools.map((t) => ({
-      name: t.name,
-      serverId: t.serverId,
-      description: (TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? ''),
-      inputSchema: toRecord(t.inputSchema),
-    }));
+    name: t.name,
+    serverId: t.serverId,
+    description: TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? '',
+    inputSchema: toRecord(t.inputSchema),
+  }));
   _mcpToolDefsCache = mapped;
   log.info`🔧 tools: ${mapped.map((t) => t.name).join(', ')} (${mapped.length}/${tools.length})`;
   return mapped;

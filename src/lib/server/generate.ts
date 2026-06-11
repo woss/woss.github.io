@@ -956,11 +956,11 @@ export async function startGeneration(
           title: r.chunk.title,
           score: r.score,
           slug: r.chunk.slug,
-          url: r.chunk.type === 'post'
-            ? `/posts/${r.chunk.slug}`
-            : r.chunk.type === 'about'
+          url: r.chunk.type === 'experience'
+            ? `/experience/${r.chunk.slug}`
+            : r.chunk.slug === 'about'
               ? `/about`
-              : `/experience/${r.chunk.slug}`,
+              : `/posts/${r.chunk.slug}`,
           type: r.chunk.type,
         }));
     }

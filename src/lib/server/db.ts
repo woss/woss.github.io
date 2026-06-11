@@ -1,10 +1,10 @@
 import Database from 'better-sqlite3';
 import { Index } from 'usearch';
 import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
-import { SEARCH_INDEX_CONFIG } from '../search-config.ts';
-import { CAT, createLogger } from './logger.ts';
-import { initDatabase, DATA_DIR, DB_PATH, DB_WAL_PATH, DB_SHM_PATH, VECTOR_INDEX_PATH } from './schema.ts';
-import { randomUUID } from '$lib/utils/random-uuid';
+import { SEARCH_INDEX_CONFIG } from '../search-config.js';
+import { CAT, createLogger } from './logger.js';
+import { initDatabase, DATA_DIR, DB_PATH, DB_WAL_PATH, DB_SHM_PATH, VECTOR_INDEX_PATH } from './schema.js';
+import { randomUUID } from '../utils/random-uuid.js';
 
 /** Typed wrapper around better-sqlite3 .all() — avoids scattering `as Record<string, unknown>[]` everywhere. */
 function queryRows<T>(stmt: Database.Statement, ...params: unknown[]): T[] {
@@ -16,8 +16,8 @@ function queryRow<T>(stmt: Database.Statement, ...params: unknown[]): T | undefi
   return stmt.get(...params) as T | undefined;
 }
 
-function validateRowType(value: unknown): 'about' | 'post' | 'experience' {
-  if (value === 'about' || value === 'post' || value === 'experience') return value;
+function validateRowType(value: unknown): 'post' | 'experience' {
+  if (value === 'post' || value === 'experience') return value;
   return 'post';
 }
 
@@ -45,7 +45,7 @@ interface StoredChunk {
   section: string;
   slug: string;
   embedding: number[];
-  type: 'about' | 'post' | 'experience';
+  type: 'post' | 'experience';
 }
 
 /** Result of a vector similarity search. */
@@ -128,7 +128,7 @@ function getDb(): Database.Database {
 
   const db = new Database(DB_PATH);
 
-  db.exec('PRAGMA journal_mode = WAL');
+  db.exec('PRAGMA journal_mode = TRUNCATE');
   db.exec('PRAGMA foreign_keys = ON');
 
   initDatabase(db);
@@ -158,7 +158,11 @@ function getIndex(): Index {
  * Search chunks by cosine similarity to the given embedding.
  * Uses USearch for KNN search, then looks up metadata from SQLite.
  */
-function searchChunks(embedding: number[], limit: number = 10, typeFilter?: 'about' | 'post' | 'experience'): SearchResult[] {
+function searchChunks(
+  embedding: number[],
+  limit: number = 10,
+  typeFilter?: 'post' | 'experience',
+): SearchResult[] {
   const db = getDb();
   const idx = getIndex();
 

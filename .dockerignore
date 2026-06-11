@@ -4,7 +4,5 @@ node_modules
 build
 data
 .env
-*.md
-old/
 .gitignore
 .gitattributes

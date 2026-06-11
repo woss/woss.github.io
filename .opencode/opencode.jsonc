@@ -212,10 +212,10 @@
         "edit": "deny",
         "write": "deny",
         "bash": {
+          "sqlite3 *": "allow",
           "*": "deny",
         },
         "task": "allow",
-        "backlog_*": "allow",
       },
     },
     "build": {

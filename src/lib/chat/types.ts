@@ -3,7 +3,7 @@ export interface Source {
   score: number;
   slug?: string;
   url: string;
-  type: 'post' | 'experience' | 'about';
+  type: 'post' | 'experience';
 }
 
 export interface ToolCallInfo {

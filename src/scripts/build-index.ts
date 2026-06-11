@@ -6,12 +6,12 @@ import { join } from 'node:path';
 import GithubSlugger from 'github-slugger';
 import { Index, MetricKind, ScalarKind } from 'usearch';
 import Database from 'better-sqlite3';
-import { parseFrontmatter } from '../content/index.ts';
-import { getDb, closeDb } from '../lib/server/db.ts';
-import { embedTexts, releaseExtractor } from '../lib/server/embed.ts';
-import { chunkContent } from './chunk-content.ts';
-import { initLogger, CAT, createLogger } from '../lib/server/logger.ts';
-import { centroidDataChanged, embedAndComputeCentroids, saveCentroids } from './seed-data.ts';
+import { parseFrontmatter } from '../content/index.js';
+import { getDb, closeDb } from '../lib/server/db.js';
+import { embedTexts, releaseExtractor } from '../lib/server/embed.js';
+import { chunkContent } from './chunk-content.js';
+import { initLogger, CAT, createLogger } from '../lib/server/logger.js';
+import { centroidDataChanged, embedAndComputeCentroids, saveCentroids } from './seed-data.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -22,7 +22,6 @@ const INDEX_PATH = `${DATA_DIR}/woss.usearch`;
 
 const POSTS_DIR = join(process.cwd(), 'src', 'content', 'posts');
 const EXPERIENCE_DIR = join(process.cwd(), 'src', 'content', 'experience');
-const CONTENT_DIR = join(process.cwd(), 'src', 'content');
 
 const args = process.argv.slice(2);
 const reset = args.includes('--reset');
@@ -57,7 +56,7 @@ export interface ContentItem {
   date: string | null;
   tags: string[];
   body: string;
-  type: 'about' | 'post' | 'experience';
+  type: 'post' | 'experience';
 }
 
 export interface ChunkRow {
@@ -78,7 +77,7 @@ export interface ProcessResult {
 
 interface FileEntry {
   slug: string;
-  type: 'about' | 'post' | 'experience';
+  type: 'post' | 'experience';
   hash: string;
 }
 
@@ -176,13 +175,6 @@ function readFileEntries(): FileEntry[] {
     entries.push({ slug, type: 'experience', hash });
   }
 
-  const aboutFp = join(CONTENT_DIR, 'about.md');
-  if (existsSync(aboutFp)) {
-    const raw = readFileSync(aboutFp, 'utf-8');
-    const slug = 'about';
-    const hash = createHash('sha256').update(raw).digest('hex');
-    entries.push({ slug, type: 'about', hash });
-  }
   return entries;
 }
 
@@ -333,6 +325,7 @@ async function buildIndex(): Promise<void> {
     } else {
       const stored = storedHashes.get(entry.slug);
       if (stored !== entry.hash) {
+        log.debug`  hash mismatch: slug=${entry.slug} stored=${stored ?? '(not in map)'} current=${entry.hash}`;
         changedEntries.push(entry);
       }
     }
@@ -402,7 +395,6 @@ async function buildIndex(): Promise<void> {
       let dir: string;
       if (entry.type === 'post') dir = POSTS_DIR;
       else if (entry.type === 'experience') dir = EXPERIENCE_DIR;
-      else if (entry.type === 'about') dir = CONTENT_DIR;
       else continue;
       const fp = join(dir, `${entry.slug}.md`);
       const raw = readFileSync(fp, 'utf-8');
@@ -423,10 +415,6 @@ async function buildIndex(): Promise<void> {
         title = String(data.title ?? '') || entry.slug;
         const rawDate = data.date;
         date = rawDate instanceof Date ? rawDate.toISOString() : rawDate ? String(rawDate) : null;
-        tags = [...new Set<string>(Array.isArray(data.tags) ? data.tags.map(String) : [])];
-      } else if (entry.type === 'about') {
-        title = String(data.title ?? '') || entry.slug;
-        date = null;  // about has no date
         tags = [...new Set<string>(Array.isArray(data.tags) ? data.tags.map(String) : [])];
       } else {
         const company = String(data.company ?? '');
@@ -466,21 +454,6 @@ async function buildIndex(): Promise<void> {
           JSON.stringify(data.header_image ?? null),
           data.featured ? 1 : 0,
           data.position ?? null,
-        );
-      } else if (entry.type === 'about') {
-        // Store in page_posts for hash tracking (no rendering needed)
-        db.prepare(
-          `INSERT OR REPLACE INTO page_posts (slug, hash, content, toc, title, description, date, tags, published, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-        ).run(
-          entry.slug,
-          entry.hash,
-          content || raw,
-          toc,
-          title,
-          data.description ?? '',
-          date,
-          JSON.stringify(tags),
-          data.published !== false ? 1 : 0,
         );
       } else {
         db.prepare(

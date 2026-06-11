@@ -1,5 +1,6 @@
 ---
 title: 'About Daniel Maricic'
+date: 2000-01-01
 tags:
   - bio
   - about

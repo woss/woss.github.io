@@ -129,7 +129,7 @@
 
 
   function getSourceType(source: { type?: string; url?: string }): { letter: string; color: string } | null {
-    const type = source.type || (source.url?.startsWith('/posts/') ? 'post' : source.url?.startsWith('/experience/') ? 'experience' : source.url === '/about' ? 'about' : undefined);
+    const type = source.type || (source.url?.startsWith('/posts/') ? 'post' : source.url?.startsWith('/experience/') ? 'experience' : undefined);
     if (!type) return null;
     const letter = type === 'post' ? 'P' : type === 'experience' ? 'E' : 'A';
     const color = type === 'post' ? 'var(--color-primary)' : type === 'experience' ? 'var(--color-secondary)' : 'var(--color-yellow, #eab308)';
