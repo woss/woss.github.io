@@ -115,17 +115,13 @@
     return 'var(--color-secondary)';
   }
 
-  const sourceTypeMap: Record<string, string> = {
-    post: 'P',
-    experience: 'E',
-    about: 'A',
-  };
 
-  function sourceTypeColor(type: string): string {
-    if (type === 'post') return 'var(--color-primary)';
-    if (type === 'experience') return 'var(--color-secondary)';
-    if (type === 'about') return 'var(--color-yellow, #eab308)';
-    return 'var(--color-on-surface-variant, #8090a0)';
+  function getSourceType(source: { type?: string; url?: string }): { letter: string; color: string } | null {
+    const type = source.type || (source.url?.startsWith('/posts/') ? 'post' : source.url?.startsWith('/experience/') ? 'experience' : source.url === '/about' ? 'about' : undefined);
+    if (!type) return null;
+    const letter = type === 'post' ? 'P' : type === 'experience' ? 'E' : 'A';
+    const color = type === 'post' ? 'var(--color-primary)' : type === 'experience' ? 'var(--color-secondary)' : 'var(--color-yellow, #eab308)';
+    return { letter, color };
   }
 
   function groupToolCalls(tools: ToolCallInfo[]): ToolCallGroup[] {
@@ -607,8 +603,10 @@
               title={source.title}
             >
               <span class="source-dot" aria-hidden="true"></span>
-              <span class="source-type-badge" style="--type-color: {sourceTypeColor(source.type)}">{sourceTypeMap[source.type]}</span>
-              <span class="source-title">{source.title}</span>
+              {#if getSourceType(source)}
+                <span class="source-type-badge" style="--type-color: {getSourceType(source)!.color}">{getSourceType(source)!.letter}</span>
+              {/if}
+              <span class="flex-1 min-w-0 truncate">{source.title}</span>
               <span class="source-score">{source.score.toFixed(2)}</span>
               <svg
                 class="source-ext"
@@ -725,11 +723,6 @@
     background: var(--source-color, var(--color-primary));
     flex-shrink: 0;
     margin: 4px;
-  }
-
-  .source-title {
-    flex: 1;
-    min-width: 0;
   }
 
   .sources-heading {
