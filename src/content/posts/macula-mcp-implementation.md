@@ -30,24 +30,49 @@ We had a public API (`unified-link`) that served metadata about files, users, an
 
 ## The Content Graph Model
 
-The Unified Link data model forms a directed graph with six node types and ten edge types:
+The Unified Link data model forms a directed graph with six node types and ten edge types. The `traverse` tool maps from nodes to edges:
 
-| from \ edge → | uploads | tagged_files | has_license | contains | random | recent | search | keywords | profile | info |
-|---|---|---|---|---|---|---|---|---|---|---|
-| **user** | File[] | — | — | — | — | — | — | — | User | — |
-| **keyword** | — | File[] | — | — | — | — | — | — | — | — |
-| **license** | — | — | File[] | — | — | — | — | — | — | — |
-| **directory** | — | — | — | File[] | — | — | — | — | — | Directory |
-| **root** | — | — | — | — | File[] | File[] | File[] | Keyword[] | — | — |
-| **file** | — | — | — | — | — | — | — | — | — | File |
+```bash
+traverse({ from, edge })                         Returns
+│
+├── FileNode[] edges (8)
+│   ├── user       → uploads       → Files published by this user
+│   ├── keyword    → tagged_files  → Files tagged with this keyword
+│   ├── license    → has_license   → Files under this license
+│   ├── directory  → contains      → Files inside this directory
+│   ├── root       → random        → Random discovery across all content
+│   ├── root       → recent        → Most recently published files
+│   ├── root       → search        → Full-text search (titles + keywords)
+│   └── file       → info          → Single file by unifiedId
+│
+├── Non-FileNode edges (3)
+│   ├── user       → profile       → User profile + directory listing
+│   ├── directory  → info          → Directory metadata + file count
+│   └── root       → keywords      → Keyword autocomplete (fuzzy match)
+│
+└── Cross-cutting filters (apply to any edge)
+    ├── filter.what          → 'all' | 'images' | 'videos' | 'files'
+    ├── filter.allowAI       → Boolean (data mining permission)
+    ├── filter.nickname      → Filter results by uploader
+    └── limit / after        → Cursor-based pagination
+```
 
-Six entry points × ten edges = sixty theoretical traversals, fourteen of which produce results. Unsupported combinations return clear errors. The result is a compact, comprehensible API surface: one traversal tool with a small set of validated `from` + `edge` pairs.
+Separate leaf-reader tools (different return shapes):
+
+```
+├── get_file(unifiedId, fields?)         → Full file metadata + assets + presets
+├── get_file_metadata(unifiedId, a?)     → EXIF/XMP/IPTC technical metadata
+└── get_users(nicknames[])               → Batch user profile lookup
+```
+
+Six starting node types × ten edge types = sixty possible combinations, eleven of which are valid. Unsupported pairs return clear error messages specifying which edges are available for the given `from.type`. The result is a compact, comprehensible API surface: one traversal tool with a small, validated set of `from` + `edge` pairs.
 
 ## Why Graph > REST
 
 A REST API for the same data requires endpoint discovery and multiple round trips:
 
 **REST approach:**
+
 ```
 GET /user/woss/uploads       → [file IDs]
   → GET /file/{id}           → file metadata
@@ -57,6 +82,7 @@ GET /user/woss/uploads       → [file IDs]
 Three round trips, three different URL patterns, versioned endpoints, and the agent must know the URL structure in advance.
 
 **Graph approach:**
+
 ```javascript
 // One call: walk edge from user to files
 traverse({ from: { type: 'user', nickname: 'woss' }, edge: 'uploads' })
@@ -167,12 +193,12 @@ One graph-walk tool + three leaf readers.
 
 | Tool | Input | Description |
 |------|-------|-------------|
-| `traverse` | `from`, `edge`, `filter?`, `limit?`, `after?`, `query?` | Graph walk: navigate from a starting node across a named edge to discover connected nodes. 14 valid `from`-`edge` pairs across 6 node types and 10 edge types. Full-text search via `edge: search` + `query`. Keyword search via `edge: keywords`. User profiles via `edge: profile`. File/directory details via `edge: info`. Cursor pagination via `after`. Filters: what, allowAI, nickname. Images work correctly — `contains` and `tagged_files` follow both direct file and rendition chains. |
+| `traverse` | `from`, `edge`, `filter?`, `limit?`, `after?`, `query?` | Graph walk: navigate from a starting node across a named edge to discover connected nodes. 11 valid `from`-`edge` pairs across 6 node types and 10 edge types. Full-text search via `edge: search` + `query`. Keyword search via `edge: keywords`. User profiles via `edge: profile`. File/directory details via `edge: info`. Cursor pagination via `after`. Filters: what, allowAI, nickname. Images work correctly — `contains` and `tagged_files` follow both direct file and rendition chains. |
 | `get_file` | `unifiedId`, `fields?` | Leaf reader: get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` for JSONPath-based selective field retrieval. |
 | `get_file_metadata` | `unifiedId, a?` | Leaf reader: get full EXIF/XMP/IPTC metadata. Optional `a` for specific metadata fields. |
 | `get_users` | `nicknames` | Leaf reader: batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found. |
 
-The `traverse` tool alone replaced seven specialized tools via its 14 valid traversals. The three leaf readers handle everything else.
+The `traverse` tool alone replaced seven specialized tools via its 11 valid traversals. The three leaf readers handle everything else.
 
 **Replaced 6 tools:** get_file_presets, get_file_json_schema, get_metadata_json_schema, get_node, search_keywords, search were deleted as redundant — `traverse` covers all discovery patterns and `get_file` covers all file queries.
 
@@ -272,6 +298,7 @@ await instance.register(fastifyRateLimit, {
 ## Development vs Production
 
 When `isDev` is true:
+
 - Rate limiting disabled
 - Slow-down disabled
 
@@ -345,12 +372,69 @@ The agent wasn't lazy — it was making a reasonable choice between a tool it un
 - New traverse: `"Explore files by directory, user uploads, or keyword search. Use edge:'contains' to view files inside a directory (pass pathCid from get_users). Use edge:'uploads' to list a user's recent uploads. Use edge:'tagged_files' to search by keyword. Use edge:'profile' for user info or edge:'info' for directory metadata..."`
 
 We added an explicit cross-reference from `get_users` to `traverse`:
+
 - Old: `"Get user profiles by nickname array. Returns array of UserNode objects with avatarUrl, bio, fileCount."`
 - New: `"Look up user profiles by nickname. Returns user info... and directory list with pathCid and fileCount per directory. To see actual files inside a directory, use traverse with from:{type:'directory', pathCid:}, edge:'contains'."`
 
 We also rewrote the `browse_user` prompt to lead with `get_users` (matching agent behavior) and added a CRITICAL section: "`get_users` returns directory names and file counts but NOT the actual files. You MUST call `traverse` with `edge: 'contains'` to retrieve file listings from a directory."
 
 **The Lesson:** Tool descriptions are user-facing documentation — but the user is an AI model, not a human developer. Abstract or jargon-heavy descriptions cause AI agents to silently skip tools they don't understand, leading to hallucinated data. Write tool descriptions like task instructions: start with what the tool does in plain language, give concrete examples, and explicitly cross-reference complementary tools. A tool that an AI doesn't understand is a tool that might as well not exist — and worse, it creates a false sense of capability that can mask hallucination.
+
+## Real-World Traversal Patterns
+
+The graph model shines when traversals chain together. Here are three common walk patterns showing how an agent moves through the content graph step by step:
+
+### Walk 1: Browse a photographer's portfolio
+
+```
+traverse({ from:{type:'user', nickname:'sarah'}, edge:'profile' })
+│
+├── Returns: user profile + directories
+│   [{name:'landscapes', pathCid:'QmA...', fileCount:42},
+│    {name:'portraits',  pathCid:'QmB...', fileCount:18}]
+│
+├── traverse({ from:{type:'directory', pathCid:'QmA...'}, edge:'contains', filter:{what:'images'} })
+│   └── Returns: FileNode[] from landscapes directory
+│
+└── traverse({ from:{type:'directory', pathCid:'QmB...'}, edge:'contains', filter:{what:'images'} })
+    └── Returns: FileNode[] from portraits directory
+```
+
+User → directory → files. The agent discovers albums exist (from profile), then walks into each one.
+
+### Walk 2: Search → filter by license → inspect metadata
+
+```
+traverse({ from:{type:'root'}, edge:'search', query:'mountain landscape' })
+│
+├── Returns: FileNode[] matching search query
+│
+├── traverse({ from:{type:'license', license:'CC BY'}, edge:'has_license', filter:{what:'images'} })
+│   └── Returns: CC-BY licensed images only
+│
+└── get_file({ unifiedId:'abc123', fields:['title','creator','license','presets'] })
+    └── Returns: full file details for attribution
+```
+
+Full-text discovery → license-filtered narrowing → leaf-reader inspection.
+
+### Walk 3: Random discovery → inspect → find more by same creator
+
+```
+traverse({ from:{type:'root'}, edge:'random', limit:5 })
+│
+├── Returns: 5 random files
+│
+├── get_file({ unifiedId:'xyz789', fields:['title','creator'] })
+│   └── Returns: title + photographer nickname
+│
+└── traverse({ from:{type:'user', nickname:'woss'}, edge:'uploads' })
+    └── Returns: more files by same photographer
+```
+
+Agent discovers content randomly, identifies the creator via leaf-reader, then walks the uploads edge for a complete portfolio view.
+
+---
 
 ## Usage Examples
 

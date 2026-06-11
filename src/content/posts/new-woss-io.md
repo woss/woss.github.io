@@ -1,7 +1,7 @@
 ---
 title: 'Building woss.io: A Journey Into AI-Powered Personal Portfolios'
 featured: true
-description: 'How we rebuilt woss.io from the ground up — an AI-native personal portfolio with streaming LLM chat, local vector embeddings, MCP tool integration, and a modern SvelteKit 5 stack.'
+description: 'How we rebuilt woss.io from the ground up — an AI-native personal portfolio with streaming LLM chat, local vector embeddings, MCP tool integration, and a modern SvelteKit 2 stack.'
 date: 2026-06-06
 tags:
   - woss.io
@@ -21,7 +21,7 @@ header_image: '[Space whale](https://u.macula.link/Z1TIROJeSMmFYnmvlCOPLg-7?pres
 
 The old woss.io was static. A simple portfolio page, blog posts rendered from markdown, a contact form. It worked, but it didn't reflect how I actually work — with AI tools daily, building systems that reason, search, and generate.
 
-I wanted a site that could talk back. Not a chatbot bolted on as a gimmick, but a site where AI is the primary interface — visitors ask questions, the AI searches my career history, reads my blog posts, explores my GitHub projects, and answers in real-time.
+I wanted a site that could talk back. Not a chatbot bolted on as a gimmick, but a site where AI is the primary interface — visitors ask questions, the AI searches my career history, reads my blog posts, explores my GitHub projects and Macula photo portfolio, and answers in real-time.
 
 This is the story of building that.
 
@@ -86,7 +86,7 @@ I started with one MCP server — just GitHub. The LLM could search repos, read 
 
 Then I got greedy. Macula had my entire photo portfolio — couldn't the AI browse that too?
 
-Plugged it in. The Macula MCP was designed like a REST API — 14 specialized tools, one per operation. `search_files`, `get_user_profile`, `list_keywords`, `get_random_files`. For weeks I fought it — writing more prompts, adding more instructions, trying to teach the LLM which tool to call when. It kept guessing wrong. It hallucinated directory contents — fabricating filenames instead of navigating to them. (The `fix/hallucination-labels` branch still sits in git as a monument to this.)
+Plugged it in. The Macula MCP was designed like a REST API — 14 specialized tools, one per operation. `search_files`, `get_user_profile`, `list_keywords`, `get_random_files`. For weeks I fought it — writing more prompts, adding more instructions, trying to teach the LLM which tool to call when. It kept guessing wrong. It hallucinated directory contents — fabricating filenames instead of navigating to them.
 
 The breakthrough didn't come from more instructions. It came from stepping back with a beer and a question: how does an LLM naturally understand pathways to information?
 
@@ -94,9 +94,9 @@ Entity → Relationship → Entity. The model thinks in associations, not endpoi
 
 I built `traverse` — a single `from(node) → edge(relationship) → results` tool — and collapsed 14 specialized tools into 4: `traverse`, `get_file`, `get_file_metadata`, `get_users`. The `feat/x-mcp-tools` branch is this exact moment in git history. The LLM stopped guessing. It just navigated.
 
-A few more iterations followed. Renamed `url` to `rawDataUrl` so the LLM knew it was a download link, not a web page. Separated discovery from consumption by removing `_links` from traverse output. Rewrote tool descriptions from graph-theory jargon ("from(node) → edge(relationship) → results") to task-oriented prose ("Explore files by directory, user uploads, or keyword search") after the model hallucinated files because it didn't understand "traverse." Reduced 14 prompts to 4 task-oriented patterns. I documented the full evolution in [Designing MCP Servers for How LLMs Think](/posts/mcp-graph-design) — it taught me more about how LLMs consume tool APIs than anything else.
+A few more iterations followed. Renamed `url` to `rawDataUrl` so the LLM knew it was a download link, not a web page. Separated discovery from consumption by removing `_links` from traverse output. Rewrote tool descriptions from graph-theory jargon ("from(node) → edge(relationship) → results") to task-oriented prose ("Explore files by directory, user uploads, or keyword search") after the model hallucinated files because it didn't understand "traverse." Reduced 14 prompts to 4 task-oriented patterns. I documented the full evolution in [Designing MCP Servers for How LLMs Think](/posts/macula-mcp-design-lessons) — it taught me more about how LLMs consume tool APIs than anything else.
 
-But now the AI had two toolkits: GitHub (repos, code, issues) and Macula (photos, media, metadata). And zero instructions on which one to grab.
+But now the AI had two tool-kits: GitHub (repos, code, issues) and Macula (photos, media, metadata). And zero instructions on which one to grab.
 
 ```mermaid
 flowchart TD
@@ -111,18 +111,18 @@ flowchart TD
     end
 ```
 
-That question birthed the tool routing architecture. Keyword scanning grew a second path — `needsGithubTools()` for "repo" and "PR", `needsMaculaTools()` for "photo" and "portfolio". The system prompt sprouted conditional sections. A lightweight LLM call became the tiebreaker for fuzzy "show me your work" messages. One LLM, two toolkits, zero confusion.
+That question birthed the tool routing architecture. Keyword scanning grew a second path — `needsGithubTools()` for "repo" and "PR", `needsMaculaTools()` for "photo" and "portfolio". The system prompt receives conditional sections. A lightweight LLM call became the tiebreaker for fuzzy "show me your work" messages. One LLM, two tool-kits, zero confusion.
 
-I tested locally, putting myself in a recruiter's shoes — I've been on both sides of the hiring table — asking "give me honest evaluation of daniel for senior SRE role" and "how does he fit an AI evangelist role focused on driving AI adoption?" and watching the AI pull his entire professional profile — repos, PRs, contributions, photography, career history — into answers that compared him against each role. This would've been a massive time saver when I was hiring 10 years ago.
+I tested locally, putting myself in a recruiter's shoes — I've been on both sides of the hiring table — asking "give me honest evaluation of daniel for senior SRE role" and "how does he fit an AI evangelist role focused on driving AI adoption?" and watching the AI pull my entire professional profile — repos, PRs, contributions, photography, career history — into answers that compared me against each role. This would've been a massive time saver when I was hiring.
 
 ### Phase 2: The Model Switch That Broke Everything
 
-Then I tried switching models. DeepSeek → Qwen. Qwen → Gemma. Gemma → Mistral. Each model expected tool calls in a slightly different format.
+Then I tried switching models. DeepSeek → Qwen → Gemma → Mistral. Each model expected tool calls in a different format.
 
-- **DeepSeek**: Native JSON function-calling, clean output
-- **Qwen**: Hybrid — sometimes XML `<tool_calls>`, sometimes JSON
-- **Gemma**: Prefers raw text instructions over structured tool definitions
-- **Mistral**: Strong JSON mode but format-sensitive
+- DeepSeek: OpenAI-compatible JSON function-calling. Clean, standard.
+- Qwen: Hybrid — OpenAI JSON via API, XML-like `<|tool_call_start|>` tags via Qwen-Agent.
+- Gemma: No native tool-call format — relies on generic chat template. Inconsistent with nested schemas.
+- Mistral: Native JSON with strict grammar enforcement. `[TOOL_CALLS][FUNC_NAME][ARGS]{json}` wire format."
 
 The result was a stream of `<tool_calls>` XML leaking into the answer text. The synthesis round — designed to produce the final answer without calling more tools — made it worse by removing tool definitions mid-response. Models that expected tools hallucinated their calling format. Every model had its own dialect for tool calling and none of them warned you until the output was already on the page.
 
@@ -200,12 +200,15 @@ The chat is the heart of the site. Every question hits a pipeline that looks lik
 
 ```
 User types question
-  → classify query (tool needs? RAG needs?)
-  → embed query (Transformers.js)
-  → vector search (USearch, top-5 chunks)
-  → build RAG prompt with context
-  → stream LLM response (SSE)
-  → if tools needed: classify tool type → execute MCP tools → retry with results
+  → save message, return 202 (generation runs in background)
+  → early gates (relevance filter, polite-only path, cache check)
+  → embed query (Transformers.js, local ONNX)
+  → classify query (centroid similarity: RAG? tool? hybrid?)
+  → if RAG: vector search (USearch, top-k chunks) → build prompt with context
+  → classify tool needs (keyword fast path + LLM fallback)
+  → load MCP tools (GitHub, Macula)
+  → stream LLM response with multi-round invariant tool calling
+  → save answer + emit SSE done event
 ```
 
 Under the hood: the two-layer relevance gate and chat-lock mechanism. Before any processing, a lightweight LLM check (`isRelevant()`) determines if the question is about Daniel's professional portfolio. If not, the AI returns a firm refusal — and permanently locks the chat (`chat.locked = 1` in SQLite) so future messages are rejected at the API level. A webhook fires to log the event. Polite messages (thanks, bye) bypass the gate entirely.
@@ -258,14 +261,17 @@ This is where it gets interesting. The site uses the Model Context Protocol to g
 - **GitHub MCP** — search repositories, list issues, read files, explore pull requests
 - **Macula MCP** — search images, browse keywords, traverse media collections
 
-When a user asks "What projects do you have on GitHub?", the LLM doesn't make up an answer. It calls `search_repositories` via MCP, reads the results, and summarizes them. Real data, every time.
+When a user asks "What projects do you have on GitHub?", the LLM doesn't make up an answer. It calls `search_repositories` via MCP, reads the results, and summarizes them. Real data, every time. When someone asks "Show me your photography work", the LLM calls `get_users` and `traverse` on Macula to browse the actual photo portfolio — no stock images, no hand-picked samples, just the real collection.
 
-The tool classification uses a two-tier approach:
+Tool classification is three independent systems that fire at different pipeline stages:
 
-1. **Keyword fast path**: Short messages with explicit references to "GitHub", "repos", "code" → immediately classified as needing GitHub tools
-2. **LLM fallback**: Ambiguous messages → LLM classifies the intent (github, macula, both, or none)
+1. **Query classification** (centroid): After embedding, the vector is compared against pre-computed centroids to determine if this is a RAG question, a tool question, or hybrid. Tool-only queries skip the RAG search entirely.
 
-This avoids an LLM call for obvious tool requests while maintaining accuracy for complex queries.
+2. **Keyword fast path**: `needsGithubTools()` and `needsMaculaTools()` scan for explicit references ("GitHub", "repos", "code", "photos", "portfolio"). No LLM call — pure regex.
+
+3. **LLM fallback for ambiguity**: When the message is short (≤6 words) and keywords are inconclusive, `classifyToolNeeds()` makes a lightweight call to a classification-only LLM endpoint. Returns `github`, `macula`, `both`, or `none`. Fail-safe always returns `none`.
+
+The results feed into `getMcpToolDefs()` which loads the actual MCP tool definitions and injects tool-awareness into the system prompt.
 
 ### Retry Logic & Fallbacks
 
@@ -282,17 +288,14 @@ On retry, tools are disabled and the system prompt is hardened with a mandatory 
 
 The streaming pipeline originally used a dual-streamText design — round 1 ran with tools enabled, then a separate "synthesis" round ran with a different system prompt urging the model not to call more tools. This caused model format drift: when tool definitions changed between rounds, the model would output `<tool_calls>` XML as raw text instead of native JSON function-calling, leaking tool call syntax into the answer.
 
-```typescript
-// In generate.ts — if LLM calls tools but produces no text:
-if (hasToolCalls && !hasText) {
-  // Retry with MANDATORY INSTRUCTION: don't call tools, just write
-  const retryMessage = `MANDATORY INSTRUCTION: Your previous response was a failure —
-    you called tools but produced NO answer text. DO NOT call any tools.
-    Use only the information you already have and write a complete answer.`;
-}
-```
+The fix was architectural — replace the synthesis round with recursive `runRound()` calls. Every round now shares identical tools, system prompt, and model instance. After tool results are injected as messages, the next round recurses with the same invariant configuration. A `MAX_ROUNDS` config (default 3) caps recursion depth, and the safety net in generate.ts catches indefinite loops.
 
-If the retry also fails, the system falls back to a simpler non-tool stream. Two layers of fallback — the user always gets something, even if it's less sophisticated.
+Key results:
+
+- No format drift — model always has native function calling available
+- No synthesis system prompt needed — model synthesizes naturally from prior results
+- Text continuity enforced between rounds via `\n\n` separator
+- `getSynthesisSystemPrompt()` and `synthesisMaxSteps` config removed as dead code
 
 ## Local Embeddings: The Surprising Beast
 
@@ -314,7 +317,7 @@ async function getExtractor(): Promise<FeatureExtractionPipeline> {
 }
 ```
 
-Key design decisions:
+## Key design decisions
 
 **Promise-based mutex for first load**: The model is ~1.3GB and takes 5-10 seconds to load on first request. Multiple concurrent requests on a cold start would each trigger a separate model load without the mutex. With it, they all await the same promise.
 
@@ -425,7 +428,7 @@ The deployment is dead simple:
 
 ```dockerfile
 # Dockerfile
-FROM node:22-slim
+FROM node:25-slim
 COPY build/ /app/
 COPY data/ /app/data/
 # CMD is set in docker-compose.yml: command: ["node", "build/index.js"]
@@ -439,15 +442,19 @@ The `VPS Setup` guide (checked into docs/) walks through the full deploy — Cad
 
 **Local embeddings are viable**. I started this project assuming I'd need an external embedding API (OpenAI, Cohere, etc.). Transformers.js proved me wrong. The BGE model runs comfortably in a $10/month VPS. Inference takes ~50ms per query. No API costs, no rate limits, no data leaving the server.
 
-**MCP changes everything about portfolio AIs**. Without MCP, the LLM would guess about my GitHub projects and fabricate photos. With it, it searches my actual repos, reads my actual code, browses my actual photo portfolio via Macula, lists my actual issues. The difference between "sounds plausible" and "provably correct" is night and day. But none of this worked until I stopped designing tools for developers and started designing them for how LLMs process information — the graph-walk pattern (`traverse`) replacing 14 specialized endpoints was the turning point. [Designing MCP Servers for How LLMs Think](/posts/mcp-graph-design) documents the full evolution. The first thing I did after getting it working was put on my hiring-manager hat — watched the AI pull my real repos, real PRs, real photos into answers comparing me against specific roles. Things I'd have spent hours digging for myself.
+**MCP changes everything about portfolio AIs**. Without MCP, the LLM would guess about my GitHub projects and fabricate photos. With it, it searches my actual repos, reads my actual code, browses my actual photo portfolio via Macula, lists my actual issues. The difference between "sounds plausible" and "provably correct" is night and day. But none of this worked until I stopped designing tools for developers and started designing them for how LLMs process information — the graph-walk pattern (`traverse`) replacing 14 specialized endpoints was the turning point. [Designing MCP Servers for How LLMs Think](/posts/mcp-design-lessons) documents the full evolution. The first thing I did after getting it working was put on my hiring-manager hat — watched the AI pull my real repos, real PRs, real photos into answers comparing me against specific roles. Things I'd have spent hours digging for myself.
 
 **Effect.ts streams beat callbacks**. The first version of the streaming pipeline used raw Node.js callbacks. It was brittle — unhandled errors in middle of a stream would crash the response. Effect.ts's typed `Stream` type provides structured error handling, backpressure, and composability that callbacks cannot match.
+
+**Tool availability must be invariant across response rounds**. Early architecture ran round 1 with tools, then a separate synthesis round with a different system prompt — the model leaked XML tool calls as text whenever tool definitions changed mid-response. Switching to recursive `runRound()` with identical tools, prompt, and model instance every round eliminated the format drift entirely. The synthesis prompt was removed; the model synthesizes naturally when it has access to all prior results.
 
 **Svelte 5 Runes are genuinely good**. I was skeptical of the Runes API after years with Svelte 4 stores. After building with it, I'm converted. `$state()` with `$derived()` replaces most store patterns more cleanly. The `$effect()` lifecycle hook is explicit about when and why side effects run. TypeScript integration is seamless.
 
 **Rate limiting is essential**. An unprotected AI chat endpoint would be bankrupt in hours. The IP-based rate limiter (`src/lib/server/rate-limiter.ts`) uses SQLite for persistent counters with a sliding window — 10 requests per minute, consistently enforced across all endpoints. The system does not block — it slows and warns.
 
 **Your personal site should dogfood your skills**. The site is a showcase, but it's also a testbed. MCP integration, local embeddings, streaming LLM responses — these are technologies I work with daily, and the site proves they work in production. A static portfolio page tells people what you've done. An AI-powered one shows them.
+
+- **System prompt position matters as much as content.** The "no invention" rule was on line 84 — sandwiched between identity and style instructions, reading like a suggestion, not a constraint. Research confirms LLMs exhibit primacy bias — instructions at the top carry more weight, middle content gets deprioritized (Wang et al., EMNLP 2023; Cobbina & Zhou, EMNLP 2025). Moving the anti-hallucination rule to the second paragraph — right after role definition — put the most critical instruction in the primacy zone without changing a single word of content. [System Prompt Position Matters](/posts/system-prompt-position-matters) documents the full analysis and restructured prompt.
 
 ## What's Next
 

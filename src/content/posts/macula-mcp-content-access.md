@@ -2,7 +2,7 @@
 
 ## How AI Agents Navigate Creative Content Like Walking Through a Gallery
 
-_Published: March 2026_
+*Published: March 2026*
 
 ---
 
@@ -42,95 +42,99 @@ Three leaf operations handle terminal data — when you've arrived at a destinat
 - **Technical metadata**: EXIF, XMP, IPTC data for in-depth technical analysis
 - **User profiles**: batch lookup of creator information
 
-The exploration tool supports 60 possible from→edge pairs — combinations of starting points and relationships to follow. Of those, 14 return data directly (the rest are invalid combinations that return empty results, guiding agents toward valid paths).
+The exploration tool supports 60 possible from→edge pairs — combinations of starting points and relationships to follow. Of those, 11 return data directly (the rest are invalid combinations that return empty results, guiding agents toward valid paths).
 
 This consolidation means agents spend less time choosing tools and more time exploring. The interface shrinks from many rigid endpoints to one flexible question: "Where do you want to start, and what do you want to follow?"
 
 ## Three Real-World Walks
 
+Each walk shows the same tree structure: an agent starts at a node, follows edges, and inspects results. The traversal chains illustrate how the content graph maps directly to agent reasoning.
+
 ### Walk 1: Building a Mood Board
 
 A designer needs images for an article on sustainable architecture. An AI agent helps find them.
 
-1. **Start**: The agent performs a full-text search across all content for "sustainable architecture." The graph returns files whose titles or descriptions match.
-2. **Follow**: From the results, the agent follows the CC-BY license connection to filter only images that can be freely used with attribution.
-3. **Inspect**: For promising candidates, the agent reads file details — title, creator, dimensions, license — to confirm suitability.
-4. **Navigate**: From a creator whose work fits perfectly, the agent walks to their full uploads to find more images by the same photographer.
+```
+traverse({ from:{type:'root'}, edge:'search', query:'sustainable architecture' })
+│
+├── Returns: files matching search
+│
+├── traverse({ from:{type:'license', license:'CC BY'}, edge:'has_license', filter:{what:'images'} })
+│   └── Returns: CC-BY licensed images only
+│       │
+│       └── get_file({ unifiedId:'candidate123', fields:['title','creator','dimensions','license'] })
+│           └── Returns: confirmed file details for attribution
+│
+└── traverse({ from:{type:'user', nickname:'photographer'}, edge:'uploads' })
+    └── Returns: more images by same creator
+```
 
-The designer gets a curated mood board in one continuous exploration, not a series of disconnected API calls.
+The agent starts with a broad search, narrows by license and content type, inspects specific candidates, then follows a creator's uploads for more. One continuous exploration, no URL patterns to discover.
 
 ### Walk 2: Researching Creative Trends
 
 An agent analyzes what creators are making to understand emerging trends.
 
-1. **Start**: The agent looks up a creator's profile and their public album list — discovering which albums exist before exploring them.
-2. **Navigate**: From each album (room), the agent explores what's inside, viewing thumbnails and titles.
-3. **Filter**: Within results, the agent narrows to images only, or further to images permitted for AI training — useful for understanding what data might be available for model development.
-4. **Compare**: The agent repeats this across multiple creators, building a comparative view of their portfolios and styles.
+```
+traverse({ from:{type:'user', nickname:'creator1'}, edge:'profile' })
+│
+├── Returns: profile + directory listing (albums)
+│   [{name:'landscapes', pathCid:'QmA...', fileCount:42},
+│    {name:'portraits',  pathCid:'QmB...', fileCount:18}]
+│
+├── traverse({ from:{type:'directory', pathCid:'QmA...'}, edge:'contains', filter:{what:'images'} })
+│   └── Returns: images from landscapes album
+│
+├── traverse({ from:{type:'directory', pathCid:'QmB...'}, edge:'contains', filter:{what:'images'} })
+│   └── Returns: images from portraits album
+│
+└── compare across creators (repeat)
+    └── traverse({ from:{type:'user', nickname:'creator2'}, edge:'profile' })
+        └── Follow same pattern...
+```
 
-This walks through the creator graph naturally: artist → albums → works → filtered views.
+Artist → albums → works. The agent discovers album structure from the profile, walks into each album, and repeats across multiple creators to build a comparative view.
 
 ### Walk 3: Building a Feature Page with Attribution
 
-Sarah is a professional landscape photographer. She publishes her best work on Macula with clear licensing — some images are CC-BY for maximum reach, others are All Rights Reserved for commercial licensing. She has AI data mining enabled on select images to allow AI model training while protecting her commercial work.
+Sarah is a professional landscape photographer. She connects Manus AI to Macula's MCP server. Here is what a full day of agent-assisted work looks like:
 
-She connects Manus AI to Macula's MCP server, and here's what happens:
+```
+traverse({ from:{type:'user', nickname:'sarah'}, edge:'profile' })
+│
+├── traverse({ from:{type:'directory', pathCid:'QmTravel'}, edge:'contains', filter:{what:'images'} })
+│   └── get_file_metadata({ unifiedId:'img001', a:['exif','xmp'] })
+│       └── Presents morning portfolio review
+│
+├── traverse({ from:{type:'user', nickname:'sarah'}, edge:'uploads' })
+│   ├── traverse({ from:{type:'license', license:'CC BY'}, edge:'has_license' })
+│   │   ├── get_file({ unifiedId:'img002', fields:['title','dimensions','license'] })
+│   │   └── Prepares midday client presentation
+│   │
+│   └── traverse({ filter:{allowAI:true} })
+│       └── Reviews which images are enabled for AI training (afternoon)
+│
+└── traverse({ from:{type:'keyword', keyword:'iceland'}, edge:'tagged_files' })
+    └── get_file({ unifiedId:'iceland01', fields:['title','creator','license','presets'] })
+        └── Generates article draft with proper attribution (afternoon)
+```
 
-**Morning: Reviewing Her Published Work**
+**What happens at each step:**
 
-Sarah asks Manus to "Show me my recently published travel photos and their details." Manus:
+- **Morning**: Sarah asks "Show me my recently published travel photos." Manus walks her profile → travel directory → inspects metadata.
+- **Midday**: A client needs architecture photography under CC-BY. Manus walks Sarah's uploads → filters by license → reads dimensions and specs.
+- **Afternoon**: A travel blog features Sarah's Iceland work. Manus walks the "iceland" keyword → tagged files → inspects candidates → checks presets for the right image sizes.
 
-1. Looks up Sarah's profile and account details
-2. Walks through her published images
-3. Inspects detailed metadata for specific images
-4. Presents her with a summary of her portfolio
+**The Key Benefit:**
 
-**Midday: Preparing a Client Presentation**
-
-A client needs a photographer for a sustainable architecture magazine. Sarah asks Manus to "Prepare a portfolio of my architectural and nature photography, filtered by CC-BY license." Manus:
-
-1. Explores Sarah's collection of uploaded images
-2. Follows the CC-BY license connection to filter only freely-licensed work
-3. Reads technical specifications for qualifying images
-4. Compiles a presentation-ready summary with image links, dimensions, and license info
-
-**Afternoon: AI Agent Builds a Feature Page**
-
-A travel blog wants to feature Sarah's Iceland photography. The blog's AI agent (connected to Macula via MCP):
-
-1. Walks from the keyword "iceland" to tagged files
-2. Inspects candidates and their details
-3. Checks available renditions for the right image sizes
-4. Generates an article draft with properly attributed images
-5. Includes correct license links and photographer credit automatically
-
-Sarah gets attribution. The blog gets content. Everyone wins.
-
-**Managing AI Data Mining Permissions**
-
-Sarah wants to see which of her images are enabled for AI training. Manus:
-
-1. Filters content by AI training permission to find what's enabled
-2. Searches for specific files and reviews their data mining settings
-3. Helps Sarah decide which additional images to enable
-
-**The Key Benefit**
-
-Sarah doesn't need to manually update her portfolio across multiple platforms. Macula is her single source of truth:
-
-- **Images** are hosted with full metadata and licensing
-- **MCP access** lets AI agents read her work with correct attribution
-- **Automatic updates** — when she publishes new work, AI agents see it immediately
-- **Rights protection** — every image has clear license and copyright info baked in
-
-Tools like Manus AI, Lovable, Cursor, and any other MCP-connected agent can now access her work properly — not by scraping websites or guessing licensing, but through structured, permissioned access that respects her choices.
+Sarah doesn't need to manually update her portfolio across multiple platforms. Macula is her single source of truth — images are hosted with full metadata, MCP access lets AI agents read her work with correct attribution, and automatic updates mean new work is instantly available.
 
 ## Why Graph Walks > REST Calls
 
 Content graphs fundamentally change how agents interact with data. Compare a graph walk to traditional REST:
 
-|                  | Graph Walk                       | REST                     |
-| ---------------- | -------------------------------- | ------------------------ |
+|              | Graph Walk                       | REST                     |
+| ------------ | -------------------------------- | ------------------------ |
 | **Mental model** | Nodes and relationships          | Endpoints and URLs       |
 | **Discovery**    | Describe what you want           | Know the URL patterns    |
 | **Round trips**  | 1-2 calls                        | 3+ sequential requests   |
@@ -232,48 +236,48 @@ _These tool names map to the content graph operations described above._
 
 ### All 4 Tools
 
-| Tool                | Description                                                                                                                                                                                                                                                                                            |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tool              | Description                                                                                                                                                                                                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `traverse`          | Universal discovery — navigate relationships across 6 from types × 10 edges. Supports full-text search, keyword lookup, user profiles, file/directory info, and all previous specialized operations. Images included in all traversal results (`contains` and `tagged_files` follow rendition chains). |
-| `get_file`          | Get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` param for selective retrieval.                                                                                                                                        |
-| `get_file_metadata` | Get full EXIF/XMP/IPTC metadata. Optional `a` parameter for specific metadata fields.                                                                                                                                                                                                                  |
-| `get_users`         | Batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                                   |
+| `get_file`          | Get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` param for selective retrieval.                                                                                                                                      |
+| `get_file_metadata` | Get full EXIF/XMP/IPTC metadata. Optional `a` parameter for specific metadata fields.                                                                                                                                                                                                                |
+| `get_users`         | Batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                               |
 
 #### Replaced Tools
 
-| Old Tool                      | Replacement                                                                                    |
-| ----------------------------- | ---------------------------------------------------------------------------------------------- |
-| `get_file_presets`            | `get_file(fields: ['presets'])`                                                                |
-| `get_file_json_schema`        | Removed — schema exposed via tool metadata                                                     |
-| `get_metadata_json_schema`    | Removed — schema exposed via tool metadata                                                     |
-| `get_node(type: 'file')`      | `traverse(edge: 'info', from: { type: 'file', unifiedId })`                                    |
+| Old Tool                    | Replacement                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| `get_file_presets`            | `get_file(fields: ['presets'])`                                                              |
+| `get_file_json_schema`        | Removed — schema exposed via tool metadata                                                 |
+| `get_metadata_json_schema`    | Removed — schema exposed via tool metadata                                                 |
+| `get_node(type: 'file')`      | `traverse(edge: 'info', from: { type: 'file', unifiedId })`                                  |
 | `get_node(type: 'user')`      | `traverse(edge: 'profile', from: { type: 'user', nickname })` or `get_users(nicknames: [...])` |
-| `get_node(type: 'directory')` | `traverse(edge: 'info', from: { type: 'directory', pathCid })`                                 |
-| `get_user(nickname)`          | `get_users(nicknames: [nickname])`                                                             |
-| `search(query)`               | `traverse(from: { type: 'root' }, edge: 'search', query)`                                      |
-| `search_keywords(search)`     | `traverse(from: { type: 'root' }, edge: 'keywords', query)`                                    |
-| `list_files_by_license`       | `traverse(from: { type: 'license', license }, edge: 'has_license')`                            |
-| `list_files_for_ai`           | `traverse(filter: { allowAI: true })`                                                          |
-| `list_user_files`             | `traverse(from: { type: 'user', nickname }, edge: 'uploads')`                                  |
-| `list_random_files`           | `traverse(from: { type: 'root' }, edge: 'random')`                                             |
-| `list_files_by_keyword`       | `traverse(from: { type: 'keyword', keyword }, edge: 'tagged_files')`                           |
-| `get_directory`               | `traverse(edge: 'info', from: { type: 'directory', pathCid })`                                 |
-| `get_directory_files`         | `traverse(from: { type: 'directory', pathCid }, edge: 'contains')`                             |
+| `get_node(type: 'directory')` | `traverse(edge: 'info', from: { type: 'directory', pathCid })`                               |
+| `get_user(nickname)`          | `get_users(nicknames: [nickname])`                                                           |
+| `search(query)`               | `traverse(from: { type: 'root' }, edge: 'search', query)`                                    |
+| `search_keywords(search)`     | `traverse(from: { type: 'root' }, edge: 'keywords', query)`                                  |
+| `list_files_by_license`       | `traverse(from: { type: 'license', license }, edge: 'has_license')`                          |
+| `list_files_for_ai`           | `traverse(filter: { allowAI: true })`                                                        |
+| `list_user_files`             | `traverse(from: { type: 'user', nickname }, edge: 'uploads')`                                |
+| `list_random_files`           | `traverse(from: { type: 'root' }, edge: 'random')`                                           |
+| `list_files_by_keyword`       | `traverse(from: { type: 'keyword', keyword }, edge: 'tagged_files')`                         |
+| `get_directory`               | `traverse(edge: 'info', from: { type: 'directory', pathCid })`                               |
+| `get_directory_files`         | `traverse(from: { type: 'directory', pathCid }, edge: 'contains')`                           |
 
 ### All 4 Prompts
 
-| Prompt              | Description                                                                                          |
-| ------------------- | ---------------------------------------------------------------------------------------------------- |
-| `browse_user`       | Explore a creator's profile, directories, and published files via user → directory → file navigation |
-| `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                 |
-| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                    |
-| `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs            |
+| Prompt | Description |
+|--------|-------------|
+| `browse_user` | Explore a creator's profile, directories, and published files via user → directory → file navigation |
+| `display_media` | Display files (images, video, audio) in markdown with optimal renditions and presets |
+| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns |
+| `inspect_metadata` | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs |
 
 ### Resources (2)
 
-| Resource URI            | Description                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `instructions`          | Service documentation and usage guidelines for AI agents                                                            |
+| Resource URI | Description |
+|-------------|-------------|
+| `instructions` | Service documentation and usage guidelines for AI agents |
 | `/.well-known/mcp.json` | Auto-discovery metadata — MCP clients find our server at `https://u.macula.link/.well-known/mcp.json` automatically |
 
 ---
