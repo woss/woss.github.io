@@ -339,10 +339,11 @@
   }
 
   function retry(): void {
-    if (lastSentText && !isLoading) {
-      messages = messages.slice(0, -2);
-      sendMessage(lastSentText);
-    }
+    if (isLoading) return;
+    const text = lastSentText || [...messages].reverse().find(m => m.role === 'user')?.text || '';
+    if (!text) return;
+    messages = messages.slice(0, -2);
+    sendMessage(text);
   }
 
 
@@ -506,6 +507,8 @@
   });
 
 
+  let seenErrorMsgIds = new Set<string>();
+
   // Connect to SSE event source for real-time generation updates
   $effect(() => {
     if (!browser || !chatId) return;
@@ -612,6 +615,7 @@
           tokensOut: data.usage?.tokensOut || 0,
           durationMs: data.usage?.durationMs || 0,
           toolCalls: completedToolCalls,
+          error: undefined,
         };
         // Update URL hash if it still points to old placeholder ID from streaming
         if (data.messageId && window.location.hash === `#msg-${oldPlaceholderId}`) {
@@ -671,9 +675,11 @@
       clearTimeout(sseTimeout);
       if (typeof e.data !== 'string') return;
       const data = JSON.parse(e.data);
-      // Skip replayed error events (message already persisted in DB)
       const msgId = data.messageId;
-      if (typeof msgId === 'string' && messages.some((m) => m.id === msgId)) return;
+      if (typeof msgId === 'string') {
+        if (seenErrorMsgIds.has(msgId)) return; // stale replay after retry
+        seenErrorMsgIds.add(msgId);
+      }
       const last = messages[messages.length - 1];
       if (last?.role !== 'assistant') {
         messages = [
