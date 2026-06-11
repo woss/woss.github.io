@@ -26,4 +26,4 @@ Daniel's career includes founding a blockchain protocol startup (Anagolay Networ
 
 ## Open Source
 
-Beyond pnpm, rushstack, and sharp, Daniel maintains several open-source projects including DaliORM (a type-safe ORM for SurrealDB), Macula (a decentralized digital asset management platform), and various developer tooling libraries. He believes in building in public and contributing to the ecosystem that makes modern web development possible.
+Beyond pnpm, rushstack, and sharp, Daniel maintains several open-source projects including the dali monorepo ([github.com/woss/dali](https://github.com/woss/dali)) — containing DaliORM (type-safe ORM for SurrealDB, npm `@woss/dali-orm`) and DaliMemory (type-safe embedded KV store, npm `@woss/dali-memory`) — as well as Macula (a private decentralized asset management platform), and various developer tooling libraries. He believes in building in public and contributing to the ecosystem that makes modern web development possible.
