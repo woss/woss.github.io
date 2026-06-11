@@ -29,6 +29,7 @@ export interface ChatMessage {
   reaction?: { type: 'up' | 'down' | 'heart'; reason: string } | null;
   savedReason?: string;
   irrecoverable?: boolean;
+  queryType?: string;
   toolCalls?: ToolCallInfo[];
   deletedAt?: string;
 }

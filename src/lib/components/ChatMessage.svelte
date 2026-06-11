@@ -647,6 +647,10 @@
         <span class="font-mono text-xs text-on-surface-variant"
           >{dayjs.utc(message.createdAt || message.timestamp).fromNow()}</span
         >
+        {#if message.queryType}
+          <span class="text-outline">·</span>
+          <span class="query-type-badge">{message.queryType}</span>
+        {/if}
       </div>
     {/if}
 
@@ -944,4 +948,19 @@
     margin: 0.5em 0;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
   }
+.query-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-primary);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
 </style>

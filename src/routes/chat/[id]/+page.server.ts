@@ -159,6 +159,7 @@ export const load: PageServerLoad = async ({ params }) => {
     reasoning: m.reasoning || undefined,
     error: m.error || undefined,
     irrecoverable: m.irrecoverable || undefined,
+    queryType: m.queryType || undefined,
     timestamp: new Date(m.createdAt).getTime() || Date.now(),
     createdAt: m.createdAt,
     modelId: m.modelId || 0,

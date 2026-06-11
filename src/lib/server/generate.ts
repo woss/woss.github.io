@@ -860,6 +860,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
     answer: answerText,
     sources,
     messageId: msgId,
+    queryType,
     usage: {
       chunks: ragChunks.length,
       totalTime: Math.floor(elapsed),
