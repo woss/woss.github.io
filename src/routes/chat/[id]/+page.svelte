@@ -304,8 +304,6 @@
       if (!hasUserMessages) {
         messageText = '';
         if (inputEl) inputEl.style.height = 'auto';
-        const alreadyHasReply = messages.some(m => m.role === 'assistant' && m.text.length > 0 && !m.error);
-        if (alreadyHasReply) return true;
         const playfulReplies = [
           "You can't brew a potion from an empty cauldron! Toss in a question and let the magic begin.",
           'The void gazes back... and it\'s terribly boring. Say something before we both turn into spacetime dust.',
