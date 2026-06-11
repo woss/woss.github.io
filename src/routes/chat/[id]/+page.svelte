@@ -577,7 +577,12 @@
       // Skip replayed done events (already loaded from DB on page refresh)
       const messageId = data.messageId;
       if (typeof messageId !== 'string') return;
-      if (messages.some((m) => m.id === messageId)) return;
+      // Replayed done event — clear any stale error on already-loaded message
+      const existingIdx = messages.findIndex((m) => m.id === messageId);
+      if (existingIdx !== -1) {
+        messages[existingIdx] = { ...messages[existingIdx], error: undefined };
+        return;
+      }
 
       const last = messages[messages.length - 1];
       const completedToolCalls = Object.values(streamingToolCalls).map(tc => ({
@@ -679,6 +684,8 @@
       if (typeof msgId === 'string') {
         if (seenErrorMsgIds.has(msgId)) return; // stale replay after retry
         seenErrorMsgIds.add(msgId);
+        // Don't set error on messages already loaded from DB — they have correct state
+        if (messages.some((m) => m.id === msgId)) return;
       }
       const last = messages[messages.length - 1];
       if (last?.role !== 'assistant') {
