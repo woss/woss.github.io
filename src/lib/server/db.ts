@@ -72,6 +72,7 @@ interface StoredMessage {
   tokensOut: number;
   durationMs: number;
   maxTokens: number;
+  queryType?: string;
   deletedAt?: string;
 }
 
@@ -479,6 +480,7 @@ function addMessage(
   tokensOut?: number,
   durationMs?: number,
   maxTokens?: number,
+  queryType?: string,
   irrecoverable?: boolean,
   error?: string,
   msgId?: string,
@@ -489,7 +491,7 @@ function addMessage(
   if (chatId) ensureChat(chatId, userId, role === 'user' ? content.slice(0, 100) : undefined);
   const id = msgId ?? crypto.randomUUID();
   db.prepare(
-    'INSERT INTO messages (id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, model_id, tokens_in, tokens_out, duration_ms, max_tokens, user_agent_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO messages (id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, model_id, tokens_in, tokens_out, duration_ms, max_tokens, query_type, user_agent_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   ).run(
     id,
     userId,
@@ -505,6 +507,7 @@ function addMessage(
     tokensOut ?? 0,
     durationMs ?? 0,
     maxTokens ?? 0,
+    queryType ?? null,
     _userAgentId ?? null,
   );
   return id;
@@ -562,6 +565,7 @@ function parseStoredMessage(row: Record<string, unknown>): StoredMessage {
     tokensOut: Number(row.tokens_out ?? 0),
     durationMs: Number(row.duration_ms ?? 0),
     maxTokens: Number(row.max_tokens ?? 0),
+    queryType: row.query_type ? String(row.query_type) : undefined,
     deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
   };
 }

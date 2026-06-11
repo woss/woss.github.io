@@ -43,10 +43,19 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
       tokens_out INTEGER DEFAULT 0,
       duration_ms INTEGER DEFAULT 0,
       max_tokens INTEGER DEFAULT 0,
+      query_type TEXT,
       deleted_at TEXT,
       user_agent_id INTEGER
     )
   `);
+
+  // Migration: add query_type column to existing messages table
+  try {
+    db.exec('ALTER TABLE messages ADD COLUMN query_type TEXT');
+  } catch {
+    // column already exists — ignore
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS page_posts (
       slug TEXT PRIMARY KEY,

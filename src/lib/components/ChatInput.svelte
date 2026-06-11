@@ -1,21 +1,10 @@
 <script lang="ts">
   import type { Chat } from '$lib/chat/types';
+  import { SLASH_COMMANDS } from '$lib/chat/slash-commands';
   import { config } from '$lib/config';
   import { enhance } from '$app/forms';
 
   const MAX_CHARS = 500;
-  const SLASH_COMMANDS = [
-    {
-      command: '/contact',
-      description: 'Show contact form',
-      keywords: 'contact hire collaborate work',
-    },
-    {
-      command: '/summarize',
-      description: 'Summarize current conversation',
-      keywords: 'summary recap tl dr digest',
-    },
-  ] as const;
 
   const STATUS_LABELS: Record<string, string> = {
     checking_relevance: 'Checking relevance',
@@ -53,7 +42,7 @@
   let slashFiltered = $derived(
     messageText.startsWith('/')
       ? SLASH_COMMANDS.filter((c) =>
-          c.command.includes(messageText.toLowerCase()),
+          c.triggers[0].includes(messageText.toLowerCase()),
         )
       : [],
   );
@@ -99,7 +88,7 @@
       if (e.key === 'Enter') {
         e.preventDefault();
         if (slashFiltered.length > 0) {
-          selectSlashCommand(slashFiltered[slashSelectedIndex].command);
+          selectSlashCommand(slashFiltered[slashSelectedIndex].triggers[0]);
         }
         return;
       }
@@ -191,7 +180,7 @@
                 >Commands</span
               >
             </div>
-            {#each slashFiltered as cmd, i (cmd.command)}
+            {#each slashFiltered as cmd, i (cmd.triggers[0])}
               <button
                 class="flex items-center gap-3 w-full px-4 py-2.5 text-left bg-transparent border-0 cursor-pointer transition-all duration-100"
                 class:bg-[rgba(0,255,136,0.15)]={i === slashSelectedIndex}
@@ -201,14 +190,14 @@
                 onmouseenter={() => {
                   slashSelectedIndex = i;
                 }}
-                onclick={() => selectSlashCommand(cmd.command)}
+                onclick={() => selectSlashCommand(cmd.triggers[0])}
                 onkeydown={(e) => {
-                  if (e.key === 'Enter') selectSlashCommand(cmd.command);
+                  if (e.key === 'Enter') selectSlashCommand(cmd.triggers[0]);
                 }}
               >
                 <span
                   class="font-mono text-sm text-primary font-semibold"
-                  >{cmd.command}</span
+                  >{cmd.triggers[0]}</span
                 >
                 <span
                   class="font-body text-xs"

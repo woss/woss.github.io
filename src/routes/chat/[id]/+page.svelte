@@ -15,6 +15,7 @@
   import { playPluckSound } from '$lib/utils/sounds';
 
   import type { ChatMessage, Chat, ToolCallInfo } from '$lib/chat/types';
+  import { matchSlashCommand } from '$lib/chat/slash-commands';
   import { sendChatMessage } from '$lib/chat/send';
 
 
@@ -159,7 +160,6 @@
           sources: m.sources ? JSON.parse(m.sources as string) : undefined,
           timestamp: new Date(m.createdAt as string).getTime() || Date.now(),
           createdAt: m.createdAt as string,
-          modelId: (m.modelId as number) || 0,
           tokensIn: (m.tokensIn as number) || 0,
           tokensOut: (m.tokensOut as number) || 0,
           durationMs: (m.durationMs as number) || 0,
@@ -235,9 +235,35 @@
     if (!trimmed || trimmed.length > 500 || isLoading) return;
     if (userMessageCount >= config.public.maxMessages) return;
     if (!currentChatId) return;
+    // Slash command: centralized dispatch via SLASH_COMMANDS
+    if (handleSlashCommand(trimmed)) return;
 
-    // Slash command: /contact — show form instantly, no AI call
-    if (trimmed === '/contact' || trimmed.startsWith('/contact ')) {
+    messageText = '';
+    lastSentText = trimmed;
+    isLoading = true;
+    if (inputEl) inputEl.style.height = 'auto';
+
+    const result = await sendChatMessage(trimmed, userId, currentChatId, messages);
+    messages = result.messages;
+    stickToBottom = true;
+
+    if (result.locked && currentChatId) {
+      chats = chats.map((c) => (c.id === currentChatId ? { ...c, locked: true } : c));
+    }
+
+    if (result.error) {
+      isLoading = false;
+    }
+    // When accepted === true, isLoading stays true until SSE 'done' event
+  }
+
+  /* ─── Slash command dispatch ─── */
+  
+  function handleSlashCommand(input: string): boolean {
+    const matched = matchSlashCommand(input);
+    if (!matched) return false;
+
+    if (matched.name === 'contact') {
       contactDismissed = false;
       if (browser) {
         try {
@@ -251,24 +277,35 @@
       showContactForm = true;
       messageText = '';
       if (inputEl) inputEl.style.height = 'auto';
-      // Log intent to server in background
       fetch('/api/leads/contact-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, chatId: currentChatId }),
       }).catch(() => {});
-      return;
+      return true;
     }
 
-    // Slash command: /summarize — guard against empty conversations
-    if (trimmed === '/summarize') {
+    if (matched.name === 'export_md') {
+      messageText = '';
+      if (inputEl) inputEl.style.height = 'auto';
+      window.open(resolve(`/api/chat/${currentChatId}/export?format=md`), '_blank');
+      return true;
+    }
+
+    if (matched.name === 'export_json') {
+      messageText = '';
+      if (inputEl) inputEl.style.height = 'auto';
+      window.open(resolve(`/api/chat/${currentChatId}/export?format=json`), '_blank');
+      return true;
+    }
+
+    if (matched.name === 'summarize') {
       const hasUserMessages = messages.some(m => m.role === 'user');
       if (!hasUserMessages) {
         messageText = '';
         if (inputEl) inputEl.style.height = 'auto';
-        // Don't add another playful message if one already exists
         const alreadyHasReply = messages.some(m => m.role === 'assistant' && m.text.length > 0 && !m.error);
-        if (alreadyHasReply) return;
+        if (alreadyHasReply) return true;
         const playfulReplies = [
           "You can't brew a potion from an empty cauldron! Toss in a question and let the magic begin.",
           'The void gazes back... and it\'s terribly boring. Say something before we both turn into spacetime dust.',
@@ -290,33 +327,16 @@
             createdAt: new Date().toISOString(),
           },
         ];
-        // Persist the playful reply to the server
         const fd = new FormData();
         fd.set('userId', userId);
         fd.set('role', 'assistant');
         fd.set('content', reply);
         fetch('?/store-message', { method: 'POST', body: fd }).catch(() => {});
-        return;
+        return true;
       }
     }
 
-    messageText = '';
-    lastSentText = trimmed;
-    isLoading = true;
-    if (inputEl) inputEl.style.height = 'auto';
-
-    const result = await sendChatMessage(trimmed, userId, currentChatId, messages);
-    messages = result.messages;
-    stickToBottom = true;
-
-    if (result.locked && currentChatId) {
-      chats = chats.map((c) => (c.id === currentChatId ? { ...c, locked: true } : c));
-    }
-
-    if (result.error) {
-      isLoading = false;
-    }
-    // When accepted === true, isLoading stays true until SSE 'done' event
+    return false;
   }
 
   function retry(): void {
@@ -588,7 +608,6 @@
           id: (data.messageId as string) || messages[idx].id,
           text: data.answer || messages[idx].text,
           sources: data.sources || messages[idx].sources,
-          modelId: data.usage?.modelId || 0,
           tokensIn: data.usage?.tokensIn || 0,
           tokensOut: data.usage?.tokensOut || 0,
           durationMs: data.usage?.durationMs || 0,

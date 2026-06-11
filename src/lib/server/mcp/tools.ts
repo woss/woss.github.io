@@ -25,7 +25,6 @@ const TOOL_DESCRIPTION_OVERRIDES: Record<string, string> = {
 };
 
 /** Suffix appended to all tool descriptions for Q&A context */
-const TOOL_ONLY_HINT = " Only use for queries about Daniel Maricic's work.";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
@@ -132,8 +131,11 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
       '  3. list_pull_requests / pull_request_read — browse and read PRs.\n' +
       '  4. search_repositories — discover repos by name/keyword/topic. Essential for verifying repo existence.\n' +
       '  5. get_tag — look up git tags.\n' +
-      '  6. get_me — get authenticated user info.\n\n' +
-      'All GitHub tools: use username "woss" (not "Daniel" or "Daniel Maricic").\n\n';
+      '  6. get_me — get authenticated user info.\n' +
+      '  7. get_file_contents — read README, source files, or any file from a GitHub repo. Essential for answering project questions after repo discovery.\n\n' +
+      'All GitHub tools: use username "woss" (not "Daniel" or "Daniel Maricic").\n\n' +
+      '  • VERIFY: ANY time RAG context or previous conversation mentions a specific repository by name, URL, or description (e.g. github.com/woss/dali, the dali monorepo, pnpm, rushstack, anagolay), ALWAYS call search_repositories to verify existence and get fresh metadata. Do NOT skip this even if RAG already covers it — RAG can be stale and you MUST verify from GitHub.\n' +
+      '';
   }
   const maculaNickname = config().maculaNickname;
   if (mac) {
@@ -176,6 +178,7 @@ function getSystemPromptAddition(options?: SystemPromptOptions): string {
     'IMPORTANT: After you receive results from any tool call, you MUST produce readable text ' +
     'that synthesizes the data into a clear answer. Never end your response silently after a tool call. ' +
     'Always write at least 2-3 sentences summarizing what the tool returned.\n' +
+    'IMPORTANT: If a tool call returns an error, re-read that tool\'s description and call it again with corrected arguments. Errors usually mean you used an invalid parameter value — check the valid options in the tool description.\n' +
     'IMPORTANT: Never output tool call JSON as text. If you cannot call a tool, say so in plain language.';
 
   return result;
@@ -202,7 +205,7 @@ async function getOpenAiTools(): Promise<OpenAiTool[]> {
       toOpenAiTool({
         name: t.name,
         serverId: t.serverId,
-        description: (TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? '') + TOOL_ONLY_HINT,
+        description: (TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? ''),
         inputSchema: toRecord(t.inputSchema),
       }),
     );
@@ -220,7 +223,7 @@ async function getMcpToolDefs(): Promise<McpToolDef[]> {
   const mapped = tools.map((t) => ({
       name: t.name,
       serverId: t.serverId,
-      description: (TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? '') + TOOL_ONLY_HINT,
+      description: (TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? ''),
       inputSchema: toRecord(t.inputSchema),
     }));
   _mcpToolDefsCache = mapped;

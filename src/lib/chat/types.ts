@@ -23,7 +23,6 @@ export interface ChatMessage {
   timestamp: number;
   createdAt: string;
   error?: string;
-  modelId?: number;
   tokensIn?: number;
   tokensOut?: number;
   durationMs?: number;

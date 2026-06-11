@@ -175,7 +175,7 @@ Respond with exactly one word: github, macula, both, or none.`,
         temperature: 0,
         max_tokens: 200,
       }),
-      signal: signal ?? AbortSignal.timeout(5000),
+      signal: signal ?? AbortSignal.timeout(config().openai.toolClassifyTimeoutMs),
     });
     log.info`🔍 classifyToolNeeds HTTP status: ${response.status}`;
     if (!response.ok) {
@@ -255,7 +255,7 @@ async function handleEarlyGates(
     const maculaKeyword = await needsMaculaTools(text, ctxMessages);
     const wordCount = text.split(/\s+/).filter(Boolean).length;
     if (!githubKeyword && !maculaKeyword && wordCount <= 6 && ctxMessages?.length) {
-      classifyResult = await classifyToolNeeds(text, ctxMessages, AbortSignal.timeout(5000));
+      classifyResult = await classifyToolNeeds(text, ctxMessages, AbortSignal.timeout(config().openai.toolClassifyTimeoutMs));
     }
     const hasToolIntent =
       githubKeyword ||
@@ -280,6 +280,7 @@ async function handleEarlyGates(
           0,
           0,
           0,
+          undefined,
           true,
           "I can only answer questions about Daniel Maricic's professional portfolio and experience.",
           undefined,
@@ -322,6 +323,7 @@ async function handleEarlyGates(
         undefined,
         undefined,
         undefined,
+        undefined,
         userAgentId,
       );
       publishPersistent(chatId, 'done', {
@@ -339,6 +341,7 @@ async function handleEarlyGates(
         '',
         undefined,
         chatId,
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -379,6 +382,7 @@ async function handleEarlyGates(
       0,
       0,
       undefined,
+      undefined,
       'Failed to generate embedding',
       undefined,
       userAgentId,
@@ -417,6 +421,7 @@ async function handleEarlyGates(
       cached.sources,
       undefined,
       chatId,
+      undefined,
       undefined,
       undefined,
       undefined,
@@ -709,6 +714,7 @@ interface SaveResultParams {
   cacheEmbeddingData: number[];
   cacheText: string;
   ragChunks: { title: string; text: string; score: number }[];
+  queryType: string;
   startTime: number;
 }
 
@@ -737,6 +743,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
     partial,
     lastError,
     msgId,
+    queryType,
     cacheEmbeddingData,
     cacheText,
     ragChunks,
@@ -760,6 +767,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
         tokenUsage.completionTokens,
         responseMs,
         maxTokens,
+        queryType,
         undefined,
         undefined,
         undefined,
@@ -780,6 +788,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
       tokenUsage?.completionTokens ?? 0,
       responseMs,
       0,
+      queryType,
       undefined,
       'Failed to generate answer after retries',
       undefined,
@@ -806,6 +815,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
       tokenUsage.completionTokens,
       responseMs,
       maxTokens,
+      queryType,
       undefined,
       undefined,
       msgId,
@@ -825,6 +835,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
       0,
       0,
       0,
+      queryType,
       undefined,
       'Failed to save response',
       undefined,
@@ -1066,6 +1077,7 @@ export async function startGeneration(
       cacheEmbeddingData,
       cacheText,
       ragChunks,
+      queryType,
       startTime,
     });
   } catch (err) {
@@ -1084,6 +1096,7 @@ export async function startGeneration(
         0,
         0,
         0,
+        undefined,
         undefined,
         message,
         undefined,

@@ -3,6 +3,7 @@
   import { slide } from 'svelte/transition';
   import type { Chat } from '$lib/chat/types';
   import { config } from '$lib/config';
+  import { SLASH_COMMANDS } from '$lib/chat/slash-commands';
 
   import SoundToggle from '$lib/components/SoundToggle.svelte';
   let {
@@ -94,7 +95,8 @@
     {/if}
   </div>
 
-  <!-- Sound toggle -->
+
+    <!-- Sound toggle -->
   <div class="border-t border-[rgba(255,255,255,0.08)] px-3 py-2.5">
     <div class="flex items-center justify-between">
       <span class="text-xs text-on-surface-variant font-body">Sound</span>
@@ -134,14 +136,12 @@
   <div class="border-t border-[rgba(255,255,255,0.08)] px-3 py-2.5">
     <p class="font-heading text-[10px] uppercase tracking-widest text-outline mb-2">Commands</p>
     <div class="space-y-1.5">
-      <div class="flex items-center gap-2">
-        <span class="font-mono text-xs text-primary font-semibold shrink-0">/contact</span>
-        <span class="font-body text-[11px] text-on-surface-variant truncate">Show contact form</span>
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="font-mono text-xs text-primary font-semibold shrink-0">/summarize</span>
-        <span class="font-body text-[11px] text-on-surface-variant truncate">Summarize conversation</span>
-      </div>
+      {#each SLASH_COMMANDS as cmd (cmd.name)}
+        <div class="flex items-center gap-2 justify-between">
+          <span class="font-mono text-xs text-primary font-semibold shrink-0">{cmd.triggers[0]}</span>
+          <span class="font-body text-[11px] text-on-surface-variant truncate">{cmd.description}</span>
+        </div>
+      {/each}
     </div>
   </div>
 
@@ -205,6 +205,7 @@
           <p class="text-on-surface-variant text-sm text-center py-8">No chats yet</p>
         {/if}
       </div>
+
 
       <div class="p-3 border-t border-[rgba(255,255,255,0.08)]">
         <p class="text-xs text-on-surface-variant font-mono">{chats.length}/{config.public.maxChats} chats</p>
