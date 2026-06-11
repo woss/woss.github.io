@@ -6,8 +6,11 @@
   import markdownItHighlightjs from 'markdown-it-highlightjs';
   import 'highlight.js/styles/atom-one-dark.css';
   import { toast } from 'svelte-sonner';
+  import { copyToClipboard } from '$lib/utils/clipboard';
   import { Tooltip } from 'sv5ui';
   import type { ToolCallInfo, ChatMessage } from '$lib/chat/types';
+  import { page } from '$app/state';
+  import { appendQueryParams } from '$lib/utils/utm';
 
   dayjs.extend(relativeTime);
   dayjs.extend(utc);
@@ -51,13 +54,22 @@
   md.renderer.rules.image = (tokens, idx, options, env, self) => {
     const token = tokens[idx];
     const src = token.attrGet('src') || '';
-    const alt = token.content || '';
+
+    // Append UTM params to image src
+    const paramsStr = page.data.queryParams;
+    let modifiedSrc = src;
+    if (paramsStr) {
+      const separator = src.includes('?') ? '&' : '?';
+      modifiedSrc = `${src}${separator}${paramsStr}`;
+      token.attrSet('src', modifiedSrc);
+    }
 
     // Check if it's a Macula image URL
-    const maculaMatch = src.match(/https?:\/\/u\.macula\.link\/([a-zA-Z0-9@_-]+)/);
+    const maculaMatch = modifiedSrc.match(/https?:\/\/u\.macula\.link\/([a-zA-Z0-9@_-]+)/);
     if (maculaMatch && !maculaMatch[1].startsWith('@')) {
       const unifiedId = maculaMatch[1];
-      const maculaHref = `https://macula.link/${unifiedId}`;
+      let maculaHref = `https://macula.link/${unifiedId}`;
+      if (paramsStr) maculaHref += `?${paramsStr}`;
       const imgHtml = defaultImageRenderer(tokens, idx, options, env, self);
       return `<a href="${maculaHref}" target="_blank" rel="noopener noreferrer" class="inline-block hover:opacity-90 transition-opacity duration-150">${imgHtml}</a>`;
     }
@@ -150,21 +162,11 @@
 
   function copyMessageLink(messageId: string): void {
     const url = `${window.location.origin}${window.location.pathname}#msg-${messageId}`;
-    navigator.clipboard
-      .writeText(url)
-      .then(() => {
-        toast.success('Link copied');
-      })
-      .catch(() => {});
+    if (copyToClipboard(url)) toast.success('Link copied');
   }
 
   function copyAsMarkdown(text: string): void {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        toast.success('Markdown copied');
-      })
-      .catch(() => {});
+    if (copyToClipboard(text)) toast.success('Markdown copied');
   }
 
   /* ─── Reaction Functions ─── */

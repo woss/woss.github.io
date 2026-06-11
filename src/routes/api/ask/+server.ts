@@ -152,7 +152,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
   }
 
   // Save user message immediately
-  addMessage(
+  const userMsgId = addMessage(
     body.userId,
     'user',
     text,
@@ -174,7 +174,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
   // Start background generation (non-blocking, no await)
   const chatId = body.chatId;
   if (chatId) {
-    startGeneration(text, chatId, body.userId, maxChunks, userAgentId);
+    startGeneration(text, chatId, body.userId, maxChunks, userAgentId, userMsgId);
   }
 
   // Return 202 — generation continues in background

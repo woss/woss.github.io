@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { resolve } from '$app/paths';
   import Seo from '$lib/components/Seo.svelte';
+  import { appendQueryParams } from '$lib/utils/utm';
 
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '';
@@ -13,8 +14,10 @@
   let visible = $state<boolean[]>([]);
   let gridEl = $state<HTMLDivElement | undefined>(undefined);
 
+  let qp = $derived(page.data.queryParams);
+
   $effect(() => {
-    const posts = $page.data.posts;
+    const posts = page.data.posts;
     if (!gridEl || !posts || posts.length === 0) return;
 
     visible = new Array(posts.length).fill(false);
@@ -48,17 +51,17 @@
 
 <Seo title="Posts — woss.io" description="Blog posts by @woss" />
 
-<section class="max-w-300 mx-auto px-6 py-12 pb-24 max-md:px-4">
+<section class="max-w-300 mx-auto px-6 pb-24 max-md:px-4">
   <header class="mb-12">
     <h1 class="font-heading text-4xl font-bold text-on-surface tracking-[-0.03em] uppercase m-0">Posts</h1>
     <div class="w-16 h-0.75 bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] mt-3 rounded-full" aria-hidden="true"></div>
   </header>
 
-  {#if $page.data.posts.length === 0}
+  {#if page.data.posts.length === 0}
     <p class="font-heading text-lg text-on-surface-variant text-center py-20">No posts yet.</p>
   {:else}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6" bind:this={gridEl}>
-      {#each $page.data.posts as post, i (post.slug)}
+      {#each page.data.posts as post, i (post.slug)}
         <article
           class="bg-surface-container border border-[rgba(255,255,255,0.08)] rounded-lg overflow-hidden transition-all duration-500 opacity-0 translate-y-6 hover:border-primary hover:shadow-[0_0_20px_rgba(0,255,136,0.15)] hover:-translate-y-0.5"
           class:opacity-100={visible[i]}
@@ -72,10 +75,10 @@
               {#if post.headerImage.url.includes('u.macula.link')}
                 {@const base = post.headerImage.url.split('?')[0]}
                 <picture>
-                  <source media="(max-width: 480px)" srcset={base + '?preset=sys_sm'} />
-                  <source media="(max-width: 768px)" srcset={base + '?preset=sys_md'} />
-                  <source media="(max-width: 1024px)" srcset={base + '?preset=sys_lg'} />
-                  <img src={base + '?preset=sys_xl'} alt={post.headerImage.alt} class="w-full aspect-2/1 object-cover" />
+                  <source media="(max-width: 480px)" srcset={appendQueryParams(base + '?preset=sys_sm', qp)} />
+                  <source media="(max-width: 768px)" srcset={appendQueryParams(base + '?preset=sys_md', qp)} />
+                  <source media="(max-width: 1024px)" srcset={appendQueryParams(base + '?preset=sys_lg', qp)} />
+                  <img src={appendQueryParams(base + '?preset=sys_xl', qp)} alt={post.headerImage.alt} class="w-full aspect-2/1 object-cover" />
                 </picture>
               {:else}
                 <img src={post.headerImage.url} alt={post.headerImage.alt} class="w-full aspect-2/1 object-cover" />

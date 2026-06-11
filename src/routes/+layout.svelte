@@ -2,9 +2,12 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { showMobileSidebar } from '$lib/stores/mobile-sidebar';
+  import { appendQueryParams } from '$lib/utils/utm';
 
 
   import '../app.css';
+
+  let avatarUrl = $derived(appendQueryParams('https://u.macula.link/@woss/avatar', page.data.queryParams));
   import { Toaster } from 'svelte-sonner';
 
   let { children } = $props();
@@ -92,8 +95,8 @@
 
 
 <svelte:head>
-  <link rel="icon" href="https://u.macula.link/@woss/avatar" />
-  <link rel="apple-touch-icon" href="https://u.macula.link/@woss/avatar" />
+  <link rel="icon" href={avatarUrl} />
+  <link rel="apple-touch-icon" href={avatarUrl} />
 </svelte:head>
 
 <nav

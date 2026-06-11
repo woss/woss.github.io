@@ -65,7 +65,6 @@ export const actions: Actions = {
     const userAgentId = event.request.headers.get('user-agent')
       ? getOrCreateUserAgent(event.request.headers.get('user-agent')!, ip)
       : undefined;
-
     if (!(await isAvailable())) return fail(503, { error: 'AI service is not available' });
 
     if (isChatLocked(chatId)) return fail(400, { error: 'This chat has been locked', locked: true });
@@ -74,7 +73,7 @@ export const actions: Actions = {
     if (!chat) return fail(404, { error: 'Chat not found' });
     if (!dev && chat.userId !== userId) return fail(403, { error: 'Not authorized' });
 
-    addMessage(
+    const userMsgId = addMessage(
       userId,
       'user',
       text,
@@ -93,7 +92,7 @@ export const actions: Actions = {
       userAgentId,
     );
 
-    startGeneration(text, chatId, userId, maxChunks, userAgentId);
+    startGeneration(text, chatId, userId, maxChunks, userAgentId, userMsgId);
 
     return { accepted: true, chatId };
   },

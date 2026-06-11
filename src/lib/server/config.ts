@@ -27,7 +27,7 @@ type Config = DeepReadonly<{
   };
   mcp: { servers: McpServerConfig[] };
   llmCache: { enabled: boolean };
-  report: { webhookUrl: string; webhookToken: string };
+  report: { webhookUrl: string; webhookToken: string; errorWebhookUrl: string };
   prompts: { system: string };
 }>;
 
@@ -43,6 +43,7 @@ const {
   LLM_CACHE_ENABLED,
   WOSS_USER_WEBHOOK_URL,
   WOSS_USER_WEBHOOK_TOKEN,
+  WOSS_USER_WEBHOOK_ERROR_URL,
   OPENAI_TOOL_CLASSIFY_TIMEOUT_MS,
   OPENAI_MAX_RESULTS_LENGTH,
 } = env;
@@ -77,6 +78,7 @@ function loadConfig(): Config {
     report: {
       webhookUrl: WOSS_USER_WEBHOOK_URL ?? '',
       webhookToken: WOSS_USER_WEBHOOK_TOKEN ?? '',
+      errorWebhookUrl: WOSS_USER_WEBHOOK_ERROR_URL ?? '',
     },
     prompts: {
       system: `You represent Daniel Maricic's professional portfolio and personal development. Answer questions about his skills, experience, projects, career history, and hobbies.

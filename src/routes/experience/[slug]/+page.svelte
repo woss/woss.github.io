@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import type { ExperienceEntry } from '$lib/../content/index';
   import { toast } from 'svelte-sonner';
+  import { copyToClipboard } from '$lib/utils/clipboard';
   import Seo from '$lib/components/Seo.svelte';
 
   type NavLink = { slug: string; company: string; role: string } | null;
@@ -26,8 +27,11 @@
     try {
       const res = await fetch(`/api/content/experience/${data.entry.slug}`);
       const json = await res.json();
-      await navigator.clipboard.writeText(json.markdown);
-      toast.success('Copied as Markdown');
+      if (copyToClipboard(json.markdown)) {
+        toast.success('Copied as Markdown');
+      } else {
+        toast.error('Failed to copy');
+      }
     } catch {
       toast.error('Failed to copy');
     }

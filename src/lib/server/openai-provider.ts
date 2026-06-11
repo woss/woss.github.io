@@ -368,7 +368,13 @@ function chatStreamWithTools(
                         ),
                       );
 
-                      if (roundToolCalls > 0 && round < MAX_ROUNDS) {
+                      // Only recurse if the model produced text (roundTextLength > 0).
+                      // If the model called tools but produced zero text (doom loop),
+                      // recursion would feed duplicated tool results back into context
+                      // and cause the model to call tools again in a loop.
+                      // Skip recursion and resolve immediately — generate.ts's
+                      // "Empty answer" / "Doom loop" detection handles the retry.
+                      if (roundToolCalls > 0 && roundTextLength > 0 && round < MAX_ROUNDS) {
                         log.info`[synthesis-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round with results`;
 
                         // Push assistant's text + tool calls as a single assistant message

@@ -1,8 +1,11 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import Seo from '$lib/components/Seo.svelte';
   import { toast } from 'svelte-sonner';
+  import { copyToClipboard } from '$lib/utils/clipboard';
+  import { appendQueryParams } from '$lib/utils/utm';
 
-  const avatarUrl = 'https://u.macula.link/@woss/avatar';
+  let avatarUrl = $derived(appendQueryParams('https://u.macula.link/@woss/avatar', page.data.queryParams));
 
   interface LinkItem {
     url: string;
@@ -70,18 +73,18 @@
     },
   ];
 
-  function copyToClipboard(value: string): void {
-    navigator.clipboard.writeText(value).then(() => {
+  function copyFingerprint(value: string): void {
+    if (copyToClipboard(value)) {
       toast.success('Fingerprint copied');
-    }).catch(() => {
+    } else {
       toast.error('Failed to copy');
-    });
+    }
   }
 </script>
 
 <Seo title="About — woss.io" description="About @woss — developer, builder, and open source enthusiast" />
 
-<section class="max-w-[800px] mx-auto px-6 py-12 pb-24">
+<section class="max-w-200 mx-auto px-6 py-12 pb-24">
   <header class="mb-12">
     <h1 class="font-heading text-4xl font-bold text-on-surface tracking-[-0.03em] uppercase m-0">About</h1>
     <div class="w-16 h-[3px] bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] mt-3 rounded-full" aria-hidden="true"></div>
@@ -123,7 +126,7 @@
       {#each links as link, i (link.url)}
         {#if link.copyValue}
           <button
-            onclick={() => copyToClipboard(link.copyValue!)}
+            onclick={() => copyFingerprint(link.copyValue!)}
             class="flex items-center gap-4 p-4 rounded-lg border border-[rgba(255,255,255,0.08)] transition-all duration-200 hover:border-primary hover:shadow-[0_0_20px_rgba(0,255,136,0.15)] group text-left w-full cursor-pointer {i === links.length - 1 ? 'md:col-span-2' : ''}"
           >
             <div class="shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant group-hover:text-primary transition-colors duration-200">

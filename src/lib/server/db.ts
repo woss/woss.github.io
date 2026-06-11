@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
 import { SEARCH_INDEX_CONFIG } from '../search-config.ts';
 import { CAT, createLogger } from './logger.ts';
 import { initDatabase, DATA_DIR, DB_PATH, DB_WAL_PATH, DB_SHM_PATH, VECTOR_INDEX_PATH } from './schema.ts';
+import { randomUUID } from '$lib/utils/random-uuid';
 
 /** Typed wrapper around better-sqlite3 .all() — avoids scattering `as Record<string, unknown>[]` everywhere. */
 function queryRows<T>(stmt: Database.Statement, ...params: unknown[]): T[] {
@@ -314,7 +315,7 @@ function createChat(userId: string, title?: string, userAgentId?: number): strin
   const db = getDb();
   ensureUser(userId);
 
-  const chatId = crypto.randomUUID();
+  const chatId = randomUUID();
   const chatTitle = title?.slice(0, 100) || 'New Chat';
 
   db.prepare('INSERT INTO chats (id, user_id, title, user_agent_id) VALUES (?, ?, ?, ?)').run(
@@ -489,7 +490,7 @@ function addMessage(
   const db = getDb();
   ensureUser(userId);
   if (chatId) ensureChat(chatId, userId, role === 'user' ? content.slice(0, 100) : undefined);
-  const id = msgId ?? crypto.randomUUID();
+  const id = msgId ?? randomUUID();
   db.prepare(
     'INSERT INTO messages (id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, model_id, tokens_in, tokens_out, duration_ms, max_tokens, query_type, user_agent_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   ).run(

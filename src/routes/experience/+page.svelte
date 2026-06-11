@@ -5,6 +5,7 @@
   import Seo from '$lib/components/Seo.svelte';
   import { SvelteDate } from 'svelte/reactivity';
   import { toast } from 'svelte-sonner';
+  import { copyToClipboard } from '$lib/utils/clipboard';
 
   let { data } = $props();
   let entries: ExperienceEntry[] = $derived(data.entries);
@@ -49,8 +50,11 @@
       const text = (data.entries as Array<Record<string, unknown>>).map((e: Record<string, unknown>) =>
         `# ${e.company || e.slug} — ${e.role}\n\n${(e.content as string).trim()}`
       ).join('\n\n---\n\n');
-      await navigator.clipboard.writeText(text);
-      toast.success('Copied all as Markdown');
+      if (copyToClipboard(text)) {
+        toast.success('Copied all as Markdown');
+      } else {
+        toast.error('Failed to copy');
+      }
     } catch {
       toast.error('Failed to copy');
     }
@@ -97,8 +101,11 @@
         return lines.join('\n');
       }).join('\n');
 
-      await navigator.clipboard.writeText(text);
-      toast.success('Copied as llms.txt');
+      if (copyToClipboard(text)) {
+        toast.success('Copied as llms.txt');
+      } else {
+        toast.error('Failed to copy');
+      }
     } catch {
       toast.error('Failed to copy');
     }
@@ -107,8 +114,11 @@
   async function copyLlmstxtUrl() {
     showDropdown = false;
     try {
-      await navigator.clipboard.writeText('https://woss.io/llms.txt');
-      toast.success('URL copied');
+      if (copyToClipboard('https://woss.io/llms.txt')) {
+        toast.success('URL copied');
+      } else {
+        toast.error('Failed to copy');
+      }
     } catch {
       toast.error('Failed to copy');
     }

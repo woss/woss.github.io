@@ -52,3 +52,32 @@ export async function callWebhook(data: WebhookData): Promise<void> {
   }
   return;
 }
+
+export interface ErrorWebhookPayload {
+  error: string;
+  userId: string;
+  chatId: string;
+  model: string;
+  provider: string;
+  status: number;
+}
+
+export async function callErrorWebhook(payload: ErrorWebhookPayload): Promise<void> {
+  const url = config().report.errorWebhookUrl;
+  if (!url) return;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.error(`Error webhook returned ${res.status}: ${await res.text()}`);
+    } else {
+      console.log(`Error webhook succeeded (${res.status})`);
+    }
+  } catch (err) {
+    console.error(`Error webhook failed: ${err}`);
+  }
+}

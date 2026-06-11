@@ -49,13 +49,6 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
     )
   `);
 
-  // Migration: add query_type column to existing messages table
-  try {
-    db.exec('ALTER TABLE messages ADD COLUMN query_type TEXT');
-  } catch {
-    // column already exists — ignore
-  }
-
   db.exec(`
     CREATE TABLE IF NOT EXISTS page_posts (
       slug TEXT PRIMARY KEY,

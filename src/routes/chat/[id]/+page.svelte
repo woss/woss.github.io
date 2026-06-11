@@ -13,10 +13,12 @@
   import ChatInput from '$lib/components/ChatInput.svelte';
   import { toast } from 'svelte-sonner';
   import { playPluckSound } from '$lib/utils/sounds';
+  import { randomUUID } from '$lib/utils/random-uuid';
 
   import type { ChatMessage, Chat, ToolCallInfo } from '$lib/chat/types';
   import { matchSlashCommand } from '$lib/chat/slash-commands';
   import { sendChatMessage } from '$lib/chat/send';
+  import { appendQueryParams } from '$lib/utils/utm';
 
 
   let { data } = $props() as { data: { messages: ChatMessage[], locked: boolean, chatOwnerId?: string } };
@@ -25,7 +27,7 @@
 
   const USER_ID_KEY = 'woss-io_user-id';
 
-  const ORIGINAL_FAV_HREF = 'https://u.macula.link/@woss/avatar';
+  let ORIGINAL_FAV_HREF = $derived(appendQueryParams('https://u.macula.link/@woss/avatar', page.data.queryParams));
   const LOADING_FAV_SVG = encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
       <circle cx="16" cy="16" r="15" fill="#1a1a2e"/>
@@ -319,7 +321,7 @@
         messages = [
           ...messages,
           {
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             role: 'assistant' as const,
             text: reply,
             timestamp: Date.now(),
@@ -377,11 +379,11 @@
       if (stored) {
         id = stored;
       } else {
-        id = crypto.randomUUID();
+        id = randomUUID();
         localStorage.setItem(USER_ID_KEY, id);
       }
     } catch {
-      id = crypto.randomUUID();
+      id = randomUUID();
     }
     userId = id;
     isOwner = import.meta.env.DEV || id === data.chatOwnerId;
@@ -527,7 +529,7 @@
             messages = [
               ...messages,
               {
-                id: crypto.randomUUID(),
+                id: randomUUID(),
                 role: 'assistant' as const,
                 text: '',
                 timestamp: Date.now(),
@@ -556,7 +558,7 @@
         messages = [
           ...messages,
           {
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             role: 'assistant' as const,
             text: '',
             timestamp: Date.now(),
@@ -598,7 +600,7 @@
         messages = [
           ...messages,
           {
-            id: (data.messageId as string) || crypto.randomUUID(),
+            id: (data.messageId as string) || randomUUID(),
             role: 'assistant' as const,
             queryType: data.queryType || '',
             text: data.answer || '',
@@ -692,7 +694,7 @@
         messages = [
           ...messages,
           {
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             role: 'assistant' as const,
             text: '',
             timestamp: Date.now(),

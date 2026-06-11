@@ -1,6 +1,7 @@
 import { config } from '$lib/server/config';
 import { initLogger, CAT, createLogger } from '$lib/server/logger';
 import type { Handle } from '@sveltejs/kit';
+import { dev } from '$app/environment';
 
 import { env } from '$env/dynamic/private';
 
@@ -19,8 +20,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   const log = createLogger(CAT.hooks);
 
-  // Only check /api/* routes
-  if (event.url.pathname.startsWith('/api/')) {
+  // Only check /api/* routes in production
+  if (!dev && event.url.pathname.startsWith('/api/')) {
     const origin = event.request.headers.get('origin');
     const referer = event.request.headers.get('referer');
 

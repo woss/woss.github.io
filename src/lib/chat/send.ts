@@ -1,4 +1,5 @@
 import type { ChatMessage } from './types.ts';
+import { randomUUID } from '$lib/utils/random-uuid';
 
 export interface SendResult {
   messages: ChatMessage[];
@@ -27,14 +28,14 @@ export async function sendChatMessage(
   const updatedMessages: ChatMessage[] = [
     ...currentMessages,
     {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       role: 'user',
       text: trimmed,
       timestamp,
       createdAt: new Date().toISOString(),
     },
     {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       role: 'assistant',
       text: '',
       timestamp: timestamp + 1,

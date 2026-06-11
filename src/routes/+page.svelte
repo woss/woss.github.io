@@ -6,6 +6,7 @@
   import { enhance } from '$app/forms';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
+  import { page } from '$app/state';
   import { parse } from 'devalue';
   import Seo from '$lib/components/Seo.svelte';
 
@@ -16,8 +17,8 @@
   import HomeChatInput from '$lib/components/HomeChatInput.svelte';
   import { config } from '$lib/config';
   import { showMobileSidebar } from '$lib/stores/mobile-sidebar';
-  import ImageAttribution from '$lib/components/ImageAttribution.svelte';
   import ContactForm from '$lib/components/ContactForm.svelte';
+  import { randomUUID } from '$lib/utils/random-uuid';
 
   let userId = $state('');
   let messageText = $state('');
@@ -50,6 +51,8 @@
   let featuredReady = $state(false);
   let showContactFormInline = $state(false);
   let ready = $state(false);
+
+  let qp = $derived(page.data.queryParams);
 
   function confirmDeleteChat(chatId: string): void {
     showDeleteConfirm = chatId;
@@ -122,12 +125,12 @@
       if (stored) {
         userId = stored;
       } else {
-        const id = crypto.randomUUID();
+        const id = randomUUID();
         localStorage.setItem(USER_ID_KEY, id);
         userId = id;
       }
     } catch {
-      userId = crypto.randomUUID();
+      userId = randomUUID();
     }
   });
 
@@ -210,28 +213,15 @@
 <Seo title="woss.io — Ask me anything" description="Personal site of @woss — AI-powered chat and blog" />
 
 <div class="relative overflow-hidden min-h-[calc(100vh-var(--nav-height)-3rem)]">
-  <picture>
-    <source media="(max-width: 480px)" srcset="https://u.macula.link/Z1TIROJeSMmFYnmvlCOPLg-7?preset=sys_sm" />
-    <source media="(max-width: 768px)" srcset="https://u.macula.link/Z1TIROJeSMmFYnmvlCOPLg-7?preset=sys_md" />
-    <source media="(max-width: 1024px)" srcset="https://u.macula.link/Z1TIROJeSMmFYnmvlCOPLg-7?preset=sys_lg" />
-    <img
-      src="https://u.macula.link/Z1TIROJeSMmFYnmvlCOPLg-7?preset=sys_xl"
-      alt="Space whale"
-      class="absolute inset-0 w-full h-full object-cover object-center z-0 opacity-90"
-    />
-  </picture>
-  <ImageAttribution title="Space whale" creator="Daniel Maricic" license="CC0" dataMining="Allowed" maculaUrl="https://macula.link/Z1TIROJeSMmFYnmvlCOPLg-7" />
-  <div class="absolute inset-0 z-[1]" style="background: linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.55) 50%, var(--color-surface) 100%);"></div>
-
 {#if ready}
 {#if hasChats}
-<div class="relative z-[2] flex min-h-[calc(100vh-var(--nav-height)-3rem)] max-md:px-4">
+<div class="relative z-2 flex min-h-[calc(100vh-var(--nav-height)-3rem)] max-md:px-4">
   <ChatSidebar {chats} {canCreateChat} {showDeleteConfirm} bind:showMobile={$showMobileSidebar} oncreateChat={createChat} onconfirmDeleteChat={confirmDeleteChat} ondeleteChat={deleteChat} oncancelDelete={() => showDeleteConfirm = null} />
 
   <div class="flex flex-col flex-1 min-w-0">
     {#if data?.hero}
-    <div class="w-full max-w-[800px] mx-auto px-4 pt-16 pb-4">
-      <div class="backdrop-blur-md bg-black/10 border border-white/[0.03] rounded-2xl p-6 md:p-8 flex flex-col items-center gap-3 text-center shadow-lg">
+    <div class="w-full max-w-200 mx-auto px-4 pt-16 pb-4">
+      <div class="backdrop-blur-md bg-black/10 border border-white/3 rounded-2xl p-6 md:p-8 flex flex-col items-center gap-3 text-center shadow-lg">
         <h1 class="font-heading text-2xl md:text-3xl lg:text-4xl text-white m-0 leading-tight">
           {data.hero.title}
         </h1>
@@ -250,20 +240,20 @@
     <main class="flex-1 flex flex-col items-center gap-8 max-md:gap-6 pt-16 md:pt-20">
       <!-- Hero + Input -->
       <div class="w-full flex flex-col items-center gap-6 pb-16">
-        <div class="w-full max-w-[800px] flex flex-col gap-5">
+        <div class="w-full max-w-200 flex flex-col gap-5">
           <HomeChatInput bind:messageText bind:isLoading bind:inputEl onsend={sendMessage} onsuggested={handleSuggestedClick} />
         </div>
       </div>
 
       <!-- Footer tagline -->
-      <div class="flex flex-col items-center gap-4 w-full max-w-[480px]">
+      <div class="flex flex-col items-center gap-4 w-full max-w-120">
         <div class="w-full h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.08)_20%,rgba(255,255,255,0.08)_80%,transparent)]" aria-hidden="true"></div>
         <p class="font-body text-sm text-on-surface-variant text-center m-0">Ask about my work, career, skills, and experience.</p>
       </div>
 
       <!-- Featured posts -->
       {#if featuredReady && data?.featuredPosts?.length}
-      <div class="w-full max-w-[800px] pt-12">
+      <div class="w-full max-w-200 pt-12">
         <div class="flex flex-col gap-3">
           <h2 class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wider m-0">Featured Posts</h2>
           <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
@@ -273,7 +263,7 @@
                 class="shrink-0 w-56 flex flex-col gap-2 rounded-xl bg-surface-container-high border border-[rgba(255,255,255,0.06)] p-4 no-underline transition-all duration-150 hover:border-primary/30 hover:shadow-[0_0_20px_rgba(0,255,136,0.06)] hover:-translate-y-0.5"
               >
                 {#if post.headerImage}
-                  <div class="w-full aspect-[16/9] rounded-lg overflow-hidden bg-surface-container">
+                  <div class="w-full aspect-video rounded-lg overflow-hidden bg-surface-container">
                     <img src={post.headerImage.url} alt={post.headerImage.alt} class="w-full h-full object-cover" />
                   </div>
                 {/if}
@@ -390,7 +380,7 @@
 {:else}
 {#if data?.hero}
 <div class="relative z-[2] w-full flex flex-col items-center gap-6 pt-16 pb-8 max-md:px-4">
-  <div class="w-full max-w-[800px] px-4">
+  <div class="w-full max-w-200 px-4">
     <div class="backdrop-blur-md bg-black/10 border border-white/[0.03] rounded-2xl p-6 md:p-8 flex flex-col items-center gap-3 text-center shadow-lg">
       <h1 class="font-heading text-2xl md:text-3xl lg:text-4xl text-white m-0 leading-tight">
         {data.hero.title}
@@ -405,10 +395,10 @@
   </div>
 </div>
 {/if}
-<div class="relative z-[2] flex flex-col items-center min-h-[calc(100vh-var(--nav-height)-3rem)] gap-8 px-8 max-md:px-4 max-md:gap-6">
+<div class="relative z-2 flex flex-col items-center min-h-[calc(100vh-var(--nav-height)-3rem)] gap-8 px-8 max-md:px-4 max-md:gap-6">
   <!-- Hero + Input -->
   <div class="w-full flex flex-col items-center gap-6 pb-16">
-    <div class="w-full max-w-[800px] flex flex-col gap-5">
+    <div class="w-full max-w-200 flex flex-col gap-5">
       <HomeChatInput bind:messageText bind:isLoading bind:inputEl onsend={sendMessage} onsuggested={handleSuggestedClick} />
     </div>
   </div>
@@ -421,7 +411,7 @@
 
   <!-- Featured posts -->
   {#if featuredReady && data?.featuredPosts?.length}
-  <div class="w-full max-w-[800px] pt-12">
+  <div class="w-full max-w-200 pt-12">
     <div class="flex flex-col gap-3">
       <h2 class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wider m-0">Featured Posts</h2>
       <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">

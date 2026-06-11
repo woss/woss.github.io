@@ -37,6 +37,7 @@ CREATE TABLE
     reasoning TEXT DEFAULT '',
     error TEXT,
     irrecoverable INTEGER DEFAULT 0,
+    query_type TEXT,
     created_at TEXT DEFAULT (datetime ('now')),
     model_id INTEGER,
     tokens_in INTEGER DEFAULT 0,

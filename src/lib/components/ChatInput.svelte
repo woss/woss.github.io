@@ -18,9 +18,7 @@
     messageText = $bindable(''),
     isLoading = false,
     canSend = false,
-    hasMessages = false,
     userId = '',
-    chatId = '',
     currentChat = null as Chat | null,
     maxMessagesReached = false,
     messagesCount = 0,
@@ -254,7 +252,7 @@
                 <textarea
                   id="chat-input"
                   name="text"
-                  class="w-full font-body text-base text-on-surface bg-transparent py-3 min-h-[44px] max-h-[120px] resize-none outline-none transition-colors duration-150 leading-normal placeholder:text-on-surface-variant disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="w-full font-body text-base text-on-surface bg-transparent py-3 min-h-11 max-h-30 resize-none outline-none transition-colors duration-150 leading-normal placeholder:text-on-surface-variant disabled:opacity-50 disabled:cursor-not-allowed"
                   class:pl-8={messageText.startsWith('/')}
                   class:pl-4={!messageText.startsWith('/')}
                   bind:value={messageText}

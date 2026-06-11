@@ -1,10 +1,12 @@
 <script lang="ts">
   import 'highlight.js/styles/atom-one-dark.css';
   import { toast } from 'svelte-sonner';
+  import { copyToClipboard } from '$lib/utils/clipboard';
   import ImageAttribution from '$lib/components/ImageAttribution.svelte';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import Seo from '$lib/components/Seo.svelte';
+  import { appendQueryParams } from '$lib/utils/utm';
 
   type Post = { slug: string; title: string; date: string | null; tags: string[]; excerpt: string; headerImage: { alt: string; url: string } | null; toc: { id: string; text: string; level: number }[] };
   type NavLink = { slug: string; title: string } | null;
@@ -21,6 +23,7 @@
   } = $props();
 
   let activeId = $state<string | null>(null);
+  let qp = $derived(page.data.queryParams);
 
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '';
@@ -49,11 +52,8 @@
     const code = btn.dataset.code || '';
     if (!code) return;
 
-    try {
-      await navigator.clipboard.writeText(code);
+    if (copyToClipboard(code)) {
       toast.success('Code copied');
-    } catch {
-      // Clipboard not available — silently degrade
     }
   }
 
@@ -205,7 +205,7 @@
 <!-- Skip to content link -->
 <a href="#main-content" class="absolute -top-full left-4 px-4 py-2 bg-primary text-surface text-sm font-semibold rounded-md z-200 transition-all duration-150 focus:top-4">Skip to content</a>
 
-<section class="pt-10 pb-24 overflow-x-hidden">
+<section class="pb-24 overflow-x-hidden">
   <div class="container max-w-6xl mx-auto px-4">
     <a href={resolve('/posts')} class="mb-4 font-mono text-sm text-on-surface-variant no-underline cursor-pointer transition-colors duration-200 hover:text-primary">← Back to posts</a>
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_220px] gap-6 xl:gap-10">
@@ -218,10 +218,10 @@
           {#if data.post.headerImage.url.includes('u.macula.link')}
             {@const base = data.post.headerImage.url.split('?')[0]}
             <picture class="block">
-              <source media="(max-width: 480px)" srcset={base + '?preset=sys_sm'} />
-              <source media="(max-width: 768px)" srcset={base + '?preset=sys_md'} />
-              <source media="(max-width: 1024px)" srcset={base + '?preset=sys_lg'} />
-              <img src={base + '?preset=sys_xl'} alt={data.post.headerImage.alt} class="w-full object-cover aspect-2/1" loading="eager" />
+              <source media="(max-width: 480px)" srcset={appendQueryParams(base + '?preset=sys_sm', qp)} />
+              <source media="(max-width: 768px)" srcset={appendQueryParams(base + '?preset=sys_md', qp)} />
+              <source media="(max-width: 1024px)" srcset={appendQueryParams(base + '?preset=sys_lg', qp)} />
+              <img src={appendQueryParams(base + '?preset=sys_xl', qp)} alt={data.post.headerImage.alt} class="w-full object-cover aspect-2/1" loading="eager" />
             </picture>
           {:else}
             <img src={data.post.headerImage.url} alt={data.post.headerImage.alt} class="w-full object-cover aspect-2/1" loading="eager" />
@@ -232,7 +232,7 @@
               creator={data.imageMeta.creator}
               license={data.imageMeta.licenseShort ?? data.imageMeta.license}
               dataMining={data.imageMeta.dataMiningFull}
-              maculaUrl={data.imageMeta._links?.raw ? `https://macula.link/${data.imageMeta.unifiedId}` : ''}
+              maculaUrl={data.imageMeta._links?.raw ? appendQueryParams(`https://macula.link/${data.imageMeta.unifiedId}`, qp) : ''}
             />
           {/if}
         </figure>
@@ -331,5 +331,22 @@
   }
   :global(.copy-btn:hover) {
     opacity: 1;
+  }
+
+  :global(.prose ul),
+  :global(.prose ol) {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+  }
+
+  :global(.prose li) {
+    margin-top: 0.15em;
+    margin-bottom: 0.15em;
+  }
+
+  :global(.prose li > ul),
+  :global(.prose li > ol) {
+    margin-top: 0.25em;
+    margin-bottom: 0.25em;
   }
 </style>

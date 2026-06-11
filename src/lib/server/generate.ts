@@ -1,5 +1,5 @@
 import { publishLive, publishPersistent } from '$lib/server/chat-events';
-import { callWebhook } from '$lib/server/webhooks';
+import { callErrorWebhook, callWebhook } from '$lib/server/webhooks';
 import {
   addMessage,
   ensureModel,
@@ -28,6 +28,7 @@ import { classifyQuery } from '$lib/query-classifier';
 import type { QueryClass } from '$lib/query-classifier';
 import { Effect, Stream } from 'effect';
 import type { ChatMessage } from '$lib/server/openai-provider';
+import { randomUUID } from '$lib/utils/random-uuid';
 import {
   tryRenameChat,
   needsGithubTools,
@@ -194,7 +195,8 @@ Respond with exactly one word: github, macula, both, or none.`,
     // Fallback: search reasoning content for classification keyword
     // DeepSeek puts reasoning in reasoning_content, answer may be buried mid-text
     if (rawAnswer.length > 10) {
-      const reasoningKeywords = rawAnswer.match(/\b(github|macula|both|none)\b/);
+      const matches = [...rawAnswer.matchAll(/\b(github|macula|both|none)\b/g)];
+      const reasoningKeywords = matches[matches.length - 1];
       if (reasoningKeywords) {
         log.info`🔍 classifyToolNeeds: extracted "${reasoningKeywords[1]}" from reasoning content`;
         return parseToolClass(reasoningKeywords[1]);
@@ -516,7 +518,7 @@ async function streamWithRetry(
 
   // Pre-generate message ID for tool-call FK tracking
   const db = getDb();
-  const msgId = crypto.randomUUID();
+  const msgId = randomUUID();
   const toolCallStmt = db.prepare(
     `INSERT INTO tool_calls (id, message_id, name, server_id, tool_input, started_at) VALUES (?, ?, ?, ?, ?, datetime('now'))`,
   );
@@ -662,7 +664,7 @@ async function streamWithRetry(
           };
         }
         lastError = new Error(answerText.trim().length === 0 ? 'Empty answer' : 'Doom loop');
-        mcpToolDefs = null;
+        if (attempt >= 3) mcpToolDefs = null;
         continue;
       }
 
@@ -672,6 +674,14 @@ async function streamWithRetry(
       const errorStack = err instanceof Error ? err.stack : 'no stack';
       log.error`Stream attempt ${attempt + 1} failed: ${lastError.message} stack=${errorStack}`;
       if (abortController.signal.aborted) {
+        partial = true;
+        break;
+      }
+      // Rate limit errors: break immediately instead of wasting retries.
+      // The AI SDK already retried 3x internally before throwing here.
+      const msg = lastError.message.toLowerCase();
+      if (msg.includes('rate limit') || msg.includes('rate_limit') || msg.includes(' 429 ')) {
+        log.warn`Rate limit detected, aborting retry loop`;
         partial = true;
         break;
       }
@@ -894,6 +904,7 @@ export async function startGeneration(
   userId: string,
   maxChunks: number,
   userAgentId?: number,
+  userMsgId?: string,
 ): Promise<void> {
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), 120_000);
@@ -914,6 +925,10 @@ export async function startGeneration(
     // 4. Classify query — skip RAG for tool-only, skip tools for rag
     const queryType: QueryClass = classifyQuery(embedding.data);
     log.info`🎯 queryType=${queryType} "${text.slice(0, 80)}"`;
+    // Persist query_type on the user message
+    if (userMsgId) {
+      getDb().prepare('UPDATE messages SET query_type = ? WHERE id = ?').run(queryType, userMsgId);
+    }
 
     // 5. RAG search (skip for tool-only queries)
     let ragChunks: { title: string; text: string; score: number }[] = [];
@@ -1054,6 +1069,25 @@ export async function startGeneration(
       partial,
       msgId,
     } = streamResult;
+
+    // Fire error webhook on LLM error
+    if (lastError) {
+      const model = config().openai.model;
+      let provider = '';
+      try { provider = new URL(config().openai.baseUrl).hostname; } catch { /* ignore */ }
+      const statusCode = typeof (lastError as any).status === 'number' && (lastError as any).status > 0
+        ? (lastError as any).status
+        : Number((lastError as Error).message.match(/ (\d{3}) /)?.[1] ?? 0);
+      log.info`🚨 LLM error detected — firing error webhook`;
+      callErrorWebhook({
+        error: `[first-round-error] "${lastError.message}" stack="${lastError.stack}"`,
+        userId,
+        chatId,
+        model,
+        provider,
+        status: statusCode,
+      });
+    }
 
     // If tools were called, clear sources (RAG sources don't apply to tool results)
     if (anyStepHadToolCalls) {

@@ -1,5 +1,7 @@
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { config } from '$lib/server/config';
+import { config } from '$lib/server/config.js';
+import { CAT, createLogger } from '$lib/server/logger.js';
+const log = createLogger(CAT.llm);
 
 /**
  * Creates a TransformStream that rewrites finish_reason in SSE responses.
@@ -57,11 +59,44 @@ function fixFinishReasonTransform(): TransformStream<Uint8Array, Uint8Array> {
 }
 
 /**
- * Custom fetch function that pipes SSE responses through the finish_reason
- * fix transform before returning them to the SDK.
+ * Custom fetch function that:
+ * 1. Pipes SSE responses through the finish_reason fix transform
+ * 2. Short-circuits 429 rate limit as 400 to skip AI SDK's internal retry loop
  */
 async function customFetch(input: string | URL | globalThis.Request, init?: RequestInit): Promise<Response> {
   const response = await fetch(input, init);
+
+  // Short-circuit 429 rate limit → 400 to prevent AI SDK's 3 internal retries.
+  // The SDK only retries on 429/5xx; a 400 passes through immediately.
+  if (response.status === 429) {
+    const body = await response.text();
+    if (body.includes('Rate limit') || body.includes('FreeUsageLimitError')) {
+      log.warn`Rate limit 429 detected, mapping to 400 to skip SDK internal retries`;
+      return new Response(body, {
+        status: 400,
+        statusText: 'Bad Request',
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+  }
+
+  // Log rate limit headers for debugging and monitoring
+  const remaining = response.headers.get('x-ratelimit-remaining');
+  const reset = response.headers.get('x-ratelimit-reset');
+  const limit = response.headers.get('x-ratelimit-limit');
+  const retryAfter = response.headers.get('retry-after');
+  if (remaining || reset || limit || retryAfter) {
+    log.debug`Rate limit headers: remaining=${remaining} reset=${reset} limit=${limit} retry-after=${retryAfter}`;
+  }
+
+  // Log all headers on error responses for discovery
+  if (!response.ok) {
+    const headers: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    log.debug`LLM API error ${response.status}: headers=${JSON.stringify(headers)}`;
+  }
 
   if (!response.body) return response;
 
