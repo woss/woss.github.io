@@ -9,5 +9,5 @@ data/
 test-results/
 playwright-report/
 coverage/
-*.png
+# *.png
 tmp/
