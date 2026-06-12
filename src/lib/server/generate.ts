@@ -43,6 +43,7 @@ import {
   parseToolClass,
   parseSources,
 } from '$lib/server/chat-helpers';
+import { generateTraceId, withTrace } from '$lib/server/trace-context';
 
 /** Shape of a chat-completion API response. */
 interface ChatCompletionResponse {
@@ -926,7 +927,16 @@ export async function startGeneration(
   maxChunks: number,
   userAgentId?: number,
   userMsgId?: string,
+  msgTraceId?: string,
 ): Promise<void> {
+  // If a message traceId is provided, wrap the entire generation in that trace context
+  // so all addMessage calls and LLM operations inherit the message traceId
+  if (msgTraceId) {
+    return withTrace(msgTraceId, generateTraceId(), () =>
+      startGeneration(text, chatId, userId, maxChunks, userAgentId, userMsgId),
+    );
+  }
+
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), 120_000);
   timeoutId?.unref?.();
@@ -1078,7 +1088,7 @@ export async function startGeneration(
     }
 
     // 7. Stream from OpenRouter with retry
-    log.info('Starting synthesis round', { round: 1, totalRounds: 1, chatId });
+    log.info('Starting LLM stream', { round: 1, totalRounds: 1, chatId });
     const streamResult = await streamWithRetry(messages, mcpToolDefs, chatId, abortController, toolServerMap);
     const {
       answerText,

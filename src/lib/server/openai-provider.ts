@@ -396,7 +396,7 @@ function chatStreamWithTools(
                         doomLoopDetectedInRound = true;
                       }
                       if (roundToolCalls > 0 && roundTextLength > 0 && !reachedMaxRounds && !isDoomLoop) {
-                        log.info`[synthesis-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round with results`;
+                        log.info`[llm-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — continuing with tools`;
 
                         // Push assistant's text + tool calls as a single assistant message
                         currentMessages.push({
@@ -426,7 +426,7 @@ function chatStreamWithTools(
                           });
                         }
 
-                        log.info`[synthesis-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}`;
+                        log.info`[llm-round-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}`;
 
                         // Ensure text continuity between rounds
                         if (roundTextLength > 0 && !/\s$/.test(roundText)) {
@@ -437,8 +437,8 @@ function chatStreamWithTools(
                         runRound(round + 1, currentToolSet).then(resolve).catch(reject);
                       } else if (roundToolCalls > 0 && roundTextLength > 0 && (reachedMaxRounds || isDoomLoop)) {
                         // MAX_ROUNDS reached with tool calls and text — force a final
-                        // synthesis round WITHOUT tools so the model must produce text.
-                        log.info`[synthesis-round] MAX_ROUNDS=${MAX_ROUNDS} reached, ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round WITHOUT tools`;
+                        // Force final round without tools so the model must produce text.
+                        log.info`[llm-round] MAX_ROUNDS=${MAX_ROUNDS} reached, ${roundToolCalls} tool calls, ${roundTextLength} text chars — forcing final round without tools`;
 
                         // Push assistant's text + tool calls
                         currentMessages.push({
@@ -473,9 +473,9 @@ function chatStreamWithTools(
                           emit.single(textDeltaEvent('\n\n'));
                         }
 
-                        log.info`[synthesis-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}`;
+                        log.info`[llm-round-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}`;
 
-                        // Synthesis round with NO tools — forces the model to synthesize
+                        // Final round with NO tools — forces the model to produce text
                         runRound(round + 1, undefined).then(resolve).catch(reject);
                       } else {
                         resolve();

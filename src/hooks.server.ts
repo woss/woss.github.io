@@ -1,7 +1,6 @@
 import { config } from '$lib/server/config';
 import { initLogger, CAT, createLogger } from '$lib/server/logger';
-import { generateTraceId, generateSpanId } from '$lib/server/trace-context';
-import { withContext } from '@logtape/logtape';
+import { generateTraceId, generateSpanId, withTrace } from '$lib/server/trace-context';
 import type { Handle } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 
@@ -47,5 +46,5 @@ export const handle: Handle = async ({ event, resolve }) => {
   // Wrap request with trace context for log correlation
   const traceId = generateTraceId();
   const spanId = generateSpanId();
-  return withContext({ traceId, spanId }, () => resolve(event));
+  return withTrace(traceId, spanId, () => resolve(event));
 };

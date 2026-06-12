@@ -33,6 +33,7 @@ import {
   tryRenameChat,
 } from '$lib/server/chat-helpers';
 import { startGeneration } from '$lib/server/generate';
+import { generateTraceId, generateSpanId, withTrace } from '$lib/server/trace-context';
 import { dev } from '$app/environment';
 
 const log = createLogger(CAT.chat);
@@ -151,30 +152,35 @@ export async function POST(event: RequestEvent): Promise<Response> {
     }
   }
 
-  // Save user message immediately
-  const userMsgId = addMessage(
-    body.userId,
-    'user',
-    text,
-    undefined,
-    undefined,
-    body.chatId,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    userAgentId,
+  // Generate message traceId for this exchange (covers user msg + LLM calls + assistant msg)
+  const msgTraceId = generateTraceId();
+
+  // Save user message inside the trace context so addMessage stores this traceId
+  const userMsgId = withTrace(msgTraceId, generateSpanId(), () =>
+    addMessage(
+      body.userId,
+      'user',
+      text,
+      undefined,
+      undefined,
+      body.chatId,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      userAgentId,
+    ),
   );
 
   // Start background generation (non-blocking, no await)
   const chatId = body.chatId;
   if (chatId) {
-    startGeneration(text, chatId, body.userId, maxChunks, userAgentId, userMsgId);
+    startGeneration(text, chatId, body.userId, maxChunks, userAgentId, userMsgId, msgTraceId);
   }
 
   // Return 202 — generation continues in background

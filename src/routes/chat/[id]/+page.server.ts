@@ -17,6 +17,7 @@ import { callWebhook } from '$lib/server/webhooks';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { isAvailable } from '$lib/server/llm';
 import { startGeneration } from '$lib/server/generate';
+import { generateTraceId, generateSpanId, withTrace } from '$lib/server/trace-context';
 import { CAT, createLogger } from '$lib/server/logger';
 
 const log = createLogger(CAT.chat);
@@ -78,26 +79,31 @@ export const actions: Actions = {
     if (!chat) return fail(404, { error: 'Chat not found' });
     if (!dev && chat.userId !== userId) return fail(403, { error: 'Not authorized' });
 
-    const userMsgId = addMessage(
-      userId,
-      'user',
-      text,
-      undefined,
-      undefined,
-      chatId,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      userAgentId,
+    // Generate message traceId for this exchange
+    const msgTraceId = generateTraceId();
+
+    const userMsgId = withTrace(msgTraceId, generateSpanId(), () =>
+      addMessage(
+        userId,
+        'user',
+        text,
+        undefined,
+        undefined,
+        chatId,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        userAgentId,
+      ),
     );
 
-    startGeneration(text, chatId, userId, maxChunks, userAgentId, userMsgId);
+    startGeneration(text, chatId, userId, maxChunks, userAgentId, userMsgId, msgTraceId);
 
     return { accepted: true, chatId };
   },

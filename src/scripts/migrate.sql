@@ -45,7 +45,8 @@ CREATE TABLE
     duration_ms INTEGER DEFAULT 0,
     max_tokens INTEGER DEFAULT 0,
     deleted_at TEXT,
-    user_agent_id INTEGER
+    user_agent_id INTEGER,
+    trace_id TEXT
   );
 
 -- Page posts: blog/content pages
@@ -130,7 +131,8 @@ CREATE TABLE
     created_at TEXT DEFAULT (datetime ('now')),
     deleted_at TEXT,
     locked INTEGER DEFAULT 0,
-    user_agent_id INTEGER
+    user_agent_id INTEGER,
+    trace_id TEXT
   );
 
 -- Chat events: event log for chat sessions
