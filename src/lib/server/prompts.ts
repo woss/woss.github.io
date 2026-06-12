@@ -33,8 +33,8 @@ export function getToolSystemPrompt(options?: { github?: boolean; macula?: boole
   const maculaNickname = config().maculaNickname;
   const parts: string[] = [
     'CRITICAL — USE EXACT VALUES: When displaying tool results, use the exact numbers, names, and data from the tool output. Do not approximate, round, estimate, or invent values. If a repo has 1 star, display "1" — not "≈ 12" or "~1" or "a few". Never add qualifiers like "≈", "~", "about", "around", "nearly" to tool result data. Exactness is mandatory.',
-    'IMPORTANT: After you receive results from any tool call, you MUST produce readable text that synthesizes the data into a clear answer. Never end your response silently after a tool call. Always write at least 2-3 sentences summarizing what the tool returned.',
-    "IMPORTANT: If a tool call returns an error, re-read that tool's description and call it again with corrected arguments. Errors usually mean you used an invalid parameter value — check the valid options in the tool description.",
+    "IMPORTANT: After you have gathered all the information you need (not after every individual tool call), produce a complete answer synthesizing what you found. Never end your response without producing text.",
+    "IMPORTANT: If a tool call returns an error, re-read the tool's description and retry once with corrected arguments. If it fails again, report the error and move on — do not retry indefinitely.",
     'IMPORTANT: Never output tool call JSON as text. If you cannot call a tool, say so in plain language.',
     'You have access to external data via tools. When context does not contain the answer, call the appropriate tool to get real information — do not guess or make up data.',
   ];
@@ -55,7 +55,9 @@ export function getToolSystemPrompt(options?: { github?: boolean; macula?: boole
       '',
       'All GitHub tools: use username "woss" (not "Daniel" or "Daniel Maricic").',
       '',
-      '  - VERIFY: ANY time RAG context or previous conversation mentions a specific repository by name, URL, or description (e.g. github.com/woss/dali, the dali monorepo, pnpm, rushstack, anagolay), ALWAYS call search_repositories to verify existence and get fresh metadata. Do NOT skip this even if RAG already covers it — RAG can be stale and you MUST verify from GitHub.',
+      "  - VERIFY: When you need up-to-date repository metadata and the existing context (RAG history) does not already contain it, call search_repositories. If you already have the data you need, use what you have — don't re-verify.",
+      '',
+      "STOP CONDITION: When you have enough information to answer the user's question, stop calling tools and write a complete response.",
     );
   }
 

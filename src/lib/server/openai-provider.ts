@@ -52,6 +52,7 @@ function finishEvent(
   providerUrl: string,
   maxTokens: number,
   usage?: TokenUsage,
+  toolLoopDetected?: boolean,
 ): LLMEvent {
   return {
     type: 'finish',
@@ -61,6 +62,7 @@ function finishEvent(
     actualModelName,
     provider: providerUrl,
     maxTokens,
+    toolLoopDetected,
   };
 }
 
@@ -281,6 +283,9 @@ function chatStreamWithTools(
           let actualModelName: string = config().openai.model;
 
           const MAX_ROUNDS = config().openai.maxRounds;
+          const CROSS_ROUND_THRESHOLD = 3;
+          const crossRoundFingerprintCounts = new Map<string, number>();
+          let doomLoopDetectedInRound = false;
 
           async function runRound(round: number, currentToolSet: ToolSet | undefined): Promise<void> {
             if (aborted) return;
@@ -369,6 +374,15 @@ function chatStreamWithTools(
                         ),
                       );
 
+                      // Build cross-round tool+args fingerprints for doom loop detection
+                      for (const tc of roundToolCallRecords) {
+                        const fingerprint = `${tc.toolName}::${JSON.stringify(tc.input)}`;
+                        const count = (crossRoundFingerprintCounts.get(fingerprint) ?? 0) + 1;
+                        crossRoundFingerprintCounts.set(fingerprint, count);
+                        log.debug`[fingerprint] ${fingerprint} count=${count}`;
+                      }
+                      const toolLoopDetected = [...crossRoundFingerprintCounts.values()].some(c => c > CROSS_ROUND_THRESHOLD);
+
                       // Only recurse if the model produced text (roundTextLength > 0).
                       // If the model called tools but produced zero text (doom loop),
                       // recursion would feed duplicated tool results back into context
@@ -376,7 +390,12 @@ function chatStreamWithTools(
                       // Skip recursion and resolve immediately — generate.ts's
                       // "Empty answer" / "Doom loop" detection handles the retry.
                       const reachedMaxRounds = round >= MAX_ROUNDS;
-                      if (roundToolCalls > 0 && roundTextLength > 0 && !reachedMaxRounds) {
+                      const isDoomLoop = toolLoopDetected;
+                      if (isDoomLoop) {
+                        log.warn`[llm-round] Cross-round tool loop detected (fingerprint repeat > ${CROSS_ROUND_THRESHOLD}) — forcing final round without tools`;
+                        doomLoopDetectedInRound = true;
+                      }
+                      if (roundToolCalls > 0 && roundTextLength > 0 && !reachedMaxRounds && !isDoomLoop) {
                         log.info`[synthesis-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round with results`;
 
                         // Push assistant's text + tool calls as a single assistant message
@@ -416,7 +435,7 @@ function chatStreamWithTools(
 
                         // Recurse runRound with same tool availability
                         runRound(round + 1, currentToolSet).then(resolve).catch(reject);
-                      } else if (roundToolCalls > 0 && roundTextLength > 0 && reachedMaxRounds) {
+                      } else if (roundToolCalls > 0 && roundTextLength > 0 && (reachedMaxRounds || isDoomLoop)) {
                         // MAX_ROUNDS reached with tool calls and text — force a final
                         // synthesis round WITHOUT tools so the model must produce text.
                         log.info`[synthesis-round] MAX_ROUNDS=${MAX_ROUNDS} reached, ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round WITHOUT tools`;
@@ -487,6 +506,7 @@ function chatStreamWithTools(
                   BASE_URL,
                   MAX_TOKENS ?? 0,
                   aggregatedUsage,
+                  doomLoopDetectedInRound,
                 ),
               );
               emit.end();

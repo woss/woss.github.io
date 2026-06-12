@@ -16,6 +16,7 @@ export type LLMEvent =
       actualModelName: string;
       provider: string;
       maxTokens: number;
+      toolLoopDetected?: boolean;
     };
 
 export type FinishReason = 'stop' | 'tool-calls' | 'error' | 'length' | 'unknown';

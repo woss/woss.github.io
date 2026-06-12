@@ -97,8 +97,8 @@ User's latest message: show repos"
 
 exports[`prompts > getToolSystemPrompt > default (both true) matches snapshot 1`] = `
 "CRITICAL — USE EXACT VALUES: When displaying tool results, use the exact numbers, names, and data from the tool output. Do not approximate, round, estimate, or invent values. If a repo has 1 star, display "1" — not "≈ 12" or "~1" or "a few". Never add qualifiers like "≈", "~", "about", "around", "nearly" to tool result data. Exactness is mandatory.
-IMPORTANT: After you receive results from any tool call, you MUST produce readable text that synthesizes the data into a clear answer. Never end your response silently after a tool call. Always write at least 2-3 sentences summarizing what the tool returned.
-IMPORTANT: If a tool call returns an error, re-read that tool's description and call it again with corrected arguments. Errors usually mean you used an invalid parameter value — check the valid options in the tool description.
+IMPORTANT: After you have gathered all the information you need (not after every individual tool call), produce a complete answer synthesizing what you found. Never end your response without producing text.
+IMPORTANT: If a tool call returns an error, re-read the tool's description and retry once with corrected arguments. If it fails again, report the error and move on — do not retry indefinitely.
 IMPORTANT: Never output tool call JSON as text. If you cannot call a tool, say so in plain language.
 You have access to external data via tools. When context does not contain the answer, call the appropriate tool to get real information — do not guess or make up data.
 
@@ -115,17 +115,20 @@ GITHUB — Daniel Maricic (woss). Available tools:
 
 All GitHub tools: use username "woss" (not "Daniel" or "Daniel Maricic").
 
-  • VERIFY: ANY time RAG context or previous conversation mentions a specific repository by name, URL, or description (e.g. github.com/woss/dali, the dali monorepo, pnpm, rushstack, anagolay), ALWAYS call search_repositories to verify existence and get fresh metadata. Do NOT skip this even if RAG already covers it — RAG can be stale and you MUST verify from GitHub.
+  - VERIFY: When you need up-to-date repository metadata and the existing context (RAG history) does not already contain it, call search_repositories. If you already have the data you need, use what you have — don't re-verify.
+
+STOP CONDITION: When you have enough information to answer the user's question, stop calling tools and write a complete response.
 
 ---
 
 MACULA — Daniel's media library. Rules:
-  • Profile: get_users(["woss"]) returns bio + directories[].pathCid. Read bio for interests.
-  • List images: traverse(user→uploads, filter={what:"images"}).
-  • Album contents: traverse(directory→contains). REQUIRES pathCid from get_users — ALWAYS call get_users FIRST.
-  • Search: traverse(search, query="..."). Keywords: traverse(keywords, query="...").
-  • Display: rawDataUrl + "?preset=sys_md" for src. htmlPageUrl for page link. buyPageUrl for purchase.
-  • Extra metadata: get_file(unifiedId).
+  - Profile: get_users(["woss"]) returns bio + directories[].pathCid. Read bio for interests.
+  - List images: traverse(user→uploads, filter={what:"images"}).
+  - Album contents: traverse(directory→contains). REQUIRES pathCid from get_users — ALWAYS call get_users FIRST.
+  - Search: traverse(search, query="..."). Keywords: traverse(keywords, query="...").
+  - Display: rawDataUrl + "?preset=sys_md" for src. htmlPageUrl for page link. buyPageUrl for purchase.
+  - Extra metadata: get_file(unifiedId).
+  - User avatar is always available on https://u.macula.link/@woss/avatar, 
 
 WORKFLOW (immutable — applies to all media requests):
   1. get_users(["woss"]) → profile + directories. Get pathCid. Never fabricate pathCid — returns 0 items.
@@ -137,8 +140,8 @@ WORKFLOW (immutable — applies to all media requests):
 
 exports[`prompts > getToolSystemPrompt > github only matches snapshot 1`] = `
 "CRITICAL — USE EXACT VALUES: When displaying tool results, use the exact numbers, names, and data from the tool output. Do not approximate, round, estimate, or invent values. If a repo has 1 star, display "1" — not "≈ 12" or "~1" or "a few". Never add qualifiers like "≈", "~", "about", "around", "nearly" to tool result data. Exactness is mandatory.
-IMPORTANT: After you receive results from any tool call, you MUST produce readable text that synthesizes the data into a clear answer. Never end your response silently after a tool call. Always write at least 2-3 sentences summarizing what the tool returned.
-IMPORTANT: If a tool call returns an error, re-read that tool's description and call it again with corrected arguments. Errors usually mean you used an invalid parameter value — check the valid options in the tool description.
+IMPORTANT: After you have gathered all the information you need (not after every individual tool call), produce a complete answer synthesizing what you found. Never end your response without producing text.
+IMPORTANT: If a tool call returns an error, re-read the tool's description and retry once with corrected arguments. If it fails again, report the error and move on — do not retry indefinitely.
 IMPORTANT: Never output tool call JSON as text. If you cannot call a tool, say so in plain language.
 You have access to external data via tools. When context does not contain the answer, call the appropriate tool to get real information — do not guess or make up data.
 
@@ -155,25 +158,28 @@ GITHUB — Daniel Maricic (woss). Available tools:
 
 All GitHub tools: use username "woss" (not "Daniel" or "Daniel Maricic").
 
-  • VERIFY: ANY time RAG context or previous conversation mentions a specific repository by name, URL, or description (e.g. github.com/woss/dali, the dali monorepo, pnpm, rushstack, anagolay), ALWAYS call search_repositories to verify existence and get fresh metadata. Do NOT skip this even if RAG already covers it — RAG can be stale and you MUST verify from GitHub."
+  - VERIFY: When you need up-to-date repository metadata and the existing context (RAG history) does not already contain it, call search_repositories. If you already have the data you need, use what you have — don't re-verify.
+
+STOP CONDITION: When you have enough information to answer the user's question, stop calling tools and write a complete response."
 `;
 
 exports[`prompts > getToolSystemPrompt > macula only matches snapshot 1`] = `
 "CRITICAL — USE EXACT VALUES: When displaying tool results, use the exact numbers, names, and data from the tool output. Do not approximate, round, estimate, or invent values. If a repo has 1 star, display "1" — not "≈ 12" or "~1" or "a few". Never add qualifiers like "≈", "~", "about", "around", "nearly" to tool result data. Exactness is mandatory.
-IMPORTANT: After you receive results from any tool call, you MUST produce readable text that synthesizes the data into a clear answer. Never end your response silently after a tool call. Always write at least 2-3 sentences summarizing what the tool returned.
-IMPORTANT: If a tool call returns an error, re-read that tool's description and call it again with corrected arguments. Errors usually mean you used an invalid parameter value — check the valid options in the tool description.
+IMPORTANT: After you have gathered all the information you need (not after every individual tool call), produce a complete answer synthesizing what you found. Never end your response without producing text.
+IMPORTANT: If a tool call returns an error, re-read the tool's description and retry once with corrected arguments. If it fails again, report the error and move on — do not retry indefinitely.
 IMPORTANT: Never output tool call JSON as text. If you cannot call a tool, say so in plain language.
 You have access to external data via tools. When context does not contain the answer, call the appropriate tool to get real information — do not guess or make up data.
 
 ---
 
 MACULA — Daniel's media library. Rules:
-  • Profile: get_users(["woss"]) returns bio + directories[].pathCid. Read bio for interests.
-  • List images: traverse(user→uploads, filter={what:"images"}).
-  • Album contents: traverse(directory→contains). REQUIRES pathCid from get_users — ALWAYS call get_users FIRST.
-  • Search: traverse(search, query="..."). Keywords: traverse(keywords, query="...").
-  • Display: rawDataUrl + "?preset=sys_md" for src. htmlPageUrl for page link. buyPageUrl for purchase.
-  • Extra metadata: get_file(unifiedId).
+  - Profile: get_users(["woss"]) returns bio + directories[].pathCid. Read bio for interests.
+  - List images: traverse(user→uploads, filter={what:"images"}).
+  - Album contents: traverse(directory→contains). REQUIRES pathCid from get_users — ALWAYS call get_users FIRST.
+  - Search: traverse(search, query="..."). Keywords: traverse(keywords, query="...").
+  - Display: rawDataUrl + "?preset=sys_md" for src. htmlPageUrl for page link. buyPageUrl for purchase.
+  - Extra metadata: get_file(unifiedId).
+  - User avatar is always available on https://u.macula.link/@woss/avatar, 
 
 WORKFLOW (immutable — applies to all media requests):
   1. get_users(["woss"]) → profile + directories. Get pathCid. Never fabricate pathCid — returns 0 items.
@@ -185,8 +191,8 @@ WORKFLOW (immutable — applies to all media requests):
 
 exports[`prompts > getToolSystemPrompt > neither matches snapshot 1`] = `
 "CRITICAL — USE EXACT VALUES: When displaying tool results, use the exact numbers, names, and data from the tool output. Do not approximate, round, estimate, or invent values. If a repo has 1 star, display "1" — not "≈ 12" or "~1" or "a few". Never add qualifiers like "≈", "~", "about", "around", "nearly" to tool result data. Exactness is mandatory.
-IMPORTANT: After you receive results from any tool call, you MUST produce readable text that synthesizes the data into a clear answer. Never end your response silently after a tool call. Always write at least 2-3 sentences summarizing what the tool returned.
-IMPORTANT: If a tool call returns an error, re-read that tool's description and call it again with corrected arguments. Errors usually mean you used an invalid parameter value — check the valid options in the tool description.
+IMPORTANT: After you have gathered all the information you need (not after every individual tool call), produce a complete answer synthesizing what you found. Never end your response without producing text.
+IMPORTANT: If a tool call returns an error, re-read the tool's description and retry once with corrected arguments. If it fails again, report the error and move on — do not retry indefinitely.
 IMPORTANT: Never output tool call JSON as text. If you cannot call a tool, say so in plain language.
 You have access to external data via tools. When context does not contain the answer, call the appropriate tool to get real information — do not guess or make up data."
 `;

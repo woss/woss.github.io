@@ -456,6 +456,7 @@ interface StreamResult {
   lastError: Error | null;
   partial: boolean;
   msgId: string;
+  toolLoopDetected: boolean;
 }
 
 /**
@@ -498,6 +499,7 @@ async function streamWithRetry(
 
   let anyStepHadToolCalls = false;
   let anySuccessfulToolCalls = false;
+  let doomLoopDetectedInRound = false;
 
   // Pre-generate message ID for tool-call FK tracking
   const db = getDb();
@@ -552,6 +554,9 @@ async function streamWithRetry(
                 }
                 maxTokens = event.maxTokens ?? config().openai.maxTokens;
                 responseMs = Math.floor(performance.now() - streamStartTime);
+                if ('toolLoopDetected' in event && event.toolLoopDetected === true) {
+                  doomLoopDetectedInRound = true;
+                }
                 break;
               }
               case 'step-finish':
@@ -634,10 +639,20 @@ async function streamWithRetry(
 
       lastError = null;
 
-      // Retry if answer is empty or doom loop detected (tools called but no text produced)
+      // Retry if answer is empty, doom loop, tiny text, or tool loop detected
+      const isTinyText =
+        anySuccessfulToolCalls &&
+        answerText.trim().length > 0 &&
+        answerText.trim().length < 100;
       const isDoomLoop = anySuccessfulToolCalls && answerText.trim().length === 0;
-      if (answerText.trim().length === 0 || isDoomLoop) {
-        log.warn`${answerText.trim().length === 0 ? 'Empty answer' : 'Doom loop'} detected, retrying (attempt ${attempt + 1})`;
+      const isToolLoop = doomLoopDetectedInRound;
+      if (answerText.trim().length === 0 || isDoomLoop || isTinyText || isToolLoop) {
+        const reason = isToolLoop
+          ? 'Tool loop detected (cross-round fingerprint repeat)'
+          : isDoomLoop || answerText.trim().length === 0
+            ? 'Doom loop (tools called, no text)'
+            : 'Stuck loop (tools called, tiny text)';
+        log.warn`${reason}, retrying (attempt ${attempt + 1})`;
         if (messages.length > 0 && messages[0].role === 'system') {
           messages[0] = {
             ...messages[0],
@@ -646,8 +661,9 @@ async function streamWithRetry(
               '\n\n' + getDoomLoopRecoveryPrompt(),
           };
         }
-        lastError = new Error(answerText.trim().length === 0 ? 'Empty answer' : 'Doom loop');
-        if (attempt >= 3) mcpToolDefs = null;
+        lastError = new Error(reason);
+        // Disable tools sooner — drop on attempt 2 instead of 3
+        if (attempt >= 2) mcpToolDefs = null;
         continue;
       }
 
@@ -683,6 +699,7 @@ async function streamWithRetry(
     lastError,
     partial,
     msgId,
+    toolLoopDetected: doomLoopDetectedInRound,
   };
 }
 
