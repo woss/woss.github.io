@@ -54,6 +54,7 @@
   md.renderer.rules.image = (tokens, idx, options, env, self) => {
     const token = tokens[idx];
     const src = token.attrGet('src') || '';
+    token.attrSet('class', 'max-w-full h-auto rounded-lg my-2 shadow-lg');
 
     // Append UTM params to image src
     const paramsStr = page.data.queryParams;
@@ -948,13 +949,6 @@
     margin: 0;
   }
 
-  :global(.bg-surface-container img) {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    margin: 0.5em 0;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  }
 .query-type-badge {
   display: inline-flex;
   align-items: center;
