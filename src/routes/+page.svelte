@@ -7,6 +7,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
+  import { Banner } from 'sv5ui';
   import { parse } from 'devalue';
   import Seo from '$lib/components/Seo.svelte';
 
@@ -220,47 +221,33 @@
 
   <div class="flex flex-col flex-1 min-w-0">
     {#if data?.hero}
-    <div class="w-full max-w-200 mx-auto px-4 pt-16 pb-4">
-      <div class="backdrop-blur-md bg-black/10 border border-white/3 rounded-2xl p-6 md:p-8 flex flex-col items-center gap-3 text-center shadow-lg">
-        <h1 class="font-heading text-2xl md:text-3xl lg:text-4xl text-white m-0 leading-tight">
-          {data.hero.title}
-        </h1>
-        <p class="font-body text-base md:text-lg text-white/80 m-0">
-          {data.hero.description}
-        </p>
-        <a href={resolve('/posts/new-woss-io')} class="font-body text-sm font-semibold text-gray-900 bg-white/90 hover:bg-white rounded-full px-5 py-1.5 inline-flex items-center gap-1.5 transition-all duration-150 no-underline shadow-sm">
-          Read the launch post →
-        </a>
-      </div>
+    <div class="w-full max-w-200 mx-auto pt-2 pb-1">
+      <Banner title={data.hero.title} icon="lucide:sparkles" color="primary" to={resolve('/posts/new-woss-io')} class="rounded-lg" />
     </div>
     {/if}
 
     {#if canCreateChat}
     <!-- Original input area -->
-    <main class="flex-1 flex flex-col items-center gap-8 max-md:gap-6 pt-16 md:pt-20">
+    <main class="flex-1 flex flex-col items-center gap-6 max-md:gap-4 pt-9">
       <!-- Hero + Input -->
-      <div class="w-full flex flex-col items-center gap-6 pb-16">
+      <div class="w-full flex flex-col items-center gap-6">
         <div class="w-full max-w-200 flex flex-col gap-5">
           <HomeChatInput bind:messageText bind:isLoading bind:inputEl onsend={sendMessage} onsuggested={handleSuggestedClick} />
         </div>
       </div>
 
-      <!-- Footer tagline -->
-      <div class="flex flex-col items-center gap-4 w-full max-w-120">
-        <div class="w-full h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.08)_20%,rgba(255,255,255,0.08)_80%,transparent)]" aria-hidden="true"></div>
-        <p class="font-body text-sm text-on-surface-variant text-center m-0">Ask about my work, career, skills, and experience.</p>
-      </div>
-
       <!-- Featured posts -->
       {#if featuredReady && data?.featuredPosts?.length}
-      <div class="w-full max-w-200 pt-12">
+      <div class="w-full max-w-200 pt-2">
+
+
         <div class="flex flex-col gap-3">
           <h2 class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wider m-0">Featured Posts</h2>
-          <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-            {#each data?.featuredPosts ?? [] as post (post.slug)}
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {#each (data?.featuredPosts ?? []).slice(-3) as post (post.slug)}
               <a
                 href={resolve('/posts/[slug]', { slug: post.slug })}
-                class="shrink-0 w-56 flex flex-col gap-2 rounded-xl bg-surface-container-high border border-[rgba(255,255,255,0.06)] p-4 no-underline transition-all duration-150 hover:border-primary/30 hover:shadow-[0_0_20px_rgba(0,255,136,0.06)] hover:-translate-y-0.5"
+                class="flex flex-col gap-2 rounded-xl bg-surface-container-high border border-[rgba(255,255,255,0.06)] p-4 no-underline transition-all duration-150 hover:border-primary/30 hover:shadow-[0_0_20px_rgba(0,255,136,0.06)] hover:-translate-y-0.5"
               >
                 {#if post.headerImage}
                   <div class="w-full aspect-video rounded-lg overflow-hidden bg-surface-container">
@@ -374,51 +361,75 @@
         </div>
       </div>
     </main>
+      <!-- Featured posts -->
+      {#if featuredReady && data?.featuredPosts?.length}
+      <div class="w-full max-w-200 pt-2 mx-auto">
+
+
+        <div class="flex flex-col gap-3">
+          <h2 class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wider m-0">Featured Posts</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {#each (data?.featuredPosts ?? []).slice(-3) as post (post.slug)}
+              <a
+                href={resolve('/posts/[slug]', { slug: post.slug })}
+                class="flex flex-col gap-2 rounded-xl bg-surface-container-high border border-[rgba(255,255,255,0.06)] p-4 no-underline transition-all duration-150 hover:border-primary/30 hover:shadow-[0_0_20px_rgba(0,255,136,0.06)] hover:-translate-y-0.5"
+              >
+                {#if post.headerImage}
+                  <div class="w-full aspect-video rounded-lg overflow-hidden bg-surface-container">
+                    <img src={post.headerImage.url} alt={post.headerImage.alt} class="w-full h-full object-cover" />
+                  </div>
+                {/if}
+                <div class="flex flex-col gap-1 min-w-0">
+                  <h3 class="font-body text-sm font-semibold text-on-surface m-0 line-clamp-2">{post.title}</h3>
+                  {#if post.description}
+                    <p class="font-body text-xs text-on-surface-variant m-0 line-clamp-2">{post.description}</p>
+                  {/if}
+                  <div class="flex items-center gap-2 mt-1">
+                    {#if post.date}
+                      <span class="font-mono text-[10px] text-on-surface-variant">{new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    {/if}
+                    {#each post.tags.slice(0, 2) as tag (tag)}
+                      <span class="font-mono text-[10px] text-primary/60 bg-primary/5 px-1.5 py-0.5 rounded-full">{tag}</span>
+                    {/each}
+                  </div>
+                </div>
+              </a>
+            {/each}
+          </div>
+        </div>
+      </div>
+      {/if}
     {/if}
   </div>
 </div>
 {:else}
 {#if data?.hero}
-<div class="relative z-[2] w-full flex flex-col items-center gap-6 pt-16 pb-8 max-md:px-4">
-  <div class="w-full max-w-200 px-4">
-    <div class="backdrop-blur-md bg-black/10 border border-white/[0.03] rounded-2xl p-6 md:p-8 flex flex-col items-center gap-3 text-center shadow-lg">
-      <h1 class="font-heading text-2xl md:text-3xl lg:text-4xl text-white m-0 leading-tight">
-        {data.hero.title}
-      </h1>
-      <p class="font-body text-base md:text-lg text-white/80 m-0">
-        {data.hero.description}
-      </p>
-      <a href={resolve('/posts/new-woss-io')} class="font-body text-sm font-semibold text-gray-900 bg-white/90 hover:bg-white rounded-full px-5 py-1.5 inline-flex items-center gap-1.5 transition-all duration-150 no-underline shadow-sm">
-        Read the launch post →
-      </a>
-    </div>
+<div class="relative z-[2] w-full px-8 max-md:px-4 pt-2 pb-0">
+  <div class="w-full max-w-200 mx-auto">
+    <Banner title={data.hero.title} icon="lucide:sparkles" color="primary" to={resolve('/posts/new-woss-io')} class="rounded-lg" />
   </div>
 </div>
 {/if}
-<div class="relative z-2 flex flex-col items-center min-h-[calc(100vh-var(--nav-height)-3rem)] gap-8 px-8 max-md:px-4 max-md:gap-6">
+<div class="relative z-2 flex flex-col items-center min-h-[calc(100vh-var(--nav-height)-3rem)] gap-4 px-8 max-md:px-4 max-md:gap-4">
   <!-- Hero + Input -->
-  <div class="w-full flex flex-col items-center gap-6 pb-16">
+  <div class="w-full flex flex-col items-center gap-6">
     <div class="w-full max-w-200 flex flex-col gap-5">
       <HomeChatInput bind:messageText bind:isLoading bind:inputEl onsend={sendMessage} onsuggested={handleSuggestedClick} />
     </div>
   </div>
 
-  <!-- Footer tagline -->
-  <div class="flex flex-col items-center gap-4 w-full max-w-120">
-    <div class="w-full h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.08)_20%,rgba(255,255,255,0.08)_80%,transparent)]" aria-hidden="true"></div>
-    <p class="font-body text-sm text-on-surface-variant text-center m-0">Ask about my work, career, skills, and experience.</p>
-  </div>
-
   <!-- Featured posts -->
   {#if featuredReady && data?.featuredPosts?.length}
-  <div class="w-full max-w-200 pt-12">
+  <div class="w-full max-w-200 pt-2">
+
+
     <div class="flex flex-col gap-3">
       <h2 class="font-body text-xs font-semibold text-on-surface-variant uppercase tracking-wider m-0">Featured Posts</h2>
-      <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-        {#each data?.featuredPosts ?? [] as post (post.slug)}
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {#each (data?.featuredPosts ?? []).slice(-3) as post (post.slug)}
           <a
             href={resolve('/posts/[slug]', { slug: post.slug })}
-            class="shrink-0 w-56 flex flex-col gap-2 rounded-xl bg-surface-container-high border border-[rgba(255,255,255,0.06)] p-4 no-underline transition-all duration-150 hover:border-primary/30 hover:shadow-[0_0_20px_rgba(0,255,136,0.06)] hover:-translate-y-0.5"
+            class="flex flex-col gap-2 rounded-xl bg-surface-container-high border border-[rgba(255,255,255,0.06)] p-4 no-underline transition-all duration-150 hover:border-primary/30 hover:shadow-[0_0_20px_rgba(0,255,136,0.06)] hover:-translate-y-0.5"
           >
             {#if post.headerImage}
               <div class="w-full aspect-[16/9] rounded-lg overflow-hidden bg-surface-container">
@@ -464,12 +475,3 @@
 </div>
 
 
-<style>
-  :global(.scrollbar-hide) {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  :global(.scrollbar-hide::-webkit-scrollbar) {
-    display: none;
-  }
-</style>
