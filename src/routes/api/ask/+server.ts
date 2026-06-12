@@ -16,7 +16,7 @@ import { embedText } from '$lib/server/embed';
 import { buildRagPrompt, chatStream, chatStreamWithTools, isAvailable } from '$lib/server/llm';
 import { checkCache, storeCache } from '$lib/server/llm-cache';
 import { checkRateLimit } from '$lib/server/rate-limiter';
-import { getMcpToolDefs, getMcpResourceContent, getSystemPromptAddition, type McpToolDef } from '$lib/server/mcp/tools';
+import { getMcpToolDefs, getMcpResourceContent, type McpToolDef } from '$lib/server/mcp/tools';
 import { config } from '$lib/server/config';
 import { config as clientConfig } from '$lib/config';
 import type { RequestEvent } from '@sveltejs/kit';

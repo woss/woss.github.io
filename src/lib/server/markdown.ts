@@ -1,5 +1,6 @@
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
 import remarkFrontmatter from 'remark-frontmatter';
 import remarkRehype from 'remark-rehype';
 import rehypeHighlight from 'rehype-highlight';
@@ -11,6 +12,7 @@ import matter from 'gray-matter';
 function createProcessor() {
   return unified()
     .use(remarkParse)
+    .use(remarkGfm)
     .use(remarkFrontmatter, ['yaml', 'toml'])
     .use(remarkRehype, { allowDangerousHtml: false })
     .use(rehypeHighlight)

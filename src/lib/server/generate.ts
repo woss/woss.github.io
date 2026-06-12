@@ -18,9 +18,14 @@ import {
   getMcpToolDefs,
   getMcpResourceContent,
   getMcpPromptContent,
-  getSystemPromptAddition,
   type McpToolDef,
 } from '$lib/server/mcp/tools';
+import {
+  getToolSystemPrompt,
+  getToolClassifierUserPrompt,
+  getToolClassifierSystemPrompt,
+  getDoomLoopRecoveryPrompt,
+} from './prompts.ts';
 import type { LLMEvent } from '$lib/server/llm/types';
 import { config } from '$lib/server/config';
 import { CAT, createLogger } from '$lib/server/logger';
@@ -129,19 +134,7 @@ async function classifyToolNeeds(
     .join('\n');
 
   try {
-    const content =
-      "Given this conversation, does the user's response require executing tools?\n\n" +
-      'GITHUB — searching code, listing issues, pull requests, repos, stars, forks, commits.\n' +
-      'MACULA — viewing, searching, listing photos, images, videos, files, media, keywords, licenses.\n' +
-      'NONE — simple reply, greeting, thanks, or question needing no tools.\n\n' +
-      'Examples:\n' +
-      '- User says "show your repos" → github\n' +
-      '- User says "find photos of landscape" → macula\n' +
-      '- User says "yup do it" after assistant offered to search GitHub → github\n' +
-      '- User says "3 more?" after assistant showed photos → macula\n' +
-      '- User says "thanks!" → none\n' +
-      (context ? `Conversation so far:\n${context}\n\n` : '') +
-      `User's latest message: ${question}`;
+    const content = getToolClassifierUserPrompt(question, context || undefined);
     log.info`🔍 classifyToolNeeds prompt:\n${content}`;
     const response = await fetch(`${config().openai.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -156,17 +149,7 @@ async function classifyToolNeeds(
         messages: [
           {
             role: 'system',
-            content: `You are a classifier for a personal AI assistant. Determine if the user's message requires tool execution.
-
-GITHUB (answer: github): User wants to search code, list issues, pull requests, repos, stars, forks, commits — GitHub operations.
-
-MACULA (answer: macula): User wants to view, search, or list photos, images, videos, files, media, keywords, licenses — Macula media/asset operations or view portfolio content.
-
-BOTH (answer: both): The message requires both GitHub and Macula tools.
-
-NONE (answer: none): The message is a simple reply, greeting, or question needing no tools.
-
-Respond with exactly one word: github, macula, both, or none.`,
+            content: getToolClassifierSystemPrompt(),
           },
           {
             role: 'user',
@@ -660,7 +643,7 @@ async function streamWithRetry(
             ...messages[0],
             content:
               messages[0].content +
-              '\n\nMANDATORY INSTRUCTION: Your previous response was a failure — you called tools but produced NO answer text. You are being retried. For this attempt: DO NOT call any tools. IGNORE any available tools. Use only the information you already have and write a complete, well-formatted answer immediately. Even if you have nothing to say, write SOMETHING — a greeting, an apology, anything. Producing NO text is unacceptable. You MUST write at least one sentence.',
+              '\n\n' + getDoomLoopRecoveryPrompt(),
           };
         }
         lastError = new Error(answerText.trim().length === 0 ? 'Empty answer' : 'Doom loop');
@@ -1032,7 +1015,7 @@ export async function startGeneration(
           log.info`🔧 tools: ${toolDefs.map((t: McpToolDef) => t.name).join(', ')}`;
           // Inject tool awareness into system prompt (always first message)
           if (messages.length > 0 && messages[0].role === 'system') {
-            let additions = getSystemPromptAddition({ github: githubNeeded, macula: maculaNeeded });
+            let additions = getToolSystemPrompt({ github: githubNeeded, macula: maculaNeeded });
             if (resourceContent) additions += '\n\n' + resourceContent;
             if (promptContent) additions += '\n\n' + promptContent;
             messages[0] = {

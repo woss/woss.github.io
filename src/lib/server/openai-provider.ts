@@ -14,6 +14,7 @@ import { provider, modelName } from './llm/provider';
 import type { LLMEvent, FinishReason, TokenUsage } from './llm/types';
 import type { ModelMessage, ToolSet } from 'ai';
 import type { McpToolCallResult } from './mcp/client';
+import { getSystemPrompt } from './prompts.ts';
 
 /* ------------------------------------------------------------------ */
 /*  LLMEvent Factory Functions (type-safe constructors)                */
@@ -156,7 +157,7 @@ function sanitizeText(raw: string): string {
 function buildRagPrompt(question: string, chunks: RagChunk[], history?: ChatMessage[]): ChatMessage[] {
   const messages: ChatMessage[] = [];
 
-  let systemPrompt = config().prompts.system;
+  let systemPrompt = getSystemPrompt();
 
   if (chunks.length > 0) {
     const context = chunks
@@ -281,7 +282,7 @@ function chatStreamWithTools(
 
           const MAX_ROUNDS = config().openai.maxRounds;
 
-          async function runRound(round: number): Promise<void> {
+          async function runRound(round: number, currentToolSet: ToolSet | undefined): Promise<void> {
             if (aborted) return;
 
             let roundToolCalls = 0;
@@ -299,7 +300,7 @@ function chatStreamWithTools(
                   abortSignal: signal,
                   temperature: 0.2,
                   ...(MAX_TOKENS !== undefined ? { maxTokens: MAX_TOKENS } : {}),
-                  ...(toolSet ? { tools: toolSet, maxSteps: FIRST_ROUND_MAX_STEPS } : {}),
+                  ...(currentToolSet ? { tools: currentToolSet, maxSteps: FIRST_ROUND_MAX_STEPS } : {}),
                   onChunk: ({ chunk }) => {
                     if (aborted) return;
                     switch (chunk.type) {
@@ -374,7 +375,8 @@ function chatStreamWithTools(
                       // and cause the model to call tools again in a loop.
                       // Skip recursion and resolve immediately — generate.ts's
                       // "Empty answer" / "Doom loop" detection handles the retry.
-                      if (roundToolCalls > 0 && roundTextLength > 0 && round < MAX_ROUNDS) {
+                      const reachedMaxRounds = round >= MAX_ROUNDS;
+                      if (roundToolCalls > 0 && roundTextLength > 0 && !reachedMaxRounds) {
                         log.info`[synthesis-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round with results`;
 
                         // Push assistant's text + tool calls as a single assistant message
@@ -412,9 +414,50 @@ function chatStreamWithTools(
                           emit.single(textDeltaEvent('\n\n'));
                         }
 
-                        // Recurse runRound instead of a separate synthesis round
-                        // All rounds have identical tools and system prompts
-                        runRound(round + 1).then(resolve).catch(reject);
+                        // Recurse runRound with same tool availability
+                        runRound(round + 1, currentToolSet).then(resolve).catch(reject);
+                      } else if (roundToolCalls > 0 && roundTextLength > 0 && reachedMaxRounds) {
+                        // MAX_ROUNDS reached with tool calls and text — force a final
+                        // synthesis round WITHOUT tools so the model must produce text.
+                        log.info`[synthesis-round] MAX_ROUNDS=${MAX_ROUNDS} reached, ${roundToolCalls} tool calls, ${roundTextLength} text chars — running synthesis round WITHOUT tools`;
+
+                        // Push assistant's text + tool calls
+                        currentMessages.push({
+                          role: 'assistant',
+                          content: [
+                            ...(roundText ? [{ type: 'text' as const, text: roundText }] : []),
+                            ...roundToolCallRecords.map(tc => ({
+                              type: 'tool-call' as const,
+                              toolCallId: tc.toolCallId,
+                              toolName: tc.toolName,
+                              input: tc.input,
+                            })),
+                          ] as Array<{ type: 'text'; text: string } | { type: 'tool-call'; toolCallId: string; toolName: string; input: unknown }>,
+                        });
+                        // Push tool results
+                        for (let i = 0; i < roundToolCallRecords.length; i++) {
+                          const tc = roundToolCallRecords[i];
+                          const result = roundToolResults[i] ?? '';
+                          currentMessages.push({
+                            role: 'tool',
+                            content: [{
+                              type: 'tool-result' as const,
+                              toolCallId: tc.toolCallId,
+                              toolName: tc.toolName,
+                              output: { type: 'text' as const, value: result },
+                            }],
+                          });
+                        }
+
+                        // Ensure text continuity
+                        if (roundTextLength > 0 && !/\s$/.test(roundText)) {
+                          emit.single(textDeltaEvent('\n\n'));
+                        }
+
+                        log.info`[synthesis-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}`;
+
+                        // Synthesis round with NO tools — forces the model to synthesize
+                        runRound(round + 1, undefined).then(resolve).catch(reject);
                       } else {
                         resolve();
                       }
@@ -432,7 +475,7 @@ function chatStreamWithTools(
             });
           }
 
-          runRound(1)
+          runRound(1, toolSet)
             .then(() => {
               if (aborted) return;
               aborted = true;

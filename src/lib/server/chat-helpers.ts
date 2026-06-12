@@ -1,5 +1,6 @@
 import { getChat, renameChat } from '$lib/server/db';
 import { config } from '$lib/server/config';
+import { getRelevanceCheckUserPrompt, getRelevanceCheckSystemPrompt, getPoliteResponseSystemPrompt } from './prompts.ts';
 import { CAT, createLogger } from '$lib/server/logger';
 
 /** Shape of a chat-completion API response. */
@@ -111,11 +112,7 @@ export async function isRelevant(
     .join('\n');
 
   try {
-    const content =
-      "Is this message about Daniel Maricic's professional portfolio, " +
-      'skills, experience, projects, or career history?' +
-      (context ? `\n\nPrevious context:\n${context}` : '') +
-      `\n\nMessage: ${question}`;
+    const content = getRelevanceCheckUserPrompt(question, context || undefined);
     const response = await fetch(`${config().openai.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -132,13 +129,7 @@ export async function isRelevant(
         messages: [
           {
             role: 'system',
-            content: `You are a classifier for a professional portfolio website. Determine if the user's message is relevant to Daniel Maricic's work. Answer exactly one word: yes or no.
-
-RELEVANT (answer yes): Questions about his skills, experience, projects, career history. Expressions of gratitude (thank you, thanks, appreciate it). Requests to contact, hire, or collaborate. Polite conversation closings. Follow-ups continuing an already-relevant topic. Messages with his name or project names.
-
-NOT RELEVANT (answer no): Questions about politics, sports, entertainment, weather, general knowledge, math, coding help not related to his projects, or anything completely unrelated to Daniel Maricic's professional portfolio.
-
-Respond only with "yes" or "no".`,
+            content: getRelevanceCheckSystemPrompt(),
           },
           {
             role: 'user',
@@ -184,7 +175,7 @@ export async function generatePoliteResponse(message: string, signal?: AbortSign
       messages: [
         {
           role: 'system',
-          content: `You are Daniel Maricic's friendly AI assistant. The user has sent a polite message or positive feedback. Respond warmly, naturally, and briefly (1-2 sentences). Do NOT mention specific projects, skills, or portfolio items. Keep it light and friendly.`,
+          content: getPoliteResponseSystemPrompt(),
         },
         { role: 'user', content: message },
       ],
