@@ -256,8 +256,8 @@
   <div
     class="shadow-md wrap-break-word max-md:max-w-full {message.role ===
     'assistant'
-      ? 'w-full rounded-2xl rounded-bl-sm border-l-3 border-primary/15 p-4 max-sm:p-3'
-      : 'max-w-[80%] ml-auto rounded-2xl rounded-br-sm p-4'} {message.role === 'user'
+      ? 'w-full rounded-lg rounded-bl-sm border-l-3 border-primary/15 p-4 max-sm:p-3'
+      : 'max-w-[80%] ml-auto rounded-lg rounded-br-sm p-4'} {message.role === 'user'
       ? 'bg-surface-container-high'
       : 'bg-surface-container'}{message.error
       ? ' bg-[color-mix(in_srgb,var(--color-secondary)_8%,transparent)] border-2 border-secondary/40'
