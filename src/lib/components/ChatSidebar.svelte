@@ -97,14 +97,6 @@
   </div>
 
 
-    <!-- Sound toggle -->
-  <div class="border-t border-[rgba(255,255,255,0.08)] px-3 py-2.5">
-    <div class="flex items-center justify-between">
-      <span class="text-xs text-on-surface-variant font-body">Sound</span>
-      <SoundToggle />
-    </div>
-  </div>
-
   <!-- MCP server status -->
   {#if mcpServers.length > 0}
     <div class="border-t border-[rgba(255,255,255,0.08)] px-3 py-2.5">
@@ -147,7 +139,8 @@
   </div>
 
   <!-- Footer -->
-  <div class="flex items-center justify-end p-3 border-t border-[rgba(255,255,255,0.08)]">
+  <div class="flex items-center justify-between p-3 border-t border-[rgba(255,255,255,0.08)]">
+    <SoundToggle />
     <p class="text-xs text-on-surface-variant font-mono truncate">{chats.length}/{config.public.maxChats} chats</p>
   </div>
 </aside>
