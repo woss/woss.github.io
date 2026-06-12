@@ -29,6 +29,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "25.9.2",
+    "@types/uuid": "^11.0.0",
     "devalue": "^5.8.1",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
@@ -92,7 +93,8 @@
     "tailwind-merge": "^3.6.0",
     "tailwind-variants": "^3.2.2",
     "unified": "^11.0.5",
-    "usearch": "2.25.3"
+    "usearch": "2.25.3",
+    "uuid": "^14.0.0"
   },
   "devEngines": {
     "runtime": {

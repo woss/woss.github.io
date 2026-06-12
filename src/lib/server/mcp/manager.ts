@@ -195,7 +195,7 @@ export class McpManager {
           });
           nameCounts.set(tool.name, (nameCounts.get(tool.name) ?? 0) + 1);
         }
-        log.trace`tools loaded for ${serverId}: ${result.tools.length}`;
+        log.debug`tools loaded for ${serverId}: ${result.tools.length}`;
       } catch (err) {
         log.debug`listTools failed for ${serverId}: ${err instanceof Error ? err.message : String(err)}`;
       }

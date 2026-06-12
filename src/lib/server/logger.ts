@@ -4,7 +4,7 @@
  *
  * Sinks:
  *   - console: getPrettyFormatter (dev readability)
- *   - file: jsonLinesFormatter → ./data/logs/woss.io.log (rotating)
+ *   - file: getJsonLinesFormatter({ properties: "flatten" }) → ./data/logs/woss.io.log (rotating)
  *
  * Use:
  *   import { CAT, createLogger } from '$lib/server/logger';
@@ -13,12 +13,13 @@
  *   log.error`Failed: ${err}`;
  */
 
-import { configure, getConsoleSink, getLogger, jsonLinesFormatter, type Logger, type LogRecord, type Sink } from '@logtape/logtape';
+import { configure, getConsoleSink, getLogger, getJsonLinesFormatter, type Logger, type LogRecord, type Sink } from '@logtape/logtape';
 import { getRotatingFileSink } from '@logtape/file';
 import { getPrettyFormatter } from '@logtape/pretty';
 import { env } from 'node:process';
 import { join } from 'node:path';
 import { existsSync, mkdirSync } from 'node:fs';
+import { traceStorage } from './trace-context';
 
 // Level mapping: LogTape → ZinaLog
 const ZINA_LEVEL_MAP: Record<string, string> = {
@@ -45,7 +46,16 @@ function getZinaLogSink(url: string, apiKey: string): Sink {
     const level = ZINA_LEVEL_MAP[record.level] ?? 'info';
     const message = formatLogtapeMessage(record.message);
     const service = record.category.join('.');
-    const body = JSON.stringify({ level, message, service });
+    const body: Record<string, unknown> = { level, message, service };
+    // Attach trace context to metadata
+    const { traceId, spanId } = record.properties as Record<string, string | undefined>;
+    if (traceId || spanId) {
+      const metadata: Record<string, string> = {};
+      if (traceId) metadata.traceId = traceId;
+      if (spanId) metadata.spanId = spanId;
+      body.metadata = metadata;
+    }
+    const bodyStr = JSON.stringify(body);
     // Fire-and-forget POST — non-blocking
     fetch(ingestUrl, {
       method: 'POST',
@@ -53,7 +63,7 @@ function getZinaLogSink(url: string, apiKey: string): Sink {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body,
+      body: bodyStr,
     }).catch((err: unknown) => {
       // fallback: can't use logger here (circular), use console as last resort
       console.error('[zinalog] push failed:', (err as Error)?.message ?? err);
@@ -104,7 +114,7 @@ export async function initLogger(logLevel: 'trace' | 'debug' | 'info' | 'warning
   const sinks: Record<string, Sink> = {
     console: getConsoleSink({ formatter: getPrettyFormatter({ inspectOptions: { colors: true } }) }),
     file: getRotatingFileSink(logFile, {
-      formatter: jsonLinesFormatter,
+      formatter: getJsonLinesFormatter({ properties: "flatten" }),
       bufferSize: 0,
       flushInterval: 0,
       nonBlocking: true,
@@ -122,6 +132,7 @@ export async function initLogger(logLevel: 'trace' | 'debug' | 'info' | 'warning
 
   await configure({
     sinks,
+    contextLocalStorage: traceStorage,
     loggers: [
       {
         category: ['woss'],
