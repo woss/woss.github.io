@@ -1,51 +1,51 @@
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: woss-ollama
-    volumes:
-      - ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"
-    restart: unless-stopped
-    environment:
-      - OLLAMA_KEEP_ALIVE=-1
-    healthcheck:
-      test: ["CMD", "ollama", "list"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: woss-ollama
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   ports:
+  #     - "11434:11434"
+  #   restart: unless-stopped
+  #   environment:
+  #     - OLLAMA_KEEP_ALIVE=-1
+  #   healthcheck:
+  #     test: ["CMD", "ollama", "list"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 20s
 
-  ollama-init:
-    image: ollama/ollama:latest
-    container_name: woss-ollama-init
-    volumes:
-      - ollama_data:/root/.ollama
-    environment:
-      - OLLAMA_HOST=http://ollama:11434
-    command: ["pull", "gemma4:e4b"]
-    depends_on:
-      ollama:
-        condition: service_healthy
-    restart: "no"
+  # ollama-init:
+  #   image: ollama/ollama:latest
+  #   container_name: woss-ollama-init
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   environment:
+  #     - OLLAMA_HOST=http://ollama:11434
+  #   command: ["pull", "gemma4:e4b"]
+  #   depends_on:
+  #     ollama:
+  #       condition: service_healthy
+  #   restart: "no"
 
-  ollama-warmup:
-    image: curlimages/curl:latest
-    container_name: woss-ollama-warmup
-    depends_on:
-      ollama:
-        condition: service_healthy
-      ollama-init:
-        condition: service_completed_successfully
-    command:
-      - -X
-      - POST
-      - http://ollama:11434/api/generate
-      - -H
-      - "Content-Type: application/json"
-      - -d
-      - '{"model": "gemma4:e4b", "prompt": "warmup", "keep_alive": -1}'
-    restart: "no"
+  # ollama-warmup:
+  #   image: curlimages/curl:latest
+  #   container_name: woss-ollama-warmup
+  #   depends_on:
+  #     ollama:
+  #       condition: service_healthy
+  #     ollama-init:
+  #       condition: service_completed_successfully
+  #   command:
+  #     - -X
+  #     - POST
+  #     - http://ollama:11434/api/generate
+  #     - -H
+  #     - "Content-Type: application/json"
+  #     - -d
+  #     - '{"model": "gemma4:e4b", "prompt": "warmup", "keep_alive": -1}'
+  #   restart: "no"
 
   search-index-init:
     image: woss/woss-io:latest
@@ -70,12 +70,14 @@ services:
       - OPENAI_MODEL=gemma4:e4b
       - OPENAI_API_KEY=public
     depends_on:
-      ollama:
+      zinalog:
         condition: service_started
-      ollama-init:
-        condition: service_completed_successfully
-      ollama-warmup:
-        condition: service_completed_successfully
+      # ollama:
+      #   condition: service_started
+      # ollama-init:
+      #   condition: service_completed_successfully
+      # ollama-warmup:
+      #   condition: service_completed_successfully
       search-index-init:
         condition: service_completed_successfully
       # mermaid:
@@ -91,6 +93,21 @@ services:
   #   ports:
   #     - "8121:8080"
   #   restart: unless-stopped
+
+  zinalog:
+    image: ghcr.io/iamceeso/zinalog:latest
+    container_name: woss-zinalog
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: "4000"
+      HOSTNAME: "0.0.0.0"
+      DATABASE_PATH: /data/logs.db
+      TRUST_PROXY: "false"
+      ENCRYPTION_KEY: ${ZINALOG_ENCRYPTION_KEY}
+    volumes:
+      - ./data/zinalog:/data
 
 volumes:
   ollama_data:

@@ -13,11 +13,53 @@
  *   log.error`Failed: ${err}`;
  */
 
-import { configure, getConsoleSink, getLogger, jsonLinesFormatter, type Logger } from '@logtape/logtape';
+import { configure, getConsoleSink, getLogger, jsonLinesFormatter, type Logger, type LogRecord, type Sink } from '@logtape/logtape';
 import { getRotatingFileSink } from '@logtape/file';
 import { getPrettyFormatter } from '@logtape/pretty';
+import { env } from 'node:process';
 import { join } from 'node:path';
 import { existsSync, mkdirSync } from 'node:fs';
+
+// Level mapping: LogTape → ZinaLog
+const ZINA_LEVEL_MAP: Record<string, string> = {
+  trace: 'debug',
+  debug: 'debug',
+  info: 'info',
+  warning: 'warning',
+  error: 'error',
+  fatal: 'error',
+};
+
+function formatLogtapeMessage(parts: readonly (string | unknown)[]): string {
+  let msg = '';
+  for (let i = 0; i < parts.length; i += 2) {
+    msg += parts[i];
+    if (i + 1 < parts.length) msg += String(parts[i + 1] ?? '');
+  }
+  return msg;
+}
+
+function getZinaLogSink(url: string, apiKey: string): Sink {
+  const ingestUrl = `${url.replace(/\/$/, '')}/api/logs`;
+  return (record: LogRecord) => {
+    const level = ZINA_LEVEL_MAP[record.level] ?? 'info';
+    const message = formatLogtapeMessage(record.message);
+    const service = record.category.join('.');
+    const body = JSON.stringify({ level, message, service });
+    // Fire-and-forget POST — non-blocking
+    fetch(ingestUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body,
+    }).catch((err: unknown) => {
+      // fallback: can't use logger here (circular), use console as last resort
+      console.error('[zinalog] push failed:', (err as Error)?.message ?? err);
+    });
+  };
+}
 
 /** Categories used across the app — add new ones here. */
 export const CAT = {
@@ -55,28 +97,41 @@ export async function initLogger(logLevel: 'trace' | 'debug' | 'info' | 'warning
 
   const logFile = join(logDir, 'woss.io.log');
 
+  // ZinaLog sink (if configured)
+  const zinalogUrl = env.ZINALOG_URL;
+  const zinalogApiKey = env.ZINALOG_API_KEY;
+
+  const sinks: Record<string, Sink> = {
+    console: getConsoleSink({ formatter: getPrettyFormatter({ inspectOptions: { colors: true } }) }),
+    file: getRotatingFileSink(logFile, {
+      formatter: jsonLinesFormatter,
+      bufferSize: 0,
+      flushInterval: 0,
+      nonBlocking: true,
+      maxFiles: 7,
+      maxSize: 10 * 1024 * 1024, // 10 MB per file
+    }),
+  };
+
+  const extraSinks: string[] = [];
+
+  if (zinalogUrl && zinalogApiKey) {
+    sinks.zinalog = getZinaLogSink(zinalogUrl, zinalogApiKey);
+    extraSinks.push('zinalog');
+  }
+
   await configure({
-    sinks: {
-      console: getConsoleSink({ formatter: getPrettyFormatter({ inspectOptions: { colors: true } }) }),
-      file: getRotatingFileSink(logFile, {
-        formatter: jsonLinesFormatter,
-        bufferSize: 0,
-        flushInterval: 0,
-        nonBlocking: true,
-        maxFiles: 7,
-        maxSize: 10 * 1024 * 1024, // 10 MB per file
-      }),
-    },
+    sinks,
     loggers: [
       {
         category: ['woss'],
         lowestLevel: logLevel,
-        sinks: ['console', 'file'],
+        sinks: ['console', 'file', ...extraSinks],
       },
       {
         category: ['logtape', 'meta'],
         lowestLevel: 'warning',
-        sinks: ['console', 'file'],
+        sinks: ['console', 'file', ...extraSinks],
       },
     ],
   });
