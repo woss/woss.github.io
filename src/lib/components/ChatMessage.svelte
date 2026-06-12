@@ -318,17 +318,22 @@
         {message.text}
       {/if}
       {#if message.role === 'assistant' && isLast && isLoading}
-        {#if message.text}
-          <span class="font-mono text-primary animate-blink select-none" aria-hidden="true">|</span>
-        {:else}
-          <span class="inline-flex items-center gap-2 text-on-surface-variant italic">
-            <span
-              class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_var(--color-primary),0_0_16px_rgba(0,255,136,0.3)] animate-pulse-dot"
-              aria-hidden="true"
-            ></span>
-            Thinking...
+        <span class="inline-flex items-center gap-1.5 align-middle" aria-hidden="true">
+          <span class="inline-flex relative w-[18px] h-[18px] items-center justify-center">
+            <!-- orbit ring -->
+            <span class="absolute inset-0 rounded-full border border-primary/20"></span>
+            <!-- central star -->
+            <span class="w-[5px] h-[5px] rounded-full bg-primary shadow-[0_0_6px_var(--color-primary)]"
+                  style="animation: pulse-center 2s ease-in-out infinite"></span>
+            <!-- orbiting moon -->
+            <span class="absolute inset-0" style="animation: orbit 2s linear infinite">
+              <span class="absolute top-[-2px] left-1/2 -translate-x-1/2 w-[3px] h-[3px] rounded-full bg-primary shadow-[0_0_4px_var(--color-primary)]"></span>
+            </span>
           </span>
-        {/if}
+          {#if !message.text}
+            <span class="text-on-surface-variant italic text-sm">Thinking...</span>
+          {/if}
+        </span>
       {/if}
       {#if message.role === 'assistant' && isLast && isLoading && streamingToolValues.length > 0}
         <div class="mt-3 space-y-1">

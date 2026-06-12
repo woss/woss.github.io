@@ -31,6 +31,8 @@
   --animate-page-enter: page-enter 600ms ease-out both;
   --animate-content-enter: content-enter 500ms ease-out both;
   --animate-fade-in: fade-in 500ms ease-out both;
+  --animate-orbit: orbit 2s linear infinite;
+  --animate-pulse-center: pulse-center 2s ease-in-out infinite;
 }
 
 @keyframes blink {
@@ -185,4 +187,14 @@ h1, h2, h3, h4, h5, h6 {
 .prose pre {
   padding: 0;
   background: transparent;
+}
+
+@keyframes orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-center {
+  0%, 100% { opacity: 0.6; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.15); }
 }
