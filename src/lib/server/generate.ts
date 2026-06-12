@@ -386,7 +386,7 @@ async function handleEarlyGates(
       const ce = await embedText(cacheText);
       cacheEmbeddingData = ce.data;
     } catch (error) {
-      console.error('Failed to generate composite embedding', error);
+      log.error('Failed to generate composite embedding', { error: error instanceof Error ? error.message : String(error) });
       /* fallback */
     }
   }
@@ -821,6 +821,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
       undefined,
       userAgentId,
     );
+    log.info('Sending SSE event', { event: 'error', chatId, dataLength: 'Failed to generate answer after retries'.length });
     publishPersistent(chatId, 'error', {
       message: 'Failed to generate answer after retries',
       messageId: retryErrMsgId,
@@ -869,6 +870,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
       undefined,
       userAgentId,
     );
+    log.info('Sending SSE event', { event: 'error', chatId, dataLength: 'Failed to save response'.length });
     publishPersistent(chatId, 'error', { message: 'Failed to save response', messageId: errMsgId });
     return;
   }
@@ -884,6 +886,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
   log.info`✅ done: tokensIn=${tokenUsage.promptTokens} tokensOut=${tokenUsage.completionTokens} durationMs=${responseMs} answerLen=${answerText.length} partial=${partial}`;
 
   const elapsed = performance.now() - startTime;
+  log.info('Sending SSE event', { event: 'done', chatId, dataLength: answerText.length });
   publishPersistent(chatId, 'done', {
     answer: answerText,
     sources,
@@ -929,10 +932,11 @@ export async function startGeneration(
   timeoutId?.unref?.();
 
   const startTime = performance.now();
-  log.info`📝 ask: "${text.slice(0, 100)}" [chatId=${chatId} userId=${userId}]`;
+    log.info`📝 ask: "${text.slice(0, 100)}" [chatId=${chatId} userId=${userId}]`;
 
   try {
     // Publish user_message event
+    log.info('Sending SSE event', { event: 'user_message', chatId, dataLength: text.length });
     publishPersistent(chatId, 'user_message', { text, userId });
 
     // 1a-3: Early gates — relevance, polite, embedding, cache
@@ -1074,6 +1078,7 @@ export async function startGeneration(
     }
 
     // 7. Stream from OpenRouter with retry
+    log.info('Starting synthesis round', { round: 1, totalRounds: 1, chatId });
     const streamResult = await streamWithRetry(messages, mcpToolDefs, chatId, abortController, toolServerMap);
     const {
       answerText,
@@ -1158,8 +1163,8 @@ export async function startGeneration(
         userAgentId,
       );
       publishPersistent(chatId, 'error', { message, messageId: errMsgId, irrecoverable: true });
-    } catch {
-      /* ignore */
+    } catch (innerErr) {
+      log.error('Failed to publish error SSE event after generation failure', { error: innerErr instanceof Error ? innerErr.message : String(innerErr) });
     }
   } finally {
     clearTimeout(timeoutId);

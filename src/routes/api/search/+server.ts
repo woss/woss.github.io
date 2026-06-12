@@ -2,7 +2,10 @@ import { searchChunks } from '$lib/server/db';
 import { embedText } from '$lib/server/embed';
 import { isAvailable } from '$lib/server/llm';
 import { checkRateLimit } from '$lib/server/rate-limiter';
+import { CAT, createLogger } from '$lib/server/logger';
 import type { RequestEvent } from '@sveltejs/kit';
+
+const log = createLogger(CAT.search);
 
 /** Chunk shape returned to client — excludes embedding vector. */
 interface ChunkResponse {
@@ -67,6 +70,8 @@ export async function GET(event: RequestEvent): Promise<Response> {
   const typeParam = event.url.searchParams.get('type') ?? '';
   const typeFilter = typeParam === 'post' || typeParam === 'experience' ? typeParam : undefined;
 
+  log.info('Search request', { query: rawQuery, type: typeParam, ip });
+
   // Parse query: strip HTML tags, trim whitespace, cap at 200 characters
   const sanitized = rawQuery
     .replace(/<[^>]*>/g, '')
@@ -75,6 +80,7 @@ export async function GET(event: RequestEvent): Promise<Response> {
 
   // Guard: empty after sanitization
   if (!sanitized) {
+    log.warn('Search query empty after sanitization', { rawQuery, ip });
     return new Response(errorBody("Query parameter 'q' is required"), {
       status: 400,
       headers: jsonHeaders(),
@@ -83,6 +89,7 @@ export async function GET(event: RequestEvent): Promise<Response> {
 
   // Guard: AI service unreachable
   if (!(await isAvailable())) {
+    log.error('Search unavailable — AI service not reachable', { ip });
     return new Response(errorBody('Search unavailable — AI service not reachable'), {
       status: 503,
       headers: jsonHeaders(),
@@ -107,6 +114,8 @@ export async function GET(event: RequestEvent): Promise<Response> {
       },
       score: r.score,
     }));
+
+  log.info('Search results', { query: sanitized, resultCount: results.length, ip });
 
   return new Response(JSON.stringify({ results }), {
     status: 200,

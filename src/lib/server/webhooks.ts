@@ -1,4 +1,7 @@
 import { config } from './config';
+import { CAT, createLogger } from '$lib/server/logger';
+
+const log = createLogger(CAT.api);
 
 export enum webhooksEnum {
   reportGenericMessage,
@@ -22,7 +25,7 @@ interface WebhookData {
 }
 
 export async function callWebhook(data: WebhookData): Promise<void> {
-  console.log('Webhook called:', data);
+  log.info('Webhook called', { type: data.type, chatId: data.chatId });
 
   const message =
     `Webhook event: ${data.type}` +
@@ -46,9 +49,9 @@ export async function callWebhook(data: WebhookData): Promise<void> {
       }),
     });
     const result = await response.json();
-    console.log('Webhook response:', result);
+    log.info('Webhook response', { type: data.type, status: response.status, result });
   } catch (error) {
-    console.error('Webhook failed:', error);
+    log.error('Webhook failed', { type: data.type, error: error instanceof Error ? error.message : String(error) });
   }
   return;
 }
@@ -73,11 +76,12 @@ export async function callErrorWebhook(payload: ErrorWebhookPayload): Promise<vo
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      console.error(`Error webhook returned ${res.status}: ${await res.text()}`);
+      const text = await res.text();
+      log.error('Error webhook returned non-ok status', { status: res.status, body: text });
     } else {
-      console.log(`Error webhook succeeded (${res.status})`);
+      log.info('Error webhook succeeded', { status: res.status });
     }
   } catch (err) {
-    console.error(`Error webhook failed: ${err}`);
+    log.error('Error webhook request failed', { error: err instanceof Error ? err.message : String(err) });
   }
 }

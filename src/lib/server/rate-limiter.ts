@@ -1,4 +1,7 @@
 import { getDb } from './db.ts';
+import { CAT, createLogger } from '$lib/server/logger';
+
+const log = createLogger(CAT.rateLimit);
 
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS = 10;
@@ -13,8 +16,8 @@ function startCleanup(): void {
     try {
       const db = getDb();
       db.prepare('DELETE FROM rate_limits WHERE timestamp < ?').run(cutoff);
-    } catch {
-      /* db may not be available */
+    } catch (cleanupErr) {
+      log.debug('Rate limit cleanup failed (db may not be available)', { error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr) });
     }
   }, CLEANUP_INTERVAL_MS);
   if (typeof cleanupTimer === 'object' && 'unref' in cleanupTimer) {
@@ -45,6 +48,7 @@ export function checkRateLimit(ip: string): {
       .get(ip, windowStart) as { count: number };
 
     if (row.count >= MAX_REQUESTS) {
+      log.warn('Rate limit exceeded', { ip, ttl: WINDOW_MS });
       // Find oldest timestamp in window for calculating reset
       const oldest = db
         .prepare('SELECT timestamp FROM rate_limits WHERE ip = ? AND timestamp > ? ORDER BY timestamp ASC LIMIT 1')
@@ -56,9 +60,10 @@ export function checkRateLimit(ip: string): {
     db.prepare('INSERT INTO rate_limits (ip, timestamp) VALUES (?, ?)').run(ip, now);
 
     const remaining = MAX_REQUESTS - row.count - 1;
+    log.debug('Rate limit check', { ip, remaining, ttl: WINDOW_MS });
     return { allowed: true, remaining, resetAt: now + WINDOW_MS };
-  } catch {
-    // Fail-open: allow request if DB is not available
+  } catch (dbErr) {
+    log.warn('Rate limit DB check failed — failing open', { error: dbErr instanceof Error ? dbErr.message : String(dbErr) });
     return { allowed: true, remaining: MAX_REQUESTS, resetAt: now + WINDOW_MS };
   }
 }

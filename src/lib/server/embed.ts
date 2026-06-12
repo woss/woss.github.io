@@ -10,6 +10,9 @@ import { env, pipeline } from '@huggingface/transformers';
 import { join } from 'node:path';
 import type { FeatureExtractionPipeline } from '@huggingface/transformers';
 import { EMBEDDING_MODEL } from '../search-config.ts';
+import { CAT, createLogger } from '$lib/server/logger';
+
+const log = createLogger(CAT.content);
 
 // Persist HuggingFace model cache inside shared data volume so it survives container rebuilds
 env.cacheDir = join(process.cwd(), 'data', '.hf-cache');
@@ -45,12 +48,14 @@ export async function embedText(text: string): Promise<{ data: number[]; dimensi
     throw new Error('Cannot embed empty text');
   }
 
+  log.info('Generating embedding for text', { length: text.length });
   const extractor = await getExtractor();
   const result = await extractor([text], {
     pooling: 'mean',
     normalize: true,
   });
   const dimensions = result.dims[result.dims.length - 1];
+  log.info('Embedding generated successfully', { dimensions });
   return { data: Array.from(result.data), dimensions };
 }
 
@@ -62,6 +67,7 @@ export async function embedText(text: string): Promise<{ data: number[]; dimensi
 export async function embedTexts(texts: string[]): Promise<Array<{ data: number[]; dimensions: number }>> {
   if (!texts.length) return [];
 
+  log.info('Generating embeddings for batch', { batchSize: texts.length });
   const extractor = await getExtractor();
   const result = await extractor(texts, {
     pooling: 'mean',
@@ -78,6 +84,7 @@ export async function embedTexts(texts: string[]): Promise<Array<{ data: number[
       dimensions,
     });
   }
+  log.info('Batch embedding completed', { count: embeddings.length, dimensions });
   return embeddings;
 }
 

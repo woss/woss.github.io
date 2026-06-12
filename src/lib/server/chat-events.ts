@@ -1,4 +1,7 @@
 import { insertChatEvent } from './db.ts';
+import { CAT, createLogger } from '$lib/server/logger';
+
+const log = createLogger(CAT.chat);
 
 export interface ChatEventPayload {
   id: number;
@@ -33,7 +36,7 @@ export function publishLive(chatId: string, type: string, data: unknown): void {
     try {
       cb(event);
     } catch {
-      /* subscriber disconnected */
+      log.error('Live subscriber callback failed', { chatId, type });
     }
   });
 }
@@ -49,7 +52,7 @@ export function publishPersistent(chatId: string, type: string, data: unknown): 
     try {
       cb(event);
     } catch {
-      /* subscriber disconnected */
+      log.error('Persistent subscriber callback failed', { chatId, type });
     }
   });
   return id;

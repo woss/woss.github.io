@@ -335,7 +335,8 @@ export class McpManager {
     // Strip prefix to get original tool name
     const originalName = this.stripPrefix(resolvedName, serverId);
 
-    log.debug`execute: ${resolvedName} → ${serverId}.${originalName}`;
+    const start = Date.now();
+    log.info('Executing MCP tool', { tool: resolvedName, serverId });
 
     const result = await Promise.race([
       conn.client.callTool({ name: originalName, arguments: args }),
@@ -344,7 +345,8 @@ export class McpManager {
       ),
     ]);
 
-    log.debug`[mcp/manager] executeTool ${resolvedName} response: content.length=${result.content.length}, isError=${result.isError}`;
+    const durationMs = Date.now() - start;
+    log.info('MCP tool completed', { tool: resolvedName, serverId, durationMs, isError: result.isError, contentLength: result.content.length });
 
     let contentItems = parseMcpContent(result.content);
     if (result.isError) {

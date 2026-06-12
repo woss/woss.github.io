@@ -17,6 +17,9 @@ import { callWebhook } from '$lib/server/webhooks';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { isAvailable } from '$lib/server/llm';
 import { startGeneration } from '$lib/server/generate';
+import { CAT, createLogger } from '$lib/server/logger';
+
+const log = createLogger(CAT.chat);
 
 function getClientIP(event: import('@sveltejs/kit').RequestEvent): string {
   return event.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? event.getClientAddress();
@@ -40,6 +43,8 @@ export const actions: Actions = {
     const fd = await event.request.formData();
     const text = sanitizeText(String(fd.get('text') ?? ''));
     const userId = String(fd.get('userId') ?? '');
+
+    log.info('Chat ask action', { chatId, textLength: text.length });
 
     if (!text) return fail(400, { error: 'text is required' });
     if (text.length > 500) return fail(400, { error: 'text must be 500 characters or fewer' });
@@ -141,11 +146,16 @@ export const actions: Actions = {
 export const load: PageServerLoad = async ({ params }) => {
   const chatId = params.id;
   if (!chatId) {
+    log.warn('Chat page load with missing chatId');
     error(400, 'chatId required');
   }
   const chat = getChat(chatId);
-  if (!chat) error(404, 'This chat is no longer available.');
+  if (!chat) {
+    log.warn('Chat not found on page load', { chatId });
+    error(404, 'This chat is no longer available.');
+  }
 
+  log.info('Chat page loaded', { chatId });
   const storedMessages = getMessages(chatId, 50, 0);
   // Batch fetch tool calls for all messages
   const messageIds = storedMessages.map((m) => m.id);
