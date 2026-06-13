@@ -196,3 +196,13 @@ CREATE TABLE
     timestamp TEXT
   );
 
+-- ============================================================
+-- Migrations for existing databases
+-- Run these manually if your database was created before these
+-- columns existed. CREATE TABLE IF NOT EXISTS won't add them.
+-- ============================================================
+
+ALTER TABLE messages ADD COLUMN irrecoverable INTEGER DEFAULT 0;
+ALTER TABLE messages ADD COLUMN trace_id TEXT;
+ALTER TABLE chats ADD COLUMN trace_id TEXT;
+

@@ -457,6 +457,7 @@ interface StreamResult {
   partial: boolean;
   msgId: string;
   toolLoopDetected: boolean;
+  irrecoverable: boolean;
 }
 
 /**
@@ -512,6 +513,7 @@ async function streamWithRetry(
   );
 
   // change from 3 to 10 attempts after adding retry-on-doom-loop logic, to give the model more chances to recover with tools disabled
+  let irrecoverable = false;
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
       const xmlStripper = new ToolCallXmlStripper();
@@ -676,12 +678,24 @@ async function streamWithRetry(
         partial = true;
         break;
       }
-      // Rate limit errors: break immediately instead of wasting retries.
+      // Non-recoverable errors: break immediately instead of wasting retries.
       // The AI SDK already retried 3x internally before throwing here.
       const msg = lastError.message.toLowerCase();
-      if (msg.includes('rate limit') || msg.includes('rate_limit') || msg.includes(' 429 ')) {
-        log.warn`Rate limit detected, aborting retry loop`;
+      const nonRecoverable = [
+        'rate limit', 'rate_limit', ' 429 ',
+        'not supported',
+        'model not found',
+        'process has terminated',
+        'signal: killed',
+        'unauthorized',
+        'forbidden',
+        ' 401 ',
+        ' 403 ',
+      ];
+      if (nonRecoverable.some((p) => msg.includes(p))) {
+        log.warn`Non-recoverable error detected (${lastError.message}), aborting retry loop`;
         partial = true;
+        irrecoverable = true;
         break;
       }
       await new Promise((r) => setTimeout(r, 100 * (attempt + 1)));
@@ -700,6 +714,7 @@ async function streamWithRetry(
     partial,
     msgId,
     toolLoopDetected: doomLoopDetectedInRound,
+    irrecoverable,
   };
 }
 
@@ -726,6 +741,7 @@ interface SaveResultParams {
   ragChunks: { title: string; text: string; score: number }[];
   queryType: string;
   startTime: number;
+  irrecoverable: boolean;
 }
 
 /**
@@ -758,6 +774,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
     cacheText,
     ragChunks,
     startTime,
+    irrecoverable,
   } = params;
 
   if (lastError && !partial) {
@@ -778,7 +795,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
         responseMs,
         maxTokens,
         queryType,
-        undefined,
+        irrecoverable || undefined,
         undefined,
         undefined,
         userAgentId,
@@ -799,7 +816,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
       responseMs,
       0,
       queryType,
-      undefined,
+      irrecoverable || undefined,
       'Failed to generate answer after retries',
       undefined,
       userAgentId,
@@ -807,6 +824,7 @@ async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
     publishPersistent(chatId, 'error', {
       message: 'Failed to generate answer after retries',
       messageId: retryErrMsgId,
+      irrecoverable: irrecoverable === true,
     });
     return;
   }
@@ -1068,6 +1086,7 @@ export async function startGeneration(
       lastError,
       partial,
       msgId,
+      irrecoverable,
     } = streamResult;
 
     // Fire error webhook on LLM error
@@ -1114,6 +1133,7 @@ export async function startGeneration(
       ragChunks,
       queryType,
       startTime,
+      irrecoverable,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -1132,12 +1152,12 @@ export async function startGeneration(
         0,
         0,
         undefined,
-        undefined,
+        true,
         message,
         undefined,
         userAgentId,
       );
-      publishPersistent(chatId, 'error', { message, messageId: errMsgId });
+      publishPersistent(chatId, 'error', { message, messageId: errMsgId, irrecoverable: true });
     } catch {
       /* ignore */
     }
