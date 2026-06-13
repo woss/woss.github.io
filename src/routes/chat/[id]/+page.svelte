@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
+  import { slide } from 'svelte/transition';
   import { config } from '$lib/config';
   import { showMobileSidebar } from '$lib/stores/mobile-sidebar';
   import { parse } from 'devalue';
@@ -55,6 +56,7 @@
   let messageListEl: HTMLDivElement | undefined = $state();
   let stickToBottom = $state(true);
   let bottomSentinelEl: HTMLDivElement | undefined = $state();
+  let chatInputVisible = $state(true);
   /* ─── Chat state ─── */
 
   // Capture SSR data at component init — page params are available here
@@ -89,6 +91,13 @@
         el.href = LOADING_FAVICON;
         return () => { el.href = ORIGINAL_FAV_HREF; };
       }
+    }
+  });
+
+  // Auto-hide chat input when loading
+  $effect(() => {
+    if (isLoading && hasMessages) {
+      chatInputVisible = false;
     }
   });
 
@@ -638,6 +647,8 @@
       if (data.messageId) {
         streamingToolCalls = {};
         currentStatus = "";
+        // Refresh chats to get updated title (AI renames "New Chat")
+        loadChats();
       }
     });
 
@@ -774,7 +785,7 @@
         </div>
       {:else}
         <!-- Message list -->
-        <div class="flex flex-col gap-3 py-4 max-w-[80vw] mx-auto w-full max-md:px-4 max-sm:px-3">
+        <div class="flex flex-col gap-3 py-4 md:max-w-[95vw] md:mx-auto w-full">
           {#each messages as message, i (message.id)}
             <MsgCard
               {message}
@@ -835,22 +846,39 @@
           </p>
         </div>
       {:else if isOwner}
-        <ChatInput
-          bind:messageText
-          {isLoading}
-          {canSend}
-          {currentChat}
-          {maxMessagesReached}
-          messagesCount={userMessageCount}
-          maxMessages={config.public.maxMessages}
-          {activeToolCount}
-          {completedToolCount}
-          {currentStatus}
-          bind:inputEl
-          {userId}
-          onsend={(text: string) => sendMessage(text)}
-          oncreateChat={createChat}
-        />
+        {#if chatInputVisible}
+          <div transition:slide={{ axis: 'y', duration: 300 }}>
+            <ChatInput
+              bind:messageText
+              {isLoading}
+              {canSend}
+              {currentChat}
+              {maxMessagesReached}
+              messagesCount={userMessageCount}
+              maxMessages={config.public.maxMessages}
+              {activeToolCount}
+              {completedToolCount}
+              {currentStatus}
+              bind:inputEl
+              {userId}
+              onsend={(text: string) => sendMessage(text)}
+              oncreateChat={createChat}
+            />
+          </div>
+        {:else}
+          <div class="flex justify-center py-3 border-t border-[rgba(255,255,255,0.08)]">
+            <button
+              onclick={() => { chatInputVisible = true; focusInput(); }}
+              class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-surface text-sm font-medium border-0 cursor-pointer transition-all duration-200 hover:shadow-[0_0_20px_rgba(0,255,136,0.15)] hover:scale-105 active:scale-95"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5" />
+                <polyline points="5 12 12 5 19 12" />
+              </svg>
+              Open chat
+            </button>
+          </div>
+        {/if}
       {:else}
         <!-- Read-only banner for non-owners -->
         <div class="border-t border-[rgba(255,255,255,0.08)] px-4 py-6 text-center">

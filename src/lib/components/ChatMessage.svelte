@@ -7,7 +7,7 @@
   import 'highlight.js/styles/atom-one-dark.css';
   import { toast } from 'svelte-sonner';
   import { copyToClipboard } from '$lib/utils/clipboard';
-  import { Tooltip } from 'sv5ui';
+  import { Accordion, Tooltip } from 'sv5ui';
   import type { ToolCallInfo, ChatMessage } from '$lib/chat/types';
   import { page } from '$app/state';
   import { appendQueryParams } from '$lib/utils/utm';
@@ -17,23 +17,71 @@
 
   const md = new MarkdownIt({ html: true, linkify: true });
   md.renderer.rules.blockquote_open = () => {
-    return '<blockquote class="border-l-4 border-primary/30 pl-4 text-on-surface-variant italic">';
+    return '<blockquote class="border-l-4 border-primary/30 pl-4 text-on-surface-variant italic my-2">';
   };
 
   md.renderer.rules.table_open = () => {
-    return '<div class="overflow-x-auto"><table class="w-full table-auto divide-y divide-gray-200">';
+    return '<div class="overflow-x-auto my-2"><table class="w-full table-auto border-collapse border border-[rgba(255,255,255,0.08)]">';
   };
 
   md.renderer.rules.table_close = () => {
     return '</table></div>';
   };
-  md.renderer.rules.bullet_list_open = function () {
-    return '<ul class="list-disc p-0 ml-4">';
+
+  // Ordered list
+  md.renderer.rules.ordered_list_open = function () {
+    return '<ol class="list-decimal p-0 ml-5 space-y-0.5 my-1">';
   };
 
-  // Custom render function for list items
+  // Bullet list
+  md.renderer.rules.bullet_list_open = function () {
+    return '<ul class="list-disc p-0 ml-5 space-y-0.5 my-1">';
+  };
+
+  // List items
   md.renderer.rules.list_item_open = function () {
-    return '<li class="rounded-lg p-2">';
+    return '<li class="leading-normal">';
+  };
+
+  // Heading styles
+  md.renderer.rules.heading_open = function (tokens, idx) {
+    const token = tokens[idx];
+    const level = token.tag.slice(1); // 'h1' → '1'
+    const sizes = {
+      '1': 'text-xl font-heading font-semibold text-on-surface mt-6 mb-3',
+      '2': 'text-lg font-heading font-semibold text-on-surface mt-5 mb-2',
+      '3': 'text-base font-heading font-semibold text-on-surface mt-4 mb-2',
+      '4': 'text-sm font-heading font-semibold text-on-surface mt-3 mb-1',
+      '5': 'text-xs font-heading font-semibold text-on-surface-variant mt-3 mb-1',
+      '6': 'text-xs font-heading text-on-surface-variant mt-2 mb-1 uppercase tracking-wider',
+    };
+    return `<${token.tag} class="${sizes[level] || 'text-base font-semibold mt-4 mb-2'}">`;
+  };
+
+  // Horizontal rule
+  md.renderer.rules.hr = function () {
+    return '<hr class="border-t border-[rgba(255,255,255,0.08)] my-4">';
+  };
+
+  // Paragraph spacing
+  md.renderer.rules.paragraph_open = function () {
+    return '<p class="my-2">';
+  };
+
+  // Emphasis
+  md.renderer.rules.em_open = function () {
+    return '<em class="italic text-on-surface-variant/90">';
+  };
+  md.renderer.rules.em_close = function () {
+    return '</em>';
+  };
+
+  // Strong
+  md.renderer.rules.strong_open = function () {
+    return '<strong class="font-semibold">';
+  };
+  md.renderer.rules.strong_close = function () {
+    return '</strong>';
   };
 
   md.renderer.rules.link_open = (tokens, idx) => {
@@ -161,6 +209,11 @@
     return Array.from(groups.values());
   }
 
+  const serverLabels: Record<string, string> = {
+    github: 'gh',
+    macula: 'mcl',
+  };
+
   function copyMessageLink(messageId: string): void {
     const url = `${window.location.origin}${window.location.pathname}#msg-${messageId}`;
     if (copyToClipboard(url)) toast.success('Link copied');
@@ -255,7 +308,7 @@
     : 'justify-start'}"
 >
   <div
-    class="shadow-md wrap-break-word max-md:max-w-full {message.role ===
+    class="shadow-md max-w-full max-md:max-w-full {message.role ===
     'assistant'
       ? 'w-full rounded-lg rounded-bl-sm border-l-3 border-primary/15 p-4 max-sm:p-3'
       : 'max-w-[80%] ml-auto rounded-lg rounded-br-sm p-4'} {message.role === 'user'
@@ -264,7 +317,7 @@
       ? ' bg-[color-mix(in_srgb,var(--color-secondary)_8%,transparent)] border-2 border-secondary/40'
       : ''}"
   >
-    <div class="font-body text-base leading-relaxed"
+    <div class="font-body text-base leading-relaxed [overflow-wrap:anywhere]"
     class:whitespace-pre-wrap={!message.deletedAt}
     >
       {#if message.deletedAt}
@@ -363,7 +416,7 @@
               >
               <!-- Tool name -->
               <span class="truncate text-xs font-mono text-on-surface-variant"
-                >{tool.serverId}/{tool.name}</span
+                >{serverLabels[tool.serverId] || tool.serverId}/{tool.name}</span
               >
               <!-- Duration -->
               <span class="tabular-nums text-xs font-mono text-outline/60 ml-auto shrink-0"
@@ -599,47 +652,63 @@
     <!-- Sources -->
     {#if message.role === 'assistant' && message.sources && message.sources.length > 0}
       <div class="mt-4 pt-3 border-t border-[rgba(255,255,255,0.08)]">
-        <p class="sources-heading">Sources</p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-0">
-          {#each message.sources as source, j (message.id + j)}
-            <a
-              href={source.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="source-pill"
-              style="--source-color: {scoreColor(source.score)}"
-              title={source.title}
-            >
-              <span class="source-dot" aria-hidden="true"></span>
-              {#if getSourceType(source)}
-                <span class="source-type-badge" style="--type-color: {getSourceType(source)!.color}">{getSourceType(source)!.letter}</span>
-              {/if}
-              <span class="flex-1 min-w-0 truncate">{source.title}</span>
-              <span class="source-score">{source.score.toFixed(2)}</span>
-              <svg
-                class="source-ext"
-                width="10"
-                height="10"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path
-                  d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-                /><polyline points="15 3 21 3 21 9" /><line
-                  x1="10"
-                  y1="14"
-                  x2="21"
-                  y2="3"
-                />
-              </svg>
-            </a>
-          {/each}
-        </div>
+        <Accordion
+          type="multiple"
+          trailingIcon=""
+          ui={{
+            trigger: 'py-0 flex items-center gap-1.5',
+            item: 'border-none',
+            body: 'pb-1',
+            label: 'font-mono text-xs uppercase tracking-wider text-on-surface-variant cursor-pointer'
+          }}
+          items={[{
+            value: 'sources',
+            label: `Sources (${message.sources.length})`
+          }]}
+        >
+          {#snippet body({ item })}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {#each message.sources as source, j (message.id + j)}
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="source-pill"
+                  style="--source-color: {scoreColor(source.score)}"
+                  title={source.title}
+                >
+                  <span class="source-dot" aria-hidden="true"></span>
+                  {#if getSourceType(source)}
+                    <span class="source-type-badge" style="--type-color: {getSourceType(source)!.color}">{getSourceType(source)!.letter}</span>
+                  {/if}
+                  <span class="flex-1 min-w-0 truncate">{source.title}</span>
+                  <span class="source-score">{source.score.toFixed(2)}</span>
+                  <svg
+                    class="source-ext"
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                    /><polyline points="15 3 21 3 21 9" /><line
+                      x1="10"
+                      y1="14"
+                      x2="21"
+                      y2="3"
+                    />
+                  </svg>
+                </a>
+              {/each}
+            </div>
+          {/snippet}
+        </Accordion>
       </div>
     {/if}
 
@@ -664,22 +733,39 @@
 
     <!-- Tool calls -->
     {#if message.role === 'assistant' && message.toolCalls?.length}
-      <div class="mt-3 pt-2 border-t border-[rgba(255,255,255,0.06)]">
-        <div class="flex flex-wrap gap-2">
-          {#each groupToolCalls(message.toolCalls || []) as group (group.key)}
-            <span
-              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high border border-[rgba(255,255,255,0.08)] text-xs font-mono text-on-surface-variant"
-            >
-              <span class="text-outline">({group.count})</span>
-              ⚙ {group.serverId}/{group.name}
-              {#if group.totalDurationMs > 0}
-                <span class="text-outline"
-                  >{formatDuration(group.totalDurationMs)}</span
+      <div class="border-t border-[rgba(255,255,255,0.06)]">
+        <Accordion
+          type="multiple"
+          trailingIcon=""
+          ui={{
+            trigger: 'py-0 flex items-center gap-1.5',
+            item: 'border-none',
+            body: 'pb-1',
+            label: 'font-mono text-xs uppercase tracking-wider text-on-surface-variant cursor-pointer'
+          }}
+          items={[{
+            value: 'tools',
+            label: `Tools (${message.toolCalls.length})`
+          }]}
+        >
+          {#snippet body({ item })}
+            <div class="flex flex-wrap gap-2 pt-2">
+              {#each groupToolCalls(message.toolCalls || []) as group (group.key)}
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high border border-[rgba(255,255,255,0.08)] text-xs font-mono text-on-surface-variant"
                 >
-              {/if}
-            </span>
-          {/each}
-        </div>
+                  <span class="text-outline">({group.count})</span>
+                  ⚙ {serverLabels[group.serverId] || group.serverId}/{group.name}
+                  {#if group.totalDurationMs > 0}
+                    <span class="text-outline"
+                      >{formatDuration(group.totalDurationMs)}</span
+                    >
+                  {/if}
+                </span>
+              {/each}
+            </div>
+          {/snippet}
+        </Accordion>
       </div>
     {/if}
     {/if}
@@ -735,15 +821,6 @@
     background: var(--source-color, var(--color-primary));
     flex-shrink: 0;
     margin: 4px;
-  }
-
-  .sources-heading {
-    font-family: var(--font-mono, monospace);
-    font-size: var(--text-xs, 0.75rem);
-    color: var(--color-on-surface-variant, #8090a0);
-    margin: 0 0 var(--space-1, 4px);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
   }
 
   .source-score {
@@ -911,7 +988,7 @@
   }
 
   :global(.font-body pre) {
-    background: #2a2a4e;
+    background: color-mix(in srgb, var(--color-surface-container-high) 100%, transparent);
     color: #e8e8ee;
     border-radius: 6px;
     padding: 1em;
@@ -936,7 +1013,7 @@
     padding-left: 1em;
     color: #9ca3af;
     font-style: italic;
-    margin: 0.75em 0;
+    margin: 1em 0;
   }
 
   :global(.font-body a) {
@@ -947,6 +1024,18 @@
 
   :global(li > p) {
     margin: 0;
+  }
+
+  :global(.font-body th),
+  :global(.font-body td) {
+    padding: 0.5em 0.75em;
+    text-align: left;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  :global(.font-body th) {
+    background: color-mix(in srgb, var(--color-surface-container) 100%, transparent);
+    font-weight: 600;
   }
 
 .query-type-badge {

@@ -125,10 +125,10 @@
   </div>
 {:else}
   <div
-    class="sticky bottom-0 shrink-0 w-full bg-surface border-t border-[rgba(255,255,255,0.08)] px-8 max-md:px-4"
+    class="sticky bottom-0 shrink-0 w-full bg-surface border-t border-[rgba(255,255,255,0.08)] px-8 max-md:px-4 overflow-hidden"
   >
     {#if isLoading}
-      <div class="py-1.5 max-w-[80vw] mx-auto">
+      <div class="py-1.5 md:max-w-[95vw] md:mx-auto">
         <div class="flex items-center gap-2 text-xs font-mono min-h-[16px]">
           {#if activeToolCount > 0}
             <span class="text-yellow-400/90"
@@ -164,7 +164,7 @@
       </div>
     {/if}
     <div class="py-4 max-md:py-3">
-      <div class="relative max-w-[80vw] mx-auto">
+      <div class="relative md:max-w-[95vw] md:mx-auto">
         <!-- Slash drop-up menu -->
         {#if showSlashMenu && slashFiltered.length > 0}
           <div
@@ -241,82 +241,69 @@
             <div
               class="relative rounded-xl border border-[rgba(255,255,255,0.08)] bg-surface-container-high focus-within:border-primary/50 focus-within:shadow-[0_0_0_1px_rgba(0,255,136,0.15),0_0_20px_rgba(0,255,136,0.05)] transition-all duration-200"
             >
-              <!-- Textarea with / indicator -->
-              <div class="relative">
-                {#if messageText.startsWith('/')}
-                  <span
-                    class="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-primary pointer-events-none z-10"
-                    >/</span
-                  >
-                {/if}
-                <textarea
-                  id="chat-input"
-                  name="text"
-                  class="w-full font-body text-base text-on-surface bg-transparent py-3 min-h-11 max-h-30 resize-none outline-none transition-colors duration-150 leading-normal placeholder:text-on-surface-variant disabled:opacity-50 disabled:cursor-not-allowed"
-                  class:pl-8={messageText.startsWith('/')}
-                  class:pl-4={!messageText.startsWith('/')}
-                  bind:value={messageText}
-                  bind:this={inputEl}
-                  placeholder="Curious about Daniel? Ask away."
-                  rows="1"
-                  maxlength={MAX_CHARS}
-                  disabled={isLoading}
-                  oninput={handleInput}
-                  onkeydown={handleKeydown}
-                ></textarea>
-              </div>
-              <!-- Bottom toolbar -->
-              <div class="flex items-center justify-between px-3 pb-3">
-                <div>
-                  {#if messagesCount > 0}
-                    <span class="font-mono text-xs text-on-surface-variant"
-                      >{messagesCount}/{maxMessages} messages</span
-                    >
-                  {/if}
-                </div>
-                <div class="flex-1 text-center px-2">
-                  <p class="text-xs text-on-surface-variant">AI can make mistakes. Verify important information.</p>
-                </div>
-                <div class="flex items-center gap-3">
-                  {#if charCount > 0}
+              <!-- Textarea row with inline send button -->
+              <div class="flex items-center gap-2 px-3 pt-3">
+                <div class="relative flex-1 min-w-0">
+                  {#if messageText.startsWith('/')}
                     <span
-                      class="font-mono text-xs text-on-surface-variant"
-                      class:text-secondary={isOverLimit}
-                      >{charCount}/{MAX_CHARS}</span
+                      class="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-primary pointer-events-none z-10"
+                      >/</span
                     >
                   {/if}
-                  <button
-                    id="chat-submit"
-                    type="submit"
-                    class="flex items-center justify-center w-8 h-8 border-0 rounded-lg bg-primary text-surface cursor-pointer transition-all duration-150 shrink-0 hover:shadow-[0_0_20px_rgba(0,255,136,0.15)] hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-none"
-                    class:bg-[color-mix(in_srgb,var(--color-primary)_50%,transparent)]={isLoading}
-                    class:cursor-wait={isLoading}
-                    disabled={!canSend}
-                    aria-label="Send message"
-                  >
+                  <textarea
+                    id="chat-input"
+                    name="text"
+                    class="w-full font-body text-base text-on-surface bg-transparent py-3 min-h-11 max-h-30 max-md:max-h-20 resize-none outline-none transition-colors duration-150 leading-normal placeholder:text-on-surface-variant disabled:opacity-50 disabled:cursor-not-allowed"
+                    class:pl-8={messageText.startsWith('/')}
+                    class:pl-4={!messageText.startsWith('/')}
+                    bind:value={messageText}
+                    bind:this={inputEl}
+                    placeholder="Curious about Daniel? Ask away."
+                    rows="1"
+                    maxlength={MAX_CHARS}
+                    disabled={isLoading}
+                    oninput={handleInput}
+                    onkeydown={handleKeydown}
+                  ></textarea>
+                </div>
+                <button
+                  id="chat-submit"
+                  type="submit"
+                  class="flex items-center justify-center w-8 h-8 border-0 rounded-lg bg-primary text-surface cursor-pointer transition-all duration-150 shrink-0 hover:shadow-[0_0_20px_rgba(0,255,136,0.15)] hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:scale-100 disabled:shadow-none"
+                  class:bg-[color-mix(in_srgb,var(--color-primary)_50%,transparent)]={isLoading}
+                  class:cursor-wait={isLoading}
+                  disabled={!canSend}
+                  aria-label="Send message"
+                >
                   {#if isLoading}
-                    <span
-                      class="w-2 h-2 rounded-full bg-surface animate-pulse-send"
-                      aria-hidden="true"
-                    ></span>
+                    <span class="w-2 h-2 rounded-full bg-surface animate-pulse-send" aria-hidden="true"></span>
                   {:else}
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <line x1="12" y1="19" x2="12" y2="5" />
                       <polyline points="5 12 12 5 19 12" />
                     </svg>
                   {/if}
                 </button>
+              </div>
+              <!-- Bottom toolbar -->
+              <div class="flex items-center justify-between px-3 pb-3 max-md:justify-end">
+                <div>
+                  {#if messagesCount > 0}
+                    <span class="font-mono text-xs text-on-surface-variant max-md:hidden"
+                      >{messagesCount}/{maxMessages} messages</span
+                    >
+                  {/if}
                 </div>
+                <div class="flex-1 text-center px-2 max-md:hidden">
+                  <p class="text-xs text-on-surface-variant">AI can make mistakes. Verify important information.</p>
+                </div>
+                {#if charCount > 0}
+                  <span
+                    class="font-mono text-xs text-on-surface-variant"
+                    class:text-secondary={isOverLimit}
+                    >{charCount}/{MAX_CHARS}</span
+                  >
+                {/if}
               </div>
             </div>
           </form>
