@@ -16,6 +16,7 @@ export async function load() {
         published: r.published,
         featured: r.featured,
         headerImage: r.headerImage ?? undefined,
+        partOfSeries: r.partOfSeries ?? undefined,
       };
     })
     .filter((p) => p.published)

@@ -51,7 +51,8 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS page_posts (
-      slug TEXT PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT UNIQUE NOT NULL,
       hash TEXT,
       content TEXT,
       toc TEXT,
@@ -64,6 +65,7 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
       header_image TEXT,
       featured INTEGER DEFAULT 0,
       position INTEGER,
+      part_of_series INTEGER REFERENCES page_posts(id),
       updated_at TEXT
     )
   `);

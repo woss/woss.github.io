@@ -387,6 +387,8 @@ async function buildIndex(): Promise<void> {
   });
 
   let newChunks = 0;
+  // Track part_of_series slugs for second-pass resolution (slug → series slug)
+  const seriesMap = new Map<string, string | null>();
 
   for (const entry of changedEntries) {
     log.debug`  ${entry.slug}…`;
@@ -438,8 +440,10 @@ async function buildIndex(): Promise<void> {
       // Save full content to page_posts or page_experience table
       const toc = JSON.stringify(extractToc(content || raw));
       if (entry.type === 'post') {
+        // Read part_of_series slug from frontmatter (resolved to ID in second pass)
+        const seriesSlug = data.part_of_series ? String(data.part_of_series) : null;
         db.prepare(
-          `INSERT OR REPLACE INTO page_posts (slug, hash, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+          `INSERT OR REPLACE INTO page_posts (slug, hash, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position, part_of_series, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
         ).run(
           entry.slug,
           entry.hash,
@@ -454,7 +458,9 @@ async function buildIndex(): Promise<void> {
           JSON.stringify(data.header_image ?? null),
           data.featured ? 1 : 0,
           data.position ?? null,
+          null, // part_of_series — resolved in second pass below
         );
+        seriesMap.set(entry.slug, seriesSlug);
       } else {
         db.prepare(
           `INSERT OR REPLACE INTO page_experience (slug, hash, content, company, role, start_date, end_date, duration, skills, description, published, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
@@ -494,6 +500,24 @@ async function buildIndex(): Promise<void> {
       const processErr = err instanceof Error ? err : new Error(String(err));
       log.error`  ⚠ Failed to process ${entry.slug}: ${processErr.message}`;
     }
+  }
+
+  // Second pass: resolve part_of_series slugs to page_posts.id
+  const seriesUpdate = db.prepare('UPDATE page_posts SET part_of_series = ? WHERE slug = ?');
+  const slugToId = new Map<string, number>();
+  const allRows = db.prepare('SELECT id, slug FROM page_posts').all() as { id: number; slug: string }[];
+  for (const row of allRows) {
+    slugToId.set(row.slug, row.id);
+  }
+  let seriesCount = 0;
+  for (const [childSlug, parentSlug] of seriesMap) {
+    if (parentSlug && slugToId.has(parentSlug)) {
+      seriesUpdate.run(slugToId.get(parentSlug)!, childSlug);
+      seriesCount++;
+    }
+  }
+  if (seriesCount > 0) {
+    log.info`Part of series: ${seriesCount} post(s) linked`;
   }
 
   // Free BGE model memory before USearch index rebuild

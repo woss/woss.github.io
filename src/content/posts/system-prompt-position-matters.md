@@ -9,6 +9,7 @@ tags:
   - primacy bias
   - woss.io
 featured: false
+part_of_series: "new-woss-io"
 ---
 
 ## The Problem: Line 84

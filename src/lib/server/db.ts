@@ -689,6 +689,7 @@ function clearChatMessages(chatId: string): void {
  * Get page posts, optionally filtered by slug.
  */
 function getPosts(slug?: string): {
+  id: number;
   slug: string;
   content: string;
   toc: { id: string; text: string; level: number }[];
@@ -701,20 +702,21 @@ function getPosts(slug?: string): {
   headerImage: { alt: string; url: string } | null;
   featured: boolean;
   position: number | null;
+  partOfSeries: number | null;
 }[] {
   const db = getDb();
   let rows;
   if (slug) {
     rows = queryRows<Record<string, unknown>>(
       db.prepare(
-        'SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts WHERE slug = ?',
+        'SELECT id, slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position, part_of_series FROM page_posts WHERE slug = ?',
       ),
       slug,
     );
   } else {
     rows = queryRows<Record<string, unknown>>(
       db.prepare(
-        'SELECT slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position FROM page_posts',
+        'SELECT id, slug, content, toc, title, description, date, tags, published, excerpt, header_image, featured, position, part_of_series FROM page_posts',
       ),
     );
   }
@@ -727,6 +729,7 @@ function getPosts(slug?: string): {
       /* ignore parse errors */
     }
     return {
+      id: Number(r.id),
       slug: String(r.slug),
       content: String(r.content),
       toc,
@@ -739,6 +742,7 @@ function getPosts(slug?: string): {
       headerImage: JSON.parse(String(r.header_image ?? 'null')) as { alt: string; url: string } | null,
       featured: Number(r.featured) === 1,
       position: r.position != null ? Number(r.position) : null,
+      partOfSeries: r.part_of_series != null ? Number(r.part_of_series) : null,
     };
   });
 }

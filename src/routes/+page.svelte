@@ -228,7 +228,7 @@
 
     {#if canCreateChat}
     <!-- Original input area -->
-    <main class="flex-1 flex flex-col items-center gap-6 max-md:gap-4 pt-9">
+    <main class="flex-1 flex flex-col items-center justify-center gap-6 max-md:gap-4 max-md:pt-9 max-md:justify-start">
       <!-- Hero + Input -->
       <div class="w-full flex flex-col items-center gap-6">
         <div class="w-full max-w-200 flex flex-col gap-5">
@@ -403,6 +403,7 @@
   </div>
 </div>
 {:else}
+<ChatSidebar {chats} {canCreateChat} {showDeleteConfirm} bind:showMobile={$showMobileSidebar} oncreateChat={createChat} onconfirmDeleteChat={confirmDeleteChat} ondeleteChat={deleteChat} oncancelDelete={() => showDeleteConfirm = null} showDesktop={false} />
 {#if data?.hero}
 <div class="relative z-[2] w-full px-8 max-md:px-4 pt-2 pb-0">
   <div class="w-full max-w-200 mx-auto">
@@ -410,7 +411,7 @@
   </div>
 </div>
 {/if}
-<div class="relative z-2 flex flex-col items-center min-h-[calc(100vh-var(--nav-height)-3rem)] gap-4 px-8 max-md:px-4 max-md:gap-4">
+<div class="relative z-2 flex flex-col items-center justify-center min-h-[calc(100vh-var(--nav-height)-3rem)] gap-4 px-8 max-md:px-4 max-md:gap-4 max-md:justify-start max-md:pt-8">
   <!-- Hero + Input -->
   <div class="w-full flex flex-col items-center gap-6">
     <div class="w-full max-w-200 flex flex-col gap-5">

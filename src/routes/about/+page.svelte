@@ -4,6 +4,7 @@
   import { toast } from 'svelte-sonner';
   import { copyToClipboard } from '$lib/utils/clipboard';
   import { appendQueryParams } from '$lib/utils/utm';
+  import { resolve } from '$app/paths';
 
   let avatarUrl = $derived(appendQueryParams('https://u.macula.link/@woss/avatar', page.data.queryParams));
 
@@ -87,7 +88,7 @@
 <section class="max-w-200 mx-auto px-6 py-12 pb-24">
   <header class="mb-12">
     <h1 class="font-heading text-4xl font-bold text-on-surface tracking-[-0.03em] uppercase m-0">About</h1>
-    <div class="w-16 h-[3px] bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] mt-3 rounded-full" aria-hidden="true"></div>
+    <div class="w-16 h-0.75 bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] mt-3 rounded-full" aria-hidden="true"></div>
   </header>
 
   <div class="bg-surface-container border border-[rgba(255,255,255,0.08)] rounded-lg p-8">
@@ -118,9 +119,12 @@
       <p>
         Instead of optimizing what already exists, I invent what hasn't been built yet — driven less by filling a resume gap and more by the pull of a blank page.
       </p>
+      <p>
+        For a lot more info you can checkout a longer version I wrote about my career and open source contributions <a href={resolve('/posts/about')} class="text-primary hover:underline">About Me</a>.
+      </p>
     </div>
 
-    <div class="h-[2px] bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] rounded-[1px] my-6" aria-hidden="true"></div>
+    <div class="h-0.5 bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] rounded-[1px] my-6" aria-hidden="true"></div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       {#each links as link, i (link.url)}

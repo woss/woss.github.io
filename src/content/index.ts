@@ -25,6 +25,8 @@ export interface BlogPost {
   published: boolean;
   featured?: boolean;
   headerImage?: { alt: string; url: string };
+  id?: number;
+  partOfSeries?: number;
 }
 
 // Re-export for backward compatibility

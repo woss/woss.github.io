@@ -70,7 +70,30 @@ export async function load({ params }: { params: Record<string, string> }) {
       currentIndex > 0 ? { slug: published[currentIndex - 1].slug, title: published[currentIndex - 1].title } : null,
   };
 
+  // Series siblings
+  let series: { title: string; siblings: { slug: string; title: string }[]; rootSlug: string } | null = null;
+
+  if (currentRaw.partOfSeries) {
+    // This post is part of a series — find root + siblings
+    const root = allPosts.find(p => p.id === currentRaw.partOfSeries);
+    if (root) {
+      const siblings = allPosts
+        .filter(p => p.partOfSeries === currentRaw.partOfSeries && p.slug !== slug)
+        .map(p => ({ slug: p.slug, title: p.title }));
+      series = { title: root.title, siblings, rootSlug: root.slug };
+    }
+  } else if (currentRaw.id) {
+    // This might be a series root — find children
+    const children = allPosts
+      .filter(p => p.partOfSeries === currentRaw.id)
+      .map(p => ({ slug: p.slug, title: p.title }));
+    if (children.length > 0) {
+      series = { title: currentRaw.title, siblings: children, rootSlug: currentRaw.slug };
+    }
+  }
+
   return {
+    series,
     post: {
       slug: current.slug,
       title: current.title,

@@ -8,7 +8,7 @@
   import Seo from '$lib/components/Seo.svelte';
   import { appendQueryParams } from '$lib/utils/utm';
 
-  type Post = { slug: string; title: string; date: string | null; tags: string[]; excerpt: string; headerImage: { alt: string; url: string } | null; toc: { id: string; text: string; level: number }[] };
+  type Post = { slug: string; title: string; date: string | null; tags: string[]; excerpt: string; headerImage: { alt: string; url: string } | null; toc: { id: string; text: string; level: number }[]; partOfSeries?: number };
   type NavLink = { slug: string; title: string } | null;
   type ImageMeta = {
     title?: string; creator?: string; license?: string;
@@ -19,7 +19,7 @@
   let {
     data
   }: {
-    data: { post: Post; html: string; nav: { prev: NavLink; next: NavLink }; imageMeta: ImageMeta | null };
+    data: { post: Post; html: string; nav: { prev: NavLink; next: NavLink }; imageMeta: ImageMeta | null; series: { title: string; siblings: { slug: string; title: string }[]; rootSlug: string } | null };
   } = $props();
 
   let activeId = $state<string | null>(null);
@@ -272,6 +272,32 @@
         <p class="text-sm text-on-surface-variant font-mono m-0 mb-4">
           Published <time datetime={dateAttrib(data.post.date)}>{formatDate(data.post.date)}</time>
         </p>
+      {/if}
+
+      {#if data.series}
+        <div class="mt-8 p-5 border border-[rgba(255,255,255,0.08)] rounded-lg bg-surface-container">
+          <span class="text-xs font-mono font-semibold text-secondary uppercase tracking-[0.08em]">Series: {data.series.title}</span>
+          <ul class="list-none p-0 m-0 mt-3 space-y-1">
+            <li>
+              <a
+                href={resolve('/posts/[slug]', { slug: data.series.rootSlug })}
+                class="font-mono text-sm no-underline transition-colors duration-150 {data.post.slug === data.series.rootSlug ? 'text-secondary font-semibold' : 'text-on-surface-variant hover:text-primary'}"
+              >
+                {#if data.post.slug === data.series.rootSlug}→ {/if}{data.series.title}
+              </a>
+            </li>
+            {#each data.series.siblings as sib}
+              <li>
+                <a
+                  href={resolve('/posts/[slug]', { slug: sib.slug })}
+                  class="font-mono text-sm no-underline transition-colors duration-150 {data.post.slug === sib.slug ? 'text-secondary font-semibold' : 'text-on-surface-variant hover:text-primary'}"
+                >
+                  {#if data.post.slug === sib.slug}→ {/if}{sib.title}
+                </a>
+              </li>
+            {/each}
+          </ul>
+        </div>
       {/if}
 
       {#if data.nav.prev || data.nav.next}

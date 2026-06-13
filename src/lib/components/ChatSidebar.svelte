@@ -17,6 +17,7 @@
     ondeleteChat = () => {},
     onconfirmDeleteChat = () => {},
     oncancelDelete = () => {},
+    showDesktop = true,
   }: {
     chats: Chat[];
     currentChatId?: string | null;
@@ -27,6 +28,7 @@
     ondeleteChat?: (id: string) => void;
     onconfirmDeleteChat?: (id: string) => void;
     oncancelDelete?: () => void;
+    showDesktop?: boolean;
   } = $props();
 
   // ── MCP connection status ──
@@ -41,7 +43,7 @@
 </script>
 
 <!-- ─── Desktop sidebar ─── -->
-<aside class="w-65 max-w-65 shrink-0 border-r border-[rgba(255,255,255,0.08)] bg-surface hidden md:flex flex-col overflow-hidden sticky self-start h-[calc(100vh-var(--nav-height))]">
+<aside class="w-65 max-w-65 shrink-0 border-r border-[rgba(255,255,255,0.08)] bg-surface flex-col overflow-hidden sticky self-start h-[calc(100vh-var(--nav-height))]" class:hidden={!showDesktop} class:md:flex={showDesktop}>
   <!-- New Chat button -->
   <div class="p-3 border-b border-[rgba(255,255,255,0.08)]">
     <button
