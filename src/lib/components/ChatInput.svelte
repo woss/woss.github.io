@@ -274,6 +274,9 @@
                     >
                   {/if}
                 </div>
+                <div class="flex-1 text-center px-2">
+                  <p class="text-xs text-on-surface-variant">AI can make mistakes. Verify important information.</p>
+                </div>
                 <div class="flex items-center gap-3">
                   {#if charCount > 0}
                     <span

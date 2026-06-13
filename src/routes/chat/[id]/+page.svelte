@@ -860,8 +860,6 @@
         </div>
       {/if}
     {/if}
-    <div class="px-8 pb-4 max-w-[80vw] mx-auto w-full max-md:px-4 max-sm:px-3 flex flex-col items-center gap-2">
-      <p class="text-xs text-on-surface-variant text-center">AI can make mistakes. Verify important information.</p>
-    </div>
+
   </div>
 </div>
