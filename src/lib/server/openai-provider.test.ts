@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mergeSameRole } from './openai-provider';
 import type { ChatMessage } from './openai-provider';
 
-describe.skip('mergeSameRole', () => {
+describe('mergeSameRole', () => {
   it('leaves alternating roles unchanged', () => {
     const input: ChatMessage[] = [
       { role: 'system', content: 'You are a helpful assistant.' },
@@ -14,40 +14,33 @@ describe.skip('mergeSameRole', () => {
     expect(result).toEqual(input);
   });
 
-  it('merges consecutive user messages', () => {
+  it('returns input unchanged (merge disabled for DeepSeek V4 Flash compatibility)', () => {
     const input: ChatMessage[] = [
       { role: 'system', content: 'System prompt' },
       { role: 'user', content: 'First question' },
       { role: 'user', content: 'Second question' },
     ];
     const result = mergeSameRole(input);
-    expect(result).toEqual([
-      { role: 'system', content: 'System prompt' },
-      { role: 'user', content: 'First question\nSecond question' },
-    ]);
+    expect(result).toEqual(input);
   });
 
-  it('merges consecutive assistant messages', () => {
+  it('returns input unchanged for consecutive assistant messages', () => {
     const input: ChatMessage[] = [
       { role: 'assistant', content: 'Part one' },
       { role: 'assistant', content: 'Part two' },
     ];
     const result = mergeSameRole(input);
-    expect(result).toEqual([
-      { role: 'assistant', content: 'Part one\nPart two' },
-    ]);
+    expect(result).toEqual(input);
   });
 
-  it('merges multiple consecutive same-role messages into one', () => {
+  it('returns input unchanged for multiple same-role messages', () => {
     const input: ChatMessage[] = [
       { role: 'user', content: 'A' },
       { role: 'user', content: 'B' },
       { role: 'user', content: 'C' },
     ];
     const result = mergeSameRole(input);
-    expect(result).toEqual([
-      { role: 'user', content: 'A\nB\nC' },
-    ]);
+    expect(result).toEqual(input);
   });
 
   it('does not merge consecutive system messages (system is excluded)', () => {
@@ -72,14 +65,12 @@ describe.skip('mergeSameRole', () => {
   });
 
   it('handles single message', () => {
-    const input: ChatMessage[] = [
-      { role: 'user', content: 'Only one' },
-    ];
+    const input: ChatMessage[] = [{ role: 'user', content: 'Only one' }];
     const result = mergeSameRole(input);
     expect(result).toEqual(input);
   });
 
-  it('real-world scenario: system + history user + new user question', () => {
+  it('real-world scenario: system + consecutive user messages returned as-is', () => {
     // This is the exact scenario that broke Mistral 14B:
     // system → user(history) → user(new question)
     const input: ChatMessage[] = [
@@ -88,10 +79,7 @@ describe.skip('mergeSameRole', () => {
       { role: 'user', content: 'Tell me more about his experience' },
     ];
     const result = mergeSameRole(input);
-    expect(result).toEqual([
-      { role: 'system', content: 'System with RAG context...' },
-      { role: 'user', content: 'What does Daniel do?\nTell me more about his experience' },
-    ]);
+    expect(result).toEqual(input);
   });
 
   it('does not mutate original array', () => {

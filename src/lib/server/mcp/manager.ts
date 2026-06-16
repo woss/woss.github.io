@@ -338,15 +338,23 @@ export class McpManager {
     const start = Date.now();
     log.info('Executing MCP tool', { tool: resolvedName, serverId });
 
+    let timeoutHandle!: ReturnType<typeof setTimeout>;
     const result = await Promise.race([
       conn.client.callTool({ name: originalName, arguments: args }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`MCP callTool timed out after 60s for ${resolvedName}`)), 60_000),
-      ),
+      new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(() => reject(new Error(`MCP callTool timed out after 60s for ${resolvedName}`)), 60_000);
+      }),
     ]);
+    clearTimeout(timeoutHandle);
 
     const durationMs = Date.now() - start;
-    log.info('MCP tool completed', { tool: resolvedName, serverId, durationMs, isError: result.isError, contentLength: result.content.length });
+    log.info('MCP tool completed', {
+      tool: resolvedName,
+      serverId,
+      durationMs,
+      isError: result.isError,
+      contentLength: result.content.length,
+    });
 
     let contentItems = parseMcpContent(result.content);
     if (result.isError) {

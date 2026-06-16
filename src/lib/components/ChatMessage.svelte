@@ -8,7 +8,7 @@
  import { page } from '$app/state';
  import ActionBar from './ActionBar.svelte';
  import ToolCallList from './ToolCallList.svelte';
- import { createMarkdownRenderer, preprocessMarkdown, sanitizeHtml } from '$lib/chat/markdown';
+ import { createMarkdownRenderer, preprocessMarkdown, sanitizeHtml, postprocessHtml } from '$lib/chat/markdown';
 
  dayjs.extend(relativeTime);
  dayjs.extend(utc);
@@ -45,18 +45,19 @@
  onToggleSidebar?: (tab: 'sources' | 'tools') => void;
  } = $props();
 
- let downReason = $state('');
+	let downReason = $state('');
 
- let renderedHtml = $derived.by(() => {
- if (!message.text) return '';
- const md = createMarkdownRenderer({
- chatId,
- messageId: message.id,
- queryParams: page.data.queryParams,
- });
- const raw = md.render(preprocessMarkdown(message.text));
- return sanitizeHtml(raw);
- });
+	let cardHtml = $derived.by(() => {
+		if (!message.text) return '';
+		const md = createMarkdownRenderer({
+			chatId,
+			messageId: message.id,
+			queryParams: page.data.queryParams,
+		});
+		const raw = md.render(preprocessMarkdown(message.text));
+		const processed = postprocessHtml(raw);
+		return sanitizeHtml(processed);
+	});
 
  async function submitDownReason(
  message: ChatMessage,
@@ -91,7 +92,7 @@
  '[&_td]:border [&_td]:border-[rgba(255,255,255,0.08)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm ' +
  '[&_hr]:border-t [&_hr]:border-[rgba(255,255,255,0.08)] [&_hr]:my-4 ' +
  '[&_a]:text-[#00da8c] [&_a:hover]:underline [&_a[target="_blank"]]:inline-flex [&_a[target="_blank"]]:items-center [&_a[target="_blank"]]:gap-1 [&_a[target="_blank"]]:after:content-["_↗"] [&_a[target="_blank"]]:after:text-xs [&_a[target="_blank"]]:after:opacity-60 ' +
- '[&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-2 [&_img]:shadow-lg ' +
+  '[&_img]:max-w-full [&_img]:max-h-[50vh] [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-2 [&_img]:shadow-lg ' +
  '[&_ul]:list-disc [&_ul]:pl-5 max-md:[&_ul]:pl-1 [&_ul]:space-y-0.5 [&_ul]:my-1 ' +
  '[&_ol]:list-decimal [&_ol]:pl-5 max-md:[&_ol]:pl-1 [&_ol]:space-y-0.5 [&_ol]:my-1 ' +
  '[&_li]:leading-normal ' +
@@ -175,7 +176,7 @@
  <!-- Markdown content -->
  {#if message.text}
  <div class={proseCls}>
- {@html renderedHtml}
+	{@html cardHtml}
  </div>
  {:else if !isLoading}
  <p class="text-outline italic">No response</p>
@@ -187,19 +188,6 @@
  {now}
  />
 
- <!-- Persisted tool calls on completed messages -->
- {#if !(isLast && isLoading) && message.toolCalls?.length}
- <ToolCallList
- tools={message.toolCalls.map(tc => ({
- id: tc.id,
- name: tc.name,
- serverId: tc.serverId,
- startedAt: new Date(tc.startedAt).getTime(),
- finishedAt: tc.finishedAt ? new Date(tc.finishedAt).getTime() : undefined,
- }))}
- {now}
- />
- {/if}
 
  <!-- ActionBar -->
  {#if !(isLast && isLoading) && message.text && !message.deletedAt}

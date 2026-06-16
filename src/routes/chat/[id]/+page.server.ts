@@ -16,7 +16,7 @@ import { config as clientConfig } from '$lib/config';
 import { callWebhook } from '$lib/server/webhooks';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { isAvailable } from '$lib/server/llm';
-import { startGeneration } from '$lib/server/generate';
+import { startGeneration, abortGeneration } from '$lib/server/generate';
 import { generateTraceId, generateSpanId, withTrace } from '$lib/server/trace-context';
 import { CAT, createLogger } from '$lib/server/logger';
 import { setReaction, deleteReaction, softDeleteMessage } from '$lib/server/db';
@@ -105,7 +105,7 @@ export const actions: Actions = {
     if (!dev && chat.userId !== userId) return fail(403, { error: 'Not authorized' });
 
     deleteChat(chatId);
-    callWebhook({ type: 'chatDeleted', chatId });
+    await callWebhook({ type: 'chatDeleted', chatId });
 
     return { success: true, chatId };
   },
@@ -179,7 +179,12 @@ export const actions: Actions = {
       const ua = event.request.headers.get('user-agent') ?? 'unknown';
       const ip = getClientIP(event);
       const country = lookupCountry(ip);
-      const webhookType = reactionType === 'up' ? 'messageUpvote' as const : reactionType === 'heart' ? 'messageHeart' as const : 'messageDownvote' as const;
+      const webhookType =
+        reactionType === 'up'
+          ? ('messageUpvote' as const)
+          : reactionType === 'heart'
+            ? ('messageHeart' as const)
+            : ('messageDownvote' as const);
       callWebhook({
         type: webhookType,
         messageId,
@@ -230,6 +235,16 @@ export const actions: Actions = {
       return fail(500, { error: 'Internal server error' });
     }
   },
+
+  abort: async (event) => {
+    const chatId = event.params.id;
+    if (!chatId) return fail(400, { error: 'chatId required' });
+
+    const aborted = abortGeneration(chatId);
+    log.info`Abort generation for chat ${chatId}: ${aborted}`;
+
+    return { success: true, aborted };
+  },
 };
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -253,7 +268,7 @@ export const load: PageServerLoad = async ({ params }) => {
     id: m.id,
     role: m.role === 'system' ? 'assistant' : m.role === 'user' ? 'user' : 'assistant',
     text: m.content || '',
-    sources: m.sources ? JSON.parse(m.sources) : undefined,
+    sources: m.sources ? (() => { try { return JSON.parse(m.sources); } catch { return undefined; } })() : undefined,
     reasoning: m.reasoning || undefined,
     error: m.error || undefined,
     irrecoverable: m.irrecoverable || undefined,

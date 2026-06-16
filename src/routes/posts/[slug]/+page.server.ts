@@ -5,9 +5,13 @@ import { renderMarkdown } from '$lib/server/markdown';
 type HeaderImage = { alt: string; url: string } | null;
 
 type ImageMeta = {
-  title?: string; creator?: string; license?: string;
-  licenseShort?: string; dataMiningFull?: string;
-  unifiedId?: string; _links?: { raw?: string }
+  title?: string;
+  creator?: string;
+  license?: string;
+  licenseShort?: string;
+  dataMiningFull?: string;
+  unifiedId?: string;
+  _links?: { raw?: string };
 } | null;
 
 export async function load({ params }: { params: Record<string, string> }) {
@@ -28,7 +32,9 @@ export async function load({ params }: { params: Record<string, string> }) {
       try {
         const res = await fetch(`https://u.macula.link/${match[1]}.json`);
         if (res.ok) imageMeta = await res.json();
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -67,7 +73,9 @@ export async function load({ params }: { params: Record<string, string> }) {
         ? { slug: publishedPosts[currentIndex + 1].slug, title: publishedPosts[currentIndex + 1].title }
         : null,
     next:
-      currentIndex > 0 ? { slug: publishedPosts[currentIndex - 1].slug, title: publishedPosts[currentIndex - 1].title } : null,
+      currentIndex > 0
+        ? { slug: publishedPosts[currentIndex - 1].slug, title: publishedPosts[currentIndex - 1].title }
+        : null,
   };
 
   // Series siblings
@@ -75,27 +83,21 @@ export async function load({ params }: { params: Record<string, string> }) {
 
   if (currentRaw.partOfSeries) {
     // This post is part of a series — find root + siblings
-    const root = allPosts.find(p => p.id === currentRaw.partOfSeries);
+    const root = allPosts.find((p) => p.id === currentRaw.partOfSeries);
     if (root) {
       const children = allPosts
-        .filter(p => p.partOfSeries === currentRaw.partOfSeries)
-        .map(p => ({ slug: p.slug, title: p.title }));
-      const items = [
-        { slug: root.slug, title: root.title },
-        ...children,
-      ];
+        .filter((p) => p.partOfSeries === currentRaw.partOfSeries)
+        .map((p) => ({ slug: p.slug, title: p.title }));
+      const items = [{ slug: root.slug, title: root.title }, ...children];
       series = { title: root.title, items, currentSlug: slug };
     }
   } else if (currentRaw.id) {
     // This might be a series root — find children
     const children = allPosts
-      .filter(p => p.partOfSeries === currentRaw.id)
-      .map(p => ({ slug: p.slug, title: p.title }));
+      .filter((p) => p.partOfSeries === currentRaw.id)
+      .map((p) => ({ slug: p.slug, title: p.title }));
     if (children.length > 0) {
-      const items = [
-        { slug: currentRaw.slug, title: currentRaw.title },
-        ...children,
-      ];
+      const items = [{ slug: currentRaw.slug, title: currentRaw.title }, ...children];
       series = { title: currentRaw.title, items, currentSlug: currentRaw.slug };
     }
   }

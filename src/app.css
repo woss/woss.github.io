@@ -36,38 +36,81 @@
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 @keyframes pulse-send {
-  0%, 100% { opacity: 0.5; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 0.4; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.2); }
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 @keyframes message-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes page-enter {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes content-enter {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ─── Legacy layout tokens (backward compat for var() refs in .svelte files) ─── */
@@ -116,7 +159,7 @@
   --color-primary: oklch(0.72 0.19 162.5);
   --color-on-primary: oklch(0.15 0.02 160);
   --color-primary-container: oklch(0.28 0.08 162.5);
-  --color-on-primary-container: oklch(0.85 0.10 162.5);
+  --color-on-primary-container: oklch(0.85 0.1 162.5);
 
   /* Secondary - warm gray */
   --color-secondary: oklch(0.65 0.04 45);
@@ -133,7 +176,7 @@
   /* Error */
   --color-error: oklch(0.68 0.15 30);
   --color-on-error: oklch(0.15 0.02 30);
-  --color-error-container: oklch(0.30 0.10 30);
+  --color-error-container: oklch(0.3 0.1 30);
   --color-on-error-container: oklch(0.88 0.06 30);
 
   /* Success - green aligned with teal */
@@ -145,11 +188,11 @@
   /* Warning - amber */
   --color-warning: oklch(0.75 0.14 80);
   --color-on-warning: oklch(0.15 0.02 80);
-  --color-warning-container: oklch(0.30 0.08 80);
+  --color-warning-container: oklch(0.3 0.08 80);
   --color-on-warning-container: oklch(0.88 0.06 80);
 
   /* Info - warm blue */
-  --color-info: oklch(0.65 0.10 240);
+  --color-info: oklch(0.65 0.1 240);
   --color-on-info: oklch(0.15 0.02 240);
   --color-info-container: oklch(0.28 0.06 240);
   --color-on-info-container: oklch(0.85 0.06 240);
@@ -160,11 +203,11 @@
   --color-on-surface-variant: oklch(0.65 0.015 45);
 
   /* Surface Containers - progressively lighter warm */
-  --color-surface-container-lowest: oklch(0.10 0.006 45);
+  --color-surface-container-lowest: oklch(0.1 0.006 45);
   --color-surface-container-low: oklch(0.135 0.007 45);
   --color-surface-container: oklch(0.155 0.008 45);
   --color-surface-container-high: oklch(0.18 0.01 45);
-  --color-surface-container-highest: oklch(0.20 0.012 45);
+  --color-surface-container-highest: oklch(0.2 0.012 45);
 
   /* Surface Dim & Bright */
   --color-surface-dim: oklch(0.115 0.006 45);
@@ -176,8 +219,8 @@
 
   /* Inverse */
   --color-inverse-surface: oklch(0.92 0.008 45);
-  --color-inverse-on-surface: oklch(0.20 0.01 45);
-  --color-inverse-primary: oklch(0.50 0.15 162.5);
+  --color-inverse-on-surface: oklch(0.2 0.01 45);
+  --color-inverse-primary: oklch(0.5 0.15 162.5);
 }
 
 /* ─── Global Base Styles ─── */
@@ -201,7 +244,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--font-heading);
   font-weight: 700;
   line-height: 1.15;
@@ -215,11 +263,23 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Scrollbar styling */
 /* Firefox */
-* { scrollbar-width: thin; scrollbar-color: var(--color-outline-variant) var(--color-surface); }
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: var(--color-surface); }
-::-webkit-scrollbar-thumb { background: var(--color-outline-variant); border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-outline); }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-outline-variant) var(--color-surface);
+}
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-outline);
+}
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
@@ -230,6 +290,39 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* Admonitions (info, warning, error, success callouts) */
+.admonition {
+  border-left: 4px solid;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+}
+.admonition :first-child {
+  margin-top: 0;
+}
+.admonition :last-child {
+  margin-bottom: 0;
+}
+.admonition p {
+  margin: 0.25rem 0;
+}
+.admonition-info {
+  background: var(--color-info-container);
+  border-color: var(--color-info);
+}
+.admonition-warning {
+  background: var(--color-warning-container);
+  border-color: var(--color-warning);
+}
+.admonition-error {
+  background: var(--color-error-container);
+  border-color: var(--color-error);
+}
+.admonition-success {
+  background: var(--color-success-container);
+  border-color: var(--color-success);
+}
+
 /* Fix code block double padding — pre delegates to atom-one-dark */
 .prose pre {
   padding: 0;
@@ -237,11 +330,22 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes orbit {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse-center {
-  0%, 100% { opacity: 0.6; transform: scale(0.85); }
-  50% { opacity: 1; transform: scale(1.15); }
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
 }

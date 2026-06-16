@@ -1,6 +1,7 @@
 ---
 company: 'Otvorena mreža d.o.o.'
 role: 'Web Developer'
+location: 'Croatia'
 startDate: '2008-02'
 endDate: '2009-07'
 duration: '02/2008 - 07/2009'

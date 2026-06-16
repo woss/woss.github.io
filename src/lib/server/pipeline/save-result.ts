@@ -70,26 +70,68 @@ export async function saveAndEmitResult(params: SaveResultParams): Promise<void>
       ? answerText
       : "I'm sorry, I wasn't able to generate a response. Please try rephrasing your question.";
     try {
-      addMessage({ userId, role: 'assistant', content: fallbackText, sources: JSON.stringify(sources), reasoning: reasoningText, chatId, modelId: currentModelId, tokensIn: tokenUsage.promptTokens, tokensOut: tokenUsage.completionTokens, durationMs: responseMs, maxTokens, queryType, irrecoverable: irrecoverable || undefined, userAgentId });
+      const errMsgId = addMessage({
+        userId,
+        role: 'assistant',
+        content: fallbackText,
+        sources: JSON.stringify(sources),
+        reasoning: reasoningText,
+        chatId,
+        modelId: currentModelId,
+        tokensIn: tokenUsage.promptTokens,
+        tokensOut: tokenUsage.completionTokens,
+        durationMs: responseMs,
+        maxTokens,
+        queryType,
+        irrecoverable: irrecoverable || undefined,
+        error: 'Failed to generate answer after retries',
+        userAgentId,
+      });
+      log.info('Sending SSE event', {
+        event: 'error',
+        chatId,
+        dataLength: fallbackText.length,
+      });
+      publishPersistent(chatId, 'error', {
+        message: 'Failed to generate answer after retries',
+        messageId: errMsgId,
+        irrecoverable: irrecoverable === true,
+      });
     } catch (e) {
       log.error`Failed to save fallback error message: ${e}`;
     }
-    const retryErrMsgId = addMessage({ userId, role: 'assistant', content: '', sources: JSON.stringify(sources ?? []), chatId, modelId: currentModelId, tokensIn: tokenUsage?.promptTokens ?? 0, tokensOut: tokenUsage?.completionTokens ?? 0, durationMs: responseMs, queryType, irrecoverable: irrecoverable || undefined, error: 'Failed to generate answer after retries', userAgentId });
-    log.info('Sending SSE event', { event: 'error', chatId, dataLength: 'Failed to generate answer after retries'.length });
-    publishPersistent(chatId, 'error', {
-      message: 'Failed to generate answer after retries',
-      messageId: retryErrMsgId,
-      irrecoverable: irrecoverable === true,
-    });
     return;
   }
 
   // Save assistant message
   try {
-    addMessage({ userId, role: 'assistant', content: answerText, sources: JSON.stringify(sources), reasoning: reasoningText, chatId, modelId: currentModelId, tokensIn: tokenUsage.promptTokens, tokensOut: tokenUsage.completionTokens, durationMs: responseMs, maxTokens, queryType, msgId, userAgentId });
+    addMessage({
+      userId,
+      role: 'assistant',
+      content: answerText,
+      sources: JSON.stringify(sources),
+      reasoning: reasoningText,
+      chatId,
+      modelId: currentModelId,
+      tokensIn: tokenUsage.promptTokens,
+      tokensOut: tokenUsage.completionTokens,
+      durationMs: responseMs,
+      maxTokens,
+      queryType,
+      msgId,
+      userAgentId,
+    });
   } catch (err) {
     log.error`addMessage failed: ${err}`;
-    const errMsgId = addMessage({ userId, role: 'assistant', content: '', chatId, queryType, error: 'Failed to save response', userAgentId });
+    const errMsgId = addMessage({
+      userId,
+      role: 'assistant',
+      content: '',
+      chatId,
+      queryType,
+      error: 'Failed to save response',
+      userAgentId,
+    });
     log.info('Sending SSE event', { event: 'error', chatId, dataLength: 'Failed to save response'.length });
     publishPersistent(chatId, 'error', { message: 'Failed to save response', messageId: errMsgId });
     return;

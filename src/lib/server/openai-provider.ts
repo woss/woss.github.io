@@ -309,7 +309,7 @@ function chatStreamWithTools(
             let roundTextLength = 0;
             let roundText = '';
             const roundToolResults: string[] = [];
-            const roundToolCallRecords: Array<{toolCallId: string; toolName: string; input: unknown}> = [];
+            const roundToolCallRecords: Array<{ toolCallId: string; toolName: string; input: unknown }> = [];
 
             return new Promise<void>((resolve, reject) => {
               try {
@@ -334,7 +334,11 @@ function chatStreamWithTools(
                         break;
                       case 'tool-call':
                         roundToolCalls++;
-                        roundToolCallRecords.push({toolCallId: chunk.toolCallId, toolName: chunk.toolName, input: chunk.input});
+                        roundToolCallRecords.push({
+                          toolCallId: chunk.toolCallId,
+                          toolName: chunk.toolName,
+                          input: chunk.input,
+                        });
                         emit.single(toolCallEvent(chunk.toolCallId, chunk.toolName, chunk.input));
                         break;
                       case 'tool-result':
@@ -396,7 +400,9 @@ function chatStreamWithTools(
                         crossRoundFingerprintCounts.set(fingerprint, count);
                         log.debug`[fingerprint] ${fingerprint} count=${count}`;
                       }
-                      const toolLoopDetected = [...crossRoundFingerprintCounts.values()].some(c => c > CROSS_ROUND_THRESHOLD);
+                      const toolLoopDetected = [...crossRoundFingerprintCounts.values()].some(
+                        (c) => c > CROSS_ROUND_THRESHOLD,
+                      );
 
                       // Only recurse if the model produced text (roundTextLength > 0).
                       // If the model called tools but produced zero text (doom loop),
@@ -418,13 +424,16 @@ function chatStreamWithTools(
                           role: 'assistant',
                           content: [
                             ...(roundText ? [{ type: 'text' as const, text: roundText }] : []),
-                            ...roundToolCallRecords.map(tc => ({
+                            ...roundToolCallRecords.map((tc) => ({
                               type: 'tool-call' as const,
                               toolCallId: tc.toolCallId,
                               toolName: tc.toolName,
                               input: tc.input,
                             })),
-                          ] as Array<{ type: 'text'; text: string } | { type: 'tool-call'; toolCallId: string; toolName: string; input: unknown }>,
+                          ] as Array<
+                            | { type: 'text'; text: string }
+                            | { type: 'tool-call'; toolCallId: string; toolName: string; input: unknown }
+                          >,
                         });
                         // Push tool results
                         for (let i = 0; i < roundToolCallRecords.length; i++) {
@@ -432,12 +441,14 @@ function chatStreamWithTools(
                           const result = roundToolResults[i] ?? '';
                           currentMessages.push({
                             role: 'tool',
-                            content: [{
-                              type: 'tool-result' as const,
-                              toolCallId: tc.toolCallId,
-                              toolName: tc.toolName,
-                              output: { type: 'text' as const, value: result },
-                            }],
+                            content: [
+                              {
+                                type: 'tool-result' as const,
+                                toolCallId: tc.toolCallId,
+                                toolName: tc.toolName,
+                                output: { type: 'text' as const, value: result },
+                              },
+                            ],
                           });
                         }
 
@@ -449,7 +460,9 @@ function chatStreamWithTools(
                         }
 
                         // Recurse runRound with same tool availability
-                        runRound(round + 1, currentToolSet).then(resolve).catch(reject);
+                        runRound(round + 1, currentToolSet)
+                          .then(resolve)
+                          .catch(reject);
                       } else if (roundToolCalls > 0 && roundTextLength > 0 && (reachedMaxRounds || isDoomLoop)) {
                         // MAX_ROUNDS reached with tool calls and text — force a final
                         // Force final round without tools so the model must produce text.
@@ -460,13 +473,16 @@ function chatStreamWithTools(
                           role: 'assistant',
                           content: [
                             ...(roundText ? [{ type: 'text' as const, text: roundText }] : []),
-                            ...roundToolCallRecords.map(tc => ({
+                            ...roundToolCallRecords.map((tc) => ({
                               type: 'tool-call' as const,
                               toolCallId: tc.toolCallId,
                               toolName: tc.toolName,
                               input: tc.input,
                             })),
-                          ] as Array<{ type: 'text'; text: string } | { type: 'tool-call'; toolCallId: string; toolName: string; input: unknown }>,
+                          ] as Array<
+                            | { type: 'text'; text: string }
+                            | { type: 'tool-call'; toolCallId: string; toolName: string; input: unknown }
+                          >,
                         });
                         // Push tool results
                         for (let i = 0; i < roundToolCallRecords.length; i++) {
@@ -474,12 +490,14 @@ function chatStreamWithTools(
                           const result = roundToolResults[i] ?? '';
                           currentMessages.push({
                             role: 'tool',
-                            content: [{
-                              type: 'tool-result' as const,
-                              toolCallId: tc.toolCallId,
-                              toolName: tc.toolName,
-                              output: { type: 'text' as const, value: result },
-                            }],
+                            content: [
+                              {
+                                type: 'tool-result' as const,
+                                toolCallId: tc.toolCallId,
+                                toolName: tc.toolName,
+                                output: { type: 'text' as const, value: result },
+                              },
+                            ],
                           });
                         }
 
@@ -491,7 +509,9 @@ function chatStreamWithTools(
                         log.info`[llm-round-ctx] messages=${currentMessages.length}, roles=${currentMessages.map((m) => m.role).join(',')}`;
 
                         // Final round with NO tools — forces the model to produce text
-                        runRound(round + 1, undefined).then(resolve).catch(reject);
+                        runRound(round + 1, undefined)
+                          .then(resolve)
+                          .catch(reject);
                       } else {
                         resolve();
                       }

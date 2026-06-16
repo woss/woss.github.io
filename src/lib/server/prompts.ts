@@ -67,7 +67,6 @@ export function getToolSystemPrompt(options?: { github?: boolean; macula?: boole
       '',
       "  - VERIFY: When you need up-to-date repository metadata and the existing context (RAG history) does not already contain it, call search_repositories. If you already have the data you need, use what you have — don't re-verify.",
       '',
-
     );
   }
 

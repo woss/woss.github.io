@@ -156,9 +156,7 @@
  </div>
  {:else}
  <form method="POST" action="?/ask" use:enhance={handleSubmit} bind:this={formEl}>
- <input type="hidden" name="userId" value={userId} />
- <input type="hidden" name="maxChunks" value="6" />
- <div
+  <div
  class="relative rounded-xl border border-[rgba(255,255,255,0.08)] bg-surface-container-high transition-all duration-200"
  >
  <SlashMenu
@@ -193,7 +191,7 @@
  class:bg-secondary={isLoading}
  class:cursor-pointer={hasText || isLoading}
  class:cursor-not-allowed={!hasText && !isLoading}
- disabled={!hasText && !isLoading}
+ disabled={(!hasText || isOverLimit) && !isLoading}
  onclick={isLoading ? handleStop : handleSend}
  aria-label={isLoading ? 'Stop' : 'Send message'}
  >

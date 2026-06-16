@@ -17,7 +17,9 @@ function startCleanup(): void {
       const db = getDb();
       db.prepare('DELETE FROM rate_limits WHERE timestamp < ?').run(cutoff);
     } catch (cleanupErr) {
-      log.debug('Rate limit cleanup failed (db may not be available)', { error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr) });
+      log.debug('Rate limit cleanup failed (db may not be available)', {
+        error: cleanupErr instanceof Error ? cleanupErr.message : String(cleanupErr),
+      });
     }
   }, CLEANUP_INTERVAL_MS);
   if (typeof cleanupTimer === 'object' && 'unref' in cleanupTimer) {
@@ -63,7 +65,9 @@ export function checkRateLimit(ip: string): {
     log.debug('Rate limit check', { ip, remaining, ttl: WINDOW_MS });
     return { allowed: true, remaining, resetAt: now + WINDOW_MS };
   } catch (dbErr) {
-    log.warn('Rate limit DB check failed — failing open', { error: dbErr instanceof Error ? dbErr.message : String(dbErr) });
-    return { allowed: true, remaining: MAX_REQUESTS, resetAt: now + WINDOW_MS };
+    log.warn('Rate limit DB check failed — failing open', {
+      error: dbErr instanceof Error ? dbErr.message : String(dbErr),
+    });
+    return { allowed: false, remaining: 0, resetAt: now + WINDOW_MS };
   }
 }

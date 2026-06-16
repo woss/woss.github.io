@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  traceStorage,
-  generateTraceId,
-  generateSpanId,
-  getCurrentTraceContext,
-  withTrace,
-} from './trace-context';
+import { traceStorage, generateTraceId, generateSpanId, getCurrentTraceContext, withTrace } from './trace-context';
 
 describe('generateTraceId', () => {
   it('returns a UUIDv7 string (time-ordered)', () => {

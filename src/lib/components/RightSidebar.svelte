@@ -112,7 +112,7 @@
  <div class="mt-2 h-1 rounded-full bg-surface-container-high overflow-hidden">
  <div
  class="h-full rounded-full transition-all duration-500"
- style="width: {Math.round((1 - source.score) * 100)}%; background-color: {1 - source.score > 0.6 ? 'var(--color-primary)' : 1 - source.score > 0.45 ? 'var(--color-warning)' : 'var(--color-primary)'};"
+ style="width: {Math.round((1 - source.score) * 100)}%; background-color: {1 - source.score > 0.6 ? 'var(--color-primary)' : 1 - source.score > 0.45 ? 'var(--color-warning)' : 'var(--color-error)'};"
  ></div>
  </div>
  {/if}

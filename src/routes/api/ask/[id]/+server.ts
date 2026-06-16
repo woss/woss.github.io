@@ -26,7 +26,7 @@ export async function GET(event: RequestEvent): Promise<Response> {
 
   // Parse Last-Event-ID header (sent by EventSource on reconnect)
   const lastEventIdHeader = event.request.headers.get('Last-Event-ID');
-  const lastEventId = lastEventIdHeader ? parseInt(lastEventIdHeader, 10) : 0;
+  const lastEventId = lastEventIdHeader ? (parseInt(lastEventIdHeader, 10) || 0) : 0;
 
   const stream = new ReadableStream({
     start(controller) {
@@ -34,7 +34,13 @@ export async function GET(event: RequestEvent): Promise<Response> {
       try {
         const events = getChatEventsSince(chatId, lastEventId).filter((evt) => {
           // Don't replay irrecoverable errors if chat is no longer locked
-          if (evt.type === 'error' && typeof evt.data === 'object' && evt.data !== null && 'irrecoverable' in evt.data && evt.data.irrecoverable === true) {
+          if (
+            evt.type === 'error' &&
+            typeof evt.data === 'object' &&
+            evt.data !== null &&
+            'irrecoverable' in evt.data &&
+            evt.data.irrecoverable === true
+          ) {
             if (!isChatLocked(chatId)) return false;
           }
           return true;

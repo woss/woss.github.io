@@ -89,17 +89,17 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
   es.addEventListener('token', (e: MessageEvent) => {
     resetSseTimeout();
     if (typeof e.data !== 'string') return;
-    const data = JSON.parse(e.data);
+    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
     callbacks.onToken(data.token);
   });
 
   es.addEventListener('done', (e: MessageEvent) => {
     clearTimeout(sseTimeout);
     if (typeof e.data !== 'string') return;
-    const data = JSON.parse(e.data);
+    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
     if (typeof data.messageId !== 'string') return;
 
-    const completedToolCalls = Object.values(sseState.streamingToolCalls).map(tc => ({
+    const completedToolCalls = Object.values(sseState.streamingToolCalls).map((tc) => ({
       id: tc.id,
       name: tc.name,
       serverId: tc.serverId,
@@ -125,7 +125,7 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
   es.addEventListener('tool_call_start', (e: MessageEvent) => {
     resetSseTimeout();
     if (typeof e.data !== 'string') return;
-    const data = JSON.parse(e.data);
+    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
     sseState.streamingToolCalls = {
       ...sseState.streamingToolCalls,
       [data.id]: {
@@ -140,23 +140,26 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
   es.addEventListener('tool_call_end', (e: MessageEvent) => {
     resetSseTimeout();
     if (typeof e.data !== 'string') return;
-    const data = JSON.parse(e.data);
+    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
     const existing = sseState.streamingToolCalls[data.id];
     if (existing) {
-      sseState.streamingToolCalls = { ...sseState.streamingToolCalls, [data.id]: { ...existing, finishedAt: Date.now() } };
+      sseState.streamingToolCalls = {
+        ...sseState.streamingToolCalls,
+        [data.id]: { ...existing, finishedAt: Date.now() },
+      };
     }
   });
 
   es.addEventListener('status', (e: MessageEvent) => {
     if (typeof e.data !== 'string') return;
-    const data = JSON.parse(e.data);
+    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
     sseState.currentStatus = data.step || '';
   });
 
   es.addEventListener('error', (e: MessageEvent) => {
     clearTimeout(sseTimeout);
     if (typeof e.data !== 'string') return;
-    const data = JSON.parse(e.data);
+    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
 
     if (typeof data.messageId === 'string') {
       if (seenErrorMsgIds.has(data.messageId)) return;

@@ -61,7 +61,11 @@ export async function POST(event: RequestEvent): Promise<Response> {
   }
 
   try {
-    const body = (await event.request.json()) as { userId: string; reactionType: 'up' | 'down' | 'heart'; reason?: string };
+    const body = (await event.request.json()) as {
+      userId: string;
+      reactionType: 'up' | 'down' | 'heart';
+      reason?: string;
+    };
 
     if (!body.userId) {
       return new Response(JSON.stringify({ error: 'userId required' }), {
@@ -82,7 +86,12 @@ export async function POST(event: RequestEvent): Promise<Response> {
     const ua = event.request.headers.get('user-agent') ?? 'unknown';
     const ip = getClientIP(event);
     const country = lookupCountry(ip);
-    const webhookType = body.reactionType === 'up' ? ('messageUpvote' as const) : body.reactionType === 'heart' ? ('messageHeart' as const) : ('messageDownvote' as const);
+    const webhookType =
+      body.reactionType === 'up'
+        ? ('messageUpvote' as const)
+        : body.reactionType === 'heart'
+          ? ('messageHeart' as const)
+          : ('messageDownvote' as const);
     callWebhook({
       type: webhookType,
       messageId,

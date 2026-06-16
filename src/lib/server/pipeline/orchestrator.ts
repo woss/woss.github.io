@@ -69,7 +69,7 @@ export async function startGeneration(
   activeGenerations.set(chatId, abortController);
 
   const startTime = performance.now();
-    log.info`📝 ask: "${text.slice(0, 100)}" [chatId=${chatId} userId=${userId}]`;
+  log.info`📝 ask: "${text.slice(0, 100)}" [chatId=${chatId} userId=${userId}]`;
 
   try {
     // Publish user_message event
@@ -93,7 +93,15 @@ export async function startGeneration(
     let ragChunks: { title: string; text: string; score: number }[] = [];
     let sources: { title: string; score: number; slug: string; url: string; type?: string }[] = [];
 
-    const needsAnyTool = classifyResult === 'github' || classifyResult === 'macula' || classifyResult === 'both';
+    // 5b. Detect tool needs BEFORE RAG gate — keyword matching may identify tools even when
+    // classifyQuery returns 'hybrid' (below threshold) or classifyResult is undefined (keyword path).
+    let mcpToolDefs: McpToolDef[] | null = null;
+    const githubNeeded =
+      classifyResult === 'github' || classifyResult === 'both' || (await needsGithubTools(text, ctxMessages));
+    const maculaNeeded =
+      classifyResult === 'macula' || classifyResult === 'both' || (await needsMaculaTools(text, ctxMessages));
+    const needsAnyTool = githubNeeded || maculaNeeded;
+
     if (queryType !== 'tool' && queryType !== 'meta' && !needsAnyTool) {
       publishLive(chatId, 'status', { step: 'searching' });
       // Search more candidates for type-balanced selection
@@ -106,7 +114,8 @@ export async function startGeneration(
 
       // Round-robin interleave by type to ensure diversity
       const selected: typeof filtered = [];
-      let pi = 0, ei = 0;
+      let pi = 0,
+        ei = 0;
       while (selected.length < maxChunks && (pi < postChunks.length || ei < experienceChunks.length)) {
         if (ei < experienceChunks.length && (selected.length % 2 === 1 || pi >= postChunks.length)) {
           selected.push(experienceChunks[ei++]);
@@ -136,11 +145,12 @@ export async function startGeneration(
           title: r.chunk.title,
           score: r.score,
           slug: r.chunk.slug,
-          url: r.chunk.type === 'experience'
-            ? `/experience/${r.chunk.slug}`
-            : r.chunk.slug === 'about'
-              ? `/about`
-              : `/posts/${r.chunk.slug}`,
+          url:
+            r.chunk.type === 'experience'
+              ? `/experience/${r.chunk.slug}`
+              : r.chunk.slug === 'about'
+                ? `/about`
+                : `/posts/${r.chunk.slug}`,
           type: r.chunk.type,
         }));
     }
@@ -177,12 +187,8 @@ export async function startGeneration(
     // 6. Build RAG prompt
     const messages = buildRagPrompt(text, ragChunks, history);
 
-    // 6b. Conditionally load MCP tools — detect which tool categories are needed
-    let mcpToolDefs: McpToolDef[] | null = null;
-    const githubNeeded =
-      classifyResult === 'github' || classifyResult === 'both' || (await needsGithubTools(text, ctxMessages));
-    const maculaNeeded =
-      classifyResult === 'macula' || classifyResult === 'both' || (await needsMaculaTools(text, ctxMessages));
+    // 6b. Conditionally load MCP tools
+    // githubNeeded and maculaNeeded already computed above in step 5b
 
     if (githubNeeded || maculaNeeded) {
       try {
@@ -237,10 +243,15 @@ export async function startGeneration(
     if (lastError) {
       const model = config().openai.model;
       let provider = '';
-      try { provider = new URL(config().openai.baseUrl).hostname; } catch { log.debug`Failed to parse baseUrl for error webhook`; }
-      const statusCode = typeof (lastError as any).status === 'number' && (lastError as any).status > 0
-        ? (lastError as any).status
-        : Number((lastError as Error).message.match(/ (\d{3}) /)?.[1] ?? 0);
+      try {
+        provider = new URL(config().openai.baseUrl).hostname;
+      } catch {
+        log.debug`Failed to parse baseUrl for error webhook`;
+      }
+      const statusCode =
+        typeof (lastError as any).status === 'number' && (lastError as any).status > 0
+          ? (lastError as any).status
+          : Number((lastError as Error).message.match(/ (\d{3}) /)?.[1] ?? 0);
       log.info`🚨 LLM error detected — firing error webhook`;
       callErrorWebhook({
         error: `[first-round-error] "${lastError.message}" stack="${lastError.stack}"`,
@@ -278,10 +289,20 @@ export async function startGeneration(
     const message = err instanceof Error ? err.message : 'Unknown error';
     log.error`Background generation failed: ${err}`;
     try {
-      const errMsgId = addMessage({ userId, role: 'assistant', content: '', chatId, irrecoverable: true, error: message, userAgentId });
+      const errMsgId = addMessage({
+        userId,
+        role: 'assistant',
+        content: '',
+        chatId,
+        irrecoverable: true,
+        error: message,
+        userAgentId,
+      });
       publishPersistent(chatId, 'error', { message, messageId: errMsgId, irrecoverable: true });
     } catch (innerErr) {
-      log.error('Failed to publish error SSE event after generation failure', { error: innerErr instanceof Error ? innerErr.message : String(innerErr) });
+      log.error('Failed to publish error SSE event after generation failure', {
+        error: innerErr instanceof Error ? innerErr.message : String(innerErr),
+      });
     }
   } finally {
     activeGenerations.delete(chatId);

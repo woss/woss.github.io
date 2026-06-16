@@ -19,7 +19,17 @@ async function getScrollState(
 
 // Generate mock messages - enough to overflow any normal viewport
 function generateMockMessages(chatId: string, count: number = 20) {
-  const messages: Array<{ id: string; role: string; content: string; createdAt: string; sources: string | null; modelId: number; tokensIn: number; tokensOut: number; durationMs: number }> = [];
+  const messages: Array<{
+    id: string;
+    role: string;
+    content: string;
+    createdAt: string;
+    sources: string | null;
+    modelId: number;
+    tokensIn: number;
+    tokensOut: number;
+    durationMs: number;
+  }> = [];
   for (let i = 0; i < count; i++) {
     if (i % 2 === 0) {
       // User message

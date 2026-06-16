@@ -1,7 +1,12 @@
 ---
 title: 'How to serve SPA with fallback on IPFS'
-date: null
-tags: []
+date: 2024-06-01
+tags:
+  - caddy
+  - ipfs
+  - spa
+  - reverse proxy
+  - routing
 excerpt: 'How to serve SPA with fallback on IPFS Firstly we need to understand that the non file system routing ( prerendered pages and index.html ) will always fail when served from IPFS and this is because the IPFS is not aware of it. Here is the simple and working example how to serve SPA with index.html as a fallback using Caddy server.'
 description: 'Configure Caddy server as a reverse proxy for IPFS to serve SPAs with index.html fallback'
 published: true

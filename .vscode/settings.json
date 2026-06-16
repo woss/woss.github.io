@@ -39,5 +39,8 @@
   "[python]": {
     "editor.defaultFormatter": "ms-python.python"
   },
+  "[svelte]": {
+    "editor.defaultFormatter": "svelte.svelte-vscode"
+  },
   "terminal.integrated.shellIntegration.history": 1000000
 }

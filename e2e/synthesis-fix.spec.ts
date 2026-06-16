@@ -17,7 +17,7 @@ test.describe('Synthesis round fix', () => {
     const textarea = page.locator('textarea').first();
     await expect(textarea).toBeVisible({ timeout: 5000 });
 
-    const question = "show me daniels photography portfolio";
+    const question = 'show me daniels photography portfolio';
     await textarea.fill(question);
     await expect(textarea).toHaveValue(question);
     await textarea.press('Enter');

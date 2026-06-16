@@ -160,11 +160,7 @@ function getIndex(): Index {
  * Search chunks by cosine similarity to the given embedding.
  * Uses USearch for KNN search, then looks up metadata from SQLite.
  */
-function searchChunks(
-  embedding: number[],
-  limit: number = 10,
-  typeFilter?: 'post' | 'experience',
-): SearchResult[] {
+function searchChunks(embedding: number[], limit: number = 10, typeFilter?: 'post' | 'experience'): SearchResult[] {
   const db = getDb();
   const idx = getIndex();
 
@@ -503,7 +499,8 @@ export interface AddMessageParams {
 function addMessage(params: AddMessageParams): string {
   const db = getDb();
   ensureUser(params.userId);
-  if (params.chatId) ensureChat(params.chatId, params.userId, params.role === 'user' ? params.content.slice(0, 100) : undefined);
+  if (params.chatId)
+    ensureChat(params.chatId, params.userId, params.role === 'user' ? params.content.slice(0, 100) : undefined);
   const id = params.msgId ?? randomUUID();
   const ctx = getCurrentTraceContext();
   db.prepare(
@@ -821,7 +818,9 @@ function isChatLocked(chatId: string): boolean {
 
 function getOffTopicCount(chatId: string): number {
   const db = getDb();
-  const row = db.prepare('SELECT off_topic_count FROM chats WHERE id = ?').get(chatId) as { off_topic_count: number } | undefined;
+  const row = db.prepare('SELECT off_topic_count FROM chats WHERE id = ?').get(chatId) as
+    | { off_topic_count: number }
+    | undefined;
   return row?.off_topic_count ?? 0;
 }
 

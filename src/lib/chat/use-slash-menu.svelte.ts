@@ -1,16 +1,11 @@
 import { SLASH_COMMANDS } from './slash-commands';
 
-export function useSlashMenu(
-  getMessageText: () => string,
-  onSelect: (cmd: string) => void,
-) {
+export function useSlashMenu(getMessageText: () => string, onSelect: (cmd: string) => void) {
   let showSlashMenu = $state(false);
   let slashSelectedIndex = $state(0);
   const slashFiltered = $derived(
     getMessageText().startsWith('/')
-      ? SLASH_COMMANDS.filter((c) =>
-          c.triggers[0].includes(getMessageText().toLowerCase()),
-        )
+      ? SLASH_COMMANDS.filter((c) => c.triggers[0].includes(getMessageText().toLowerCase()))
       : [],
   );
 
@@ -26,6 +21,7 @@ export function useSlashMenu(
   /** Handle keyboard events for slash menu navigation. Returns true if the event was consumed. */
   function handleKeydown(e: KeyboardEvent): boolean {
     if (!showSlashMenu) return false;
+    if (slashFiltered.length === 0) return false;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -34,8 +30,7 @@ export function useSlashMenu(
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      slashSelectedIndex =
-        (slashSelectedIndex - 1 + slashFiltered.length) % slashFiltered.length;
+      slashSelectedIndex = (slashSelectedIndex - 1 + slashFiltered.length) % slashFiltered.length;
       return true;
     }
     if (e.key === 'Enter') {

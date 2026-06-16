@@ -220,7 +220,7 @@
               - heading "Featured Posts" [level=2] [ref=e219]
               - generic [ref=e220]:
                 - 'link "Future in the city Type-Safe SurrealDB: Meet the ORM That Ships Introducing a new ORM for SurrealDB that delivers type-safe query building without abstraction overhead. Your schema becomes your TypeScript, and your queries chain like they should. Built on the official SurrealDB SDK, this ORM gives you compile-time validation, autocomplete, and a fluent API that maps directly to SurrealQL. Say goodbye to runtime errors and hello to a better way to work with SurrealDB. Jun 3, 2026 surrealdb orm" [ref=e221] [cursor=pointer]':
-                  - /url: /posts/blog-post-orm
+                  - /url: /posts/dali-orm-announcement
                   - img "Future in the city" [ref=e223]
                   - generic [ref=e224]:
                     - 'heading "Type-Safe SurrealDB: Meet the ORM That Ships" [level=3] [ref=e225]'

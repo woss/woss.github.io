@@ -24,6 +24,7 @@ export async function sendChatMessage(
 ): Promise<SendResult> {
   const trimmed = text.trim();
   const timestamp = Date.now();
+  if (!trimmed) return { messages: currentMessages, error: 'Message cannot be empty', accepted: false };
 
   const updatedMessages: ChatMessage[] = [
     ...currentMessages,
@@ -51,7 +52,7 @@ export async function sendChatMessage(
 
     const response = await fetch(`/chat/${chatId}?/ask`, {
       method: 'POST',
-      headers: { 'Accept': 'application/json' },
+      headers: { Accept: 'application/json' },
       body: fd,
     });
 

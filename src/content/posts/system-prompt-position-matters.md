@@ -1,5 +1,5 @@
 ---
-published: true
+published: false
 title: 'System Prompt Position Matters: Why Your Most Important Instruction Should Be First'
 description: 'How moving a single anti-hallucination rule from line 84 to line 2 of the system prompt changed behavior without changing a word of content — and the research that explains why.'
 date: 2026-06-11
@@ -10,14 +10,14 @@ tags:
   - primacy bias
   - woss.io
 featured: false
-part_of_series: "new-woss-io"
+part_of_series: 'new-woss-io'
 ---
 
 ## The Problem: Line 84
 
 The system prompt for [woss.io](/) had a "no invention" rule. It said:
 
-> *No invention. Never mention company names, roles, or projects not found in context or tool results.*
+> _No invention. Never mention company names, roles, or projects not found in context or tool results._
 
 This was on **line 84** of the prompt — sandwiched between the identity statement ("You represent Daniel Maricic's professional portfolio...") and the style instructions ("Use markdown formatting..."). It read like a suggestion. The model fabricated data anyway.
 
@@ -25,7 +25,7 @@ This was on **line 84** of the prompt — sandwiched between the identity statem
 
 Commit `07016c5` on the `v1` branch did one thing: it moved the constraint to the **second paragraph**, right after the role definition:
 
-> *CRITICAL — ANTI-HALLUCINATION RULE: Never fabricate, invent, or guess any data — including PR numbers, issue numbers, commit SHAs, dates, statistics, repository metadata, or any specific facts. If the exact data is not in context or tool results, say "I don't have that information." Do not extrapolate or construct plausible-looking but unverified data.*
+> _CRITICAL — ANTI-HALLUCINATION RULE: Never fabricate, invent, or guess any data — including PR numbers, issue numbers, commit SHAs, dates, statistics, repository metadata, or any specific facts. If the exact data is not in context or tool results, say "I don't have that information." Do not extrapolate or construct plausible-looking but unverified data._
 
 That's it. Zero words removed. Zero added to any other instruction. Just **repositioned**.
 
@@ -34,48 +34,53 @@ That's it. Zero words removed. Zero added to any other instruction. Just **repos
 Research across multiple papers confirms that LLMs exhibit **primacy bias** — instructions at the start of a prompt carry more weight than those buried in the middle.
 
 ### Primacy Effect of ChatGPT
+
 **Wang et al., EMNLP 2023**
 
-The original paper establishing primacy bias in instruction-tuned LLMs: *"ChatGPT's decision is sensitive to the order of labels in the prompt... clearly higher chance to select the labels at earlier positions as the answer."* If label position affects classification output, instruction position affects behavioral compliance.
+The original paper establishing primacy bias in instruction-tuned LLMs: _"ChatGPT's decision is sensitive to the order of labels in the prompt... clearly higher chance to select the labels at earlier positions as the answer."_ If label position affects classification output, instruction position affects behavioral compliance.
 
 ### DPP Bias: Where to Show Demos in Your Prompt
+
 **Cobbina & Zhou, EMNLP 2025**
 
-A systematic study across 10 LLMs from 4 model families (Qwen, Llama3, Mistral, Cohere): *"Placing demos at the start of prompt yields the most stable and accurate outputs with gains of up to +6 points. Placing demos at the end of the user message flips over 30% of predictions without improving correctness."* The earliest positions have the highest influence — and the effect is strongest for smaller models, but persists across all sizes.
+A systematic study across 10 LLMs from 4 model families (Qwen, Llama3, Mistral, Cohere): _"Placing demos at the start of prompt yields the most stable and accurate outputs with gains of up to +6 points. Placing demos at the end of the user message flips over 30% of predictions without improving correctness."_ The earliest positions have the highest influence — and the effect is strongest for smaller models, but persists across all sizes.
 
 ### Serial Position Effects of Large Language Models
+
 **ACL 2025 Findings**
 
 Confirmed primacy and recency biases across all tested LLMs. Content in the **middle** of a prompt is worst recalled. The "no invention" rule was in exactly this position — the serial position equivalent of an instruction void.
 
 ### Do Prompt Positions Really Matter?
+
 **Lu et al., NAACL 2024**
 
-*"The positions used in many published works are often sub-optimal choices."* While no single position universally excels, early positions consistently outperform middle positions. The paper recommends prompt position optimization as a lightweight, zero-cost performance lever.
+_"The positions used in many published works are often sub-optimal choices."_ While no single position universally excels, early positions consistently outperform middle positions. The paper recommends prompt position optimization as a lightweight, zero-cost performance lever.
 
 ### Position is Power: System Prompts as a Mechanism of Bias
+
 **ACM FAccT 2025**
 
-Demonstrated that *"system-level placements had two key effects: providing model user-information through the system prompt led models to express more negative sentiment when describing demographic groups; and system prompts tended to cause greater deviations from baseline rankings in resource allocation tasks compared to user prompts."* The key takeaway: **within-system position** determines instruction weight. Same content, different position, different behavior.
+Demonstrated that _"system-level placements had two key effects: providing model user-information through the system prompt led models to express more negative sentiment when describing demographic groups; and system prompts tended to cause greater deviations from baseline rankings in resource allocation tasks compared to user prompts."_ The key takeaway: **within-system position** determines instruction weight. Same content, different position, different behavior.
 
 ## Before vs After
 
 The original prompt structure (config.ts, pre-commit 07016c5):
 
-| Position | Content | Serial Effect |
-|----------|---------|---------------|
-| Lines 1-2 | Identity/role statement | **Primacy** ✅ |
-| Lines 3-84 | Context sources, style rules, GitHub formatting | Middle void ❌ |
-| **Line 84** | **"No invention" rule** | **Weakest position** ❌ |
-| Lines 85-94 | Contact rules, refusal rule | Recency |
+| Position    | Content                                         | Serial Effect           |
+| ----------- | ----------------------------------------------- | ----------------------- |
+| Lines 1-2   | Identity/role statement                         | **Primacy** ✅          |
+| Lines 3-84  | Context sources, style rules, GitHub formatting | Middle void ❌          |
+| **Line 84** | **"No invention" rule**                         | **Weakest position** ❌ |
+| Lines 85-94 | Contact rules, refusal rule                     | Recency                 |
 
 The restructured prompt (commit 07016c5):
 
-| Position | Content | Serial Effect |
-|----------|---------|---------------|
-| Lines 1-2 | Identity/role statement | **Primacy** ✅ |
-| **Line 3** | **ANTI-HALLUCINATION RULE** | **Strongest position** ✅ |
-| Lines 4-94 | Context, style, GitHub, contact, refusal | Post-constraint |
+| Position   | Content                                  | Serial Effect             |
+| ---------- | ---------------------------------------- | ------------------------- |
+| Lines 1-2  | Identity/role statement                  | **Primacy** ✅            |
+| **Line 3** | **ANTI-HALLUCINATION RULE**              | **Strongest position** ✅ |
+| Lines 4-94 | Context, style, GitHub, contact, refusal | Post-constraint           |
 
 The anti-hallucination rule now sits in the **primacy zone** — immediately after the model understands its role, before any other instruction can dilute its weight.
 
@@ -99,24 +104,24 @@ Instructions placed in the primacy zone get disproportionate attention. The midd
 The full system prompt as it runs today:
 
 ```
-You represent Daniel Maricic's professional portfolio and personal 
-development. Answer questions about his skills, experience, projects, 
+You represent Daniel Maricic's professional portfolio and personal
+development. Answer questions about his skills, experience, projects,
 career history, and hobbies.
 
-CRITICAL — ANTI-HALLUCINATION RULE: Never fabricate, invent, or guess 
-any data — including PR numbers, issue numbers, commit SHAs, dates, 
-statistics, repository metadata, or any specific facts. If the exact 
-data is not in context or tool results, say "I don't have that 
-information." Do not extrapolate or construct plausible-looking but 
+CRITICAL — ANTI-HALLUCINATION RULE: Never fabricate, invent, or guess
+any data — including PR numbers, issue numbers, commit SHAs, dates,
+statistics, repository metadata, or any specific facts. If the exact
+data is not in context or tool results, say "I don't have that
+information." Do not extrapolate or construct plausible-looking but
 unverified data.
 
-Start with provided context. If context lacks the answer, use available 
-tools to find real data. No invention. Never mention company names, 
+Start with provided context. If context lacks the answer, use available
+tools to find real data. No invention. Never mention company names,
 roles, or projects not found in context or tool results...
 
 [style instructions, formatting rules, GitHub link conventions...]
 
-CRITICAL — REFUSAL RULE: If the user asks about anything NOT related 
+CRITICAL — REFUSAL RULE: If the user asks about anything NOT related
 to Daniel Maricic...
 ```
 
@@ -134,4 +139,4 @@ The original "no invention" text remains verbatim on line 4 — but it's now **r
 
 ---
 
-*Part of the [Building woss.io](/posts/new-woss-io) series. The full system prompt evolution is tracked in [commit 07016c5](https://github.com/woss/woss.io/commit/07016c5) on the `v1` branch.*
+_Part of the [Building woss.io](/posts/new-woss-io) series. The full system prompt evolution is tracked in [commit 07016c5](https://github.com/woss/woss.io/commit/07016c5) on the `v1` branch._

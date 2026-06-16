@@ -68,7 +68,7 @@ export async function classifyToolNeeds(
     const body = (await response.json()) as ChatCompletionResponse;
     const msg = body.choices?.[0]?.message;
     const rawAnswer = (msg?.content || msg?.reasoning_content || '').trim().toLowerCase();
-    log.info(l => l`🔍 classifyToolNeeds raw response body: ${JSON.stringify(body)}`);
+    log.info((l) => l`🔍 classifyToolNeeds raw response body: ${JSON.stringify(body)}`);
     log.info`🔍 classifyToolNeeds answer="${rawAnswer}"`;
     // Direct match — model put the keyword in content
     if (rawAnswer === 'github' || rawAnswer === 'macula' || rawAnswer === 'both' || rawAnswer === 'none')
@@ -78,7 +78,7 @@ export async function classifyToolNeeds(
     if (rawAnswer.length > 10) {
       const matches = [...rawAnswer.matchAll(/\b(github|macula|both|none)\b/g)];
       // Filter out negated keywords (e.g., "not a GitHub or macula operation")
-      const nonNegated = matches.filter(m => {
+      const nonNegated = matches.filter((m) => {
         const before = rawAnswer.slice(Math.max(0, m.index! - 40), m.index!);
         return !/\bnot\s/i.test(before);
       });

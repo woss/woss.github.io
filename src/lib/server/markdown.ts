@@ -7,6 +7,7 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeSlug from 'rehype-slug';
 import rehypeStringify from 'rehype-stringify';
 import { rehypeMermaidTabs } from './rehype-mermaid-tabs.ts';
+import { rehypeAdmonitions } from './rehype-admonitions.ts';
 import matter from 'gray-matter';
 import type { Root, Element } from 'hast';
 
@@ -45,6 +46,7 @@ function createProcessor() {
     .use(remarkGfm)
     .use(remarkFrontmatter, ['yaml', 'toml'])
     .use(remarkRehype, { allowDangerousHtml: false })
+    .use(rehypeAdmonitions)
     .use(rehypeHighlight)
     .use(rehypeMermaidTabs)
     .use(rehypeLazyLoad)

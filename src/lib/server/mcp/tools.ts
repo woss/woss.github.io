@@ -6,7 +6,6 @@ import { mcp } from './client.ts';
 import { CAT, createLogger } from '$lib/server/logger';
 import type { McpToolDefinition, McpToolCallResult } from './client.ts';
 
-
 const log = createLogger(CAT.mcp);
 
 /** Description overrides for tools needing critical LLM usage hints */
@@ -83,10 +82,12 @@ interface OpenAiTool {
   };
 }
 
-let _openAiToolsCache: OpenAiTool[] | null = null;
-let _mcpToolDefsCache: McpToolDef[] | null = null;
-let _mcpResourceContent: string | null = null;
-let _mcpPromptContent: string | null = null;
+const CACHE_TTL_MS = 60_000; // 60 seconds
+
+let _openAiToolsCache: { data: OpenAiTool[]; ts: number } | null = null;
+let _mcpToolDefsCache: { data: McpToolDef[]; ts: number } | null = null;
+let _mcpResourceContent: { data: string; ts: number } | null = null;
+let _mcpPromptContent: { data: string; ts: number } | null = null;
 
 /* ------------------------------------------------------------------ */
 /*  OpenAI Tool Format                                                 */
@@ -120,7 +121,7 @@ function resetOpenAiToolsCache(): void {
  * Results are cached so subsequent calls return the same list.
  */
 async function getOpenAiTools(): Promise<OpenAiTool[]> {
-  if (_openAiToolsCache) return _openAiToolsCache;
+  if (_openAiToolsCache && Date.now() - _openAiToolsCache.ts < CACHE_TTL_MS) return _openAiToolsCache.data;
 
   const tools = await mcp.listTools();
   const mapped = tools.map((t) =>
@@ -131,7 +132,7 @@ async function getOpenAiTools(): Promise<OpenAiTool[]> {
       inputSchema: toRecord(t.inputSchema),
     }),
   );
-  _openAiToolsCache = mapped;
+  _openAiToolsCache = { data: mapped, ts: Date.now() };
   return mapped;
 }
 
@@ -140,7 +141,7 @@ async function getOpenAiTools(): Promise<OpenAiTool[]> {
  * Results are cached so subsequent calls return the same list.
  */
 async function getMcpToolDefs(): Promise<McpToolDef[]> {
-  if (_mcpToolDefsCache) return _mcpToolDefsCache;
+  if (_mcpToolDefsCache && Date.now() - _mcpToolDefsCache.ts < CACHE_TTL_MS) return _mcpToolDefsCache.data;
   const tools = await mcp.listTools();
   const mapped = tools.map((t) => ({
     name: t.name,
@@ -148,7 +149,7 @@ async function getMcpToolDefs(): Promise<McpToolDef[]> {
     description: TOOL_DESCRIPTION_OVERRIDES[t.name] ?? t.description ?? '',
     inputSchema: toRecord(t.inputSchema),
   }));
-  _mcpToolDefsCache = mapped;
+  _mcpToolDefsCache = { data: mapped, ts: Date.now() };
   log.info`🔧 tools: ${mapped.map((t) => t.name).join(', ')} (${mapped.length}/${tools.length})`;
   return mapped;
 }
@@ -177,7 +178,7 @@ async function executeMcpToolCall(toolCall: { name: string; arguments?: string }
  * Filters by serverId if provided. Results are cached across requests.
  */
 async function getMcpResourceContent(serverId?: string): Promise<string> {
-  if (_mcpResourceContent) return _mcpResourceContent;
+  if (_mcpResourceContent && Date.now() - _mcpResourceContent.ts < CACHE_TTL_MS) return _mcpResourceContent.data;
   const resources = await mcp.listResources();
   const filtered = serverId ? resources.filter((r) => r.serverId === serverId) : resources;
   const parts: string[] = [];
@@ -187,11 +188,12 @@ async function getMcpResourceContent(serverId?: string): Promise<string> {
       parts.push(`=== ${resource.uri} ===\n${content.text}`);
     }
   }
-  _mcpResourceContent = parts.length > 0 ? parts.join('\n\n') : '';
+  const data = parts.length > 0 ? parts.join('\n\n') : '';
+  _mcpResourceContent = { data, ts: Date.now() };
   if (parts.length > 0) {
     log.info`📄 resources: ${filtered.map((r) => r.uri).join(', ')}`;
   }
-  return _mcpResourceContent;
+  return data;
 }
 
 /**
@@ -199,7 +201,7 @@ async function getMcpResourceContent(serverId?: string): Promise<string> {
  * Results are cached across requests.
  */
 async function getMcpPromptContent(): Promise<string> {
-  if (_mcpPromptContent) return _mcpPromptContent;
+  if (_mcpPromptContent && Date.now() - _mcpPromptContent.ts < CACHE_TTL_MS) return _mcpPromptContent.data;
   const prompts = await mcp.listPrompts();
   const parts: string[] = [];
   for (const prompt of prompts) {
@@ -209,11 +211,12 @@ async function getMcpPromptContent(): Promise<string> {
       parts.push(`=== PROMPT: ${prompt.name} ===\n${text}`);
     }
   }
-  _mcpPromptContent = parts.length > 0 ? parts.join('\n\n') : '';
+  const data = parts.length > 0 ? parts.join('\n\n') : '';
+  _mcpPromptContent = { data, ts: Date.now() };
   if (parts.length > 0) {
     log.info`📋 prompts: ${prompts.map((p) => p.name).join(', ')}`;
   }
-  return _mcpPromptContent;
+  return data;
 }
 
 function resetMcpResourceContent(): void {

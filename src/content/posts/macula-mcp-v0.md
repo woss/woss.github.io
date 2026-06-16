@@ -1,13 +1,15 @@
 ---
 published: true
----
-
-# Making Content Accessible to AI: How Macula's MCP Works
-
-## Connecting AI Agents to Creative Content
-
-_Published: March 2026_
-
+title: "Making Content Accessible to AI: How Macula's MCP Works"
+description: "An introductory walkthrough of Macula's public MCP server — 10 tools and 14 prompts connecting AI agents to millions of creative files with full metadata, licensing, and graph-based discovery."
+date: 2026-03-01
+tags:
+  - macula
+  - MCP
+  - AI agents
+  - content discovery
+  - creative content
+  - Model Context Protocol
 ---
 
 ## The Challenge of AI Content Discovery

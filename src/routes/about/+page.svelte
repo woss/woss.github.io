@@ -109,61 +109,94 @@
       </div>
     </div>
 
-    <!-- Bio + links card -->
-    <div class="bg-surface-container border border-[rgba(255,255,255,0.08)] rounded-lg p-8">
-      <div class="font-body text-sm/relaxed text-on-surface-variant space-y-4 max-md:px-0">
-        <p>
-          My career defies linear progression — I jumped from blockchain protocol design with zero prior knowledge to
-          content rights architecture to AI adoption strategy, each time rewiring my thinking and mastering an entirely
-          new vocabulary.
-        </p>
-        <p>
-          I treat learning as a creative act, not a prerequisite: I discovered Docker on client projects and evangelized
-          it before it was mainstream, then did the same with AI tooling at Ipsos — I'd rather build first and ask
-          permission later.
-        </p>
-        <p>
-          My non-linear thinking surfaces in how I connect unconnected worlds: I wrote EU grant proposals blending
-          technical vision with policy language, built a content rights platform bridging blockchain and AI, and
-          designed developer experiences shaped by years of being both builder and user.
-        </p>
-        <p>
-          Instead of optimizing what already exists, I invent what hasn't been built yet — driven less by filling a
-          resume gap and more by the pull of a blank page.
-        </p>
-        <p>
-          For a lot more info you can checkout a longer version I wrote about my career and open source contributions <a
-            href={resolve('/posts/about')}
-            class="text-primary hover:underline">About Me</a
-          >.
-        </p>
-      </div>
+    <div class="font-body text-sm/relaxed text-on-surface-variant space-y-4 max-md:px-0">
+      <p>
+        My career defies linear progression — I jumped from blockchain protocol design with zero prior knowledge to
+        content rights architecture to AI adoption strategy, each time rewiring my thinking and mastering an entirely
+        new vocabulary.
+      </p>
+      <p>
+        I treat learning as a creative act, not a prerequisite: I discovered Docker on client projects and evangelized
+        it before it was mainstream, then did the same with AI tooling at Ipsos — I'd rather build first and ask
+        permission later.
+      </p>
+      <p>
+        My non-linear thinking surfaces in how I connect unconnected worlds: I wrote EU grant proposals blending
+        technical vision with policy language, built a content rights platform bridging blockchain and AI, and designed
+        developer experiences shaped by years of being both builder and user.
+      </p>
+      <p>
+        Instead of optimizing what already exists, I invent what hasn't been built yet — driven less by filling a resume
+        gap and more by the pull of a blank page.
+      </p>
+      <p>
+        For a lot more info you can checkout a longer version I wrote about my career and open source contributions <a
+          href={resolve('/posts/about-daniel-maricic')}
+          class="text-primary hover:underline">About Me</a
+        >.
+      </p>
+    </div>
 
-      <div
-        class="h-0.5 bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] rounded-[1px] my-6"
-        aria-hidden="true"
-      ></div>
+    <div
+      class="h-0.5 bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] rounded-[1px] my-6"
+      aria-hidden="true"
+    ></div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {#each links as link, i (link.url)}
-          {#if link.copyValue}
-            <button
-              onclick={() => copyFingerprint(link.copyValue!)}
-              class="flex items-center gap-4 p-4 rounded-lg border border-[rgba(255,255,255,0.08)] transition-all duration-200 hover:border-primary hover:shadow-[0_0_20px_rgba(0,218,140,0.15)] group text-left w-full cursor-pointer {i ===
-              links.length - 1
-                ? 'md:col-span-2'
-                : ''}"
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {#each links as link, i (link.url)}
+        {#if link.copyValue}
+          <button
+            onclick={() => copyFingerprint(link.copyValue!)}
+            class="flex items-center gap-4 p-4 rounded-lg border border-[rgba(255,255,255,0.08)] transition-all duration-200 hover:border-primary hover:shadow-[0_0_20px_rgba(0,255,136,0.15)] group text-left w-full cursor-pointer {i ===
+            links.length - 1
+              ? 'md:col-span-2'
+              : ''}"
+          >
+            <div
+              class="shrink-0 size-10 flex items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant group-hover:text-primary transition-colors duration-200"
             >
-              <div
-                class="shrink-0 size-10 flex items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant group-hover:text-primary transition-colors duration-200"
-              >
-                <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-                {@html link.icon}
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="font-body text-sm font-semibold text-on-surface m-0">{link.label}</p>
-                <p class="font-body text-xs text-on-surface-variant m-0 truncate">{link.handle}</p>
-              </div>
+              <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+              {@html link.icon}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-body text-sm font-semibold text-on-surface m-0">{link.label}</p>
+              <p class="font-body text-xs text-on-surface-variant m-0 truncate">{link.handle}</p>
+            </div>
+            <svg
+              class="shrink-0 size-4 text-on-surface-variant group-hover:text-primary transition-colors duration-200"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+          </button>
+        {:else}
+          <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+          <a
+            href={link.url}
+            target={link.url.startsWith('http') ? '_blank' : undefined}
+            rel={link.url.startsWith('http') ? 'noopener noreferrer' : undefined}
+            class="flex items-center gap-4 p-4 rounded-lg border border-[rgba(255,255,255,0.08)] no-underline transition-all duration-200 hover:border-primary hover:shadow-[0_0_20px_rgba(0,255,136,0.15)] group {i ===
+            links.length - 1
+              ? 'md:col-span-2'
+              : ''}"
+          >
+            <div
+              class="shrink-0 size-10 flex items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant group-hover:text-primary transition-colors duration-200"
+            >
+              <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+              {@html link.icon}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-body text-sm font-semibold text-on-surface m-0">{link.label}</p>
+              <p class="font-body text-xs text-on-surface-variant m-0 truncate">{link.handle}</p>
+            </div>
+            {#if link.url.startsWith('http')}
               <svg
                 class="shrink-0 size-4 text-on-surface-variant group-hover:text-primary transition-colors duration-200"
                 viewBox="0 0 24 24"
@@ -173,48 +206,12 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
               >
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                <path d="M7 17L17 7" /><path d="M7 7h10v10" />
               </svg>
-            </button>
-          {:else}
-            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-            <a
-              href={link.url}
-              target={link.url.startsWith('http') ? '_blank' : undefined}
-              rel={link.url.startsWith('http') ? 'noopener noreferrer' : undefined}
-              class="flex items-center gap-4 p-4 rounded-lg border border-[rgba(255,255,255,0.08)] no-underline transition-all duration-200 hover:border-primary hover:shadow-[0_0_20px_rgba(0,218,140,0.15)] group {i ===
-              links.length - 1
-                ? 'md:col-span-2'
-                : ''}"
-            >
-              <div
-                class="shrink-0 size-10 flex items-center justify-center rounded-lg bg-surface-container-high text-on-surface-variant group-hover:text-primary transition-colors duration-200"
-              >
-                <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-                {@html link.icon}
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="font-body text-sm font-semibold text-on-surface m-0">{link.label}</p>
-                <p class="font-body text-xs text-on-surface-variant m-0 truncate">{link.handle}</p>
-              </div>
-              {#if link.url.startsWith('http')}
-                <svg
-                  class="shrink-0 size-4 text-on-surface-variant group-hover:text-primary transition-colors duration-200"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M7 17L17 7" /><path d="M7 7h10v10" />
-                </svg>
-              {/if}
-            </a>
-          {/if}
-        {/each}
-      </div>
+            {/if}
+          </a>
+        {/if}
+      {/each}
     </div>
   </div>
 </section>

@@ -29,9 +29,9 @@ import {
   isRelevant,
   needsGithubTools,
   needsMaculaTools,
-  sanitizeText,
   tryRenameChat,
 } from '$lib/server/chat-helpers';
+import { sanitizeText } from '$lib/server/openai-provider';
 import { startGeneration } from '$lib/server/generate';
 import { generateTraceId, generateSpanId, withTrace } from '$lib/server/trace-context';
 import { dev } from '$app/environment';
@@ -173,5 +173,3 @@ export async function POST(event: RequestEvent): Promise<Response> {
     headers: { 'Content-Type': 'application/json' },
   });
 }
-
-

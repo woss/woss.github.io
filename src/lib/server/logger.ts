@@ -13,7 +13,15 @@
  *   log.error`Failed: ${err}`;
  */
 
-import { configure, getConsoleSink, getLogger, getJsonLinesFormatter, type Logger, type LogRecord, type Sink } from '@logtape/logtape';
+import {
+  configure,
+  getConsoleSink,
+  getLogger,
+  getJsonLinesFormatter,
+  type Logger,
+  type LogRecord,
+  type Sink,
+} from '@logtape/logtape';
 import { getRotatingFileSink } from '@logtape/file';
 import { getPrettyFormatter } from '@logtape/pretty';
 import { env } from 'node:process';
@@ -112,9 +120,9 @@ export async function initLogger(logLevel: 'trace' | 'debug' | 'info' | 'warning
   const zinalogApiKey = env.ZINALOG_API_KEY;
 
   const sinks: Record<string, Sink> = {
-    console: getConsoleSink({ formatter: getPrettyFormatter({ timestamp: "time", inspectOptions: { colors: true } }) }),
+    console: getConsoleSink({ formatter: getPrettyFormatter({ timestamp: 'time', inspectOptions: { colors: true } }) }),
     file: getRotatingFileSink(logFile, {
-      formatter: getJsonLinesFormatter({ properties: "flatten" }),
+      formatter: getJsonLinesFormatter({ properties: 'flatten' }),
       bufferSize: 0,
       flushInterval: 0,
       nonBlocking: true,

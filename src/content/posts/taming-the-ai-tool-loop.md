@@ -1,5 +1,5 @@
 ---
-published: true
+published: false
 title: 'Taming the AI Tool Loop: What Happens When the Model Never Gets a Turn Without Tools'
 description: 'How woss.io evolved from a 41-character AI answer to a robust 4-layer defense system against infinite tool-calling doom loops — with cross-round fingerprinting, synthesis rounds, and lessons from opencode.'
 date: 2026-06-13
@@ -11,12 +11,12 @@ tags:
   - woss.io
   - opencode
 featured: false
-part_of_series: "new-woss-io"
+part_of_series: 'new-woss-io'
 ---
 
 ## The 41-Character Answer
 
-A user asked: *"Show me Daniel's pull requests."*
+A user asked: _"Show me Daniel's pull requests."_
 
 The AI responded: `"Now let me get the closed/merged PRs too."`
 
@@ -46,6 +46,7 @@ finishReason "stop" → DONE
 ```
 
 Safety layers sit on top:
+
 - **tool-loop-guard.ts** — fingerprints tool+args, terminates repeats
 - **processor.ts** — same tool 3x → interrupt
 - Thinking loop detection, schema validation, tool output truncation
@@ -66,8 +67,8 @@ The core difference: opencode's outer loop can retry with tools forever. woss.io
 The bug traced back to `prompts.ts`. The tool system prompt told the model:
 
 ```
-VERIFY: When you need up-to-date repository metadata and the existing context 
-(RAG history) does not already contain it, call search_repositories. If you 
+VERIFY: When you need up-to-date repository metadata and the existing context
+(RAG history) does not already contain it, call search_repositories. If you
 already have the data you need, use what you have — don't re-verify.
 ```
 
@@ -99,11 +100,10 @@ for (const tc of roundToolCallRecords) {
   const count = (crossRoundFingerprintCounts.get(fingerprint) ?? 0) + 1;
   crossRoundFingerprintCounts.set(fingerprint, count);
 }
-const toolLoopDetected = [...crossRoundFingerprintCounts.values()]
-  .some(c => c > CROSS_ROUND_THRESHOLD);  // threshold = 3
+const toolLoopDetected = [...crossRoundFingerprintCounts.values()].some((c) => c > CROSS_ROUND_THRESHOLD); // threshold = 3
 ```
 
-The key insight: **tool name alone isn't enough**. A model legitimately calling `search_repositories("woss")` and `search_repositories("opencode")` is different from calling `search_repositories("woss")` three times. The fingerprint includes both the tool name *and* the serialized arguments.
+The key insight: **tool name alone isn't enough**. A model legitimately calling `search_repositories("woss")` and `search_repositories("opencode")` is different from calling `search_repositories("woss")` three times. The fingerprint includes both the tool name _and_ the serialized arguments.
 
 When detected:
 
@@ -122,7 +122,9 @@ This is the structural fix. When `runRound` reaches `MAX_ROUNDS` (default 3) and
 if (roundToolCalls > 0 && roundTextLength > 0 && (reachedMaxRounds || isDoomLoop)) {
   // Force final round WITHOUT tools — the model MUST produce text
   log.info`[llm-round] MAX_ROUNDS=${MAX_ROUNDS} reached — forcing final round without tools`;
-  runRound(round + 1, undefined).then(resolve).catch(reject);
+  runRound(round + 1, undefined)
+    .then(resolve)
+    .catch(reject);
 }
 ```
 
@@ -133,10 +135,7 @@ Setting `currentToolSet` to `undefined` in the recursive call means the next `st
 Even with the synthesis round, sometimes the model would produce a stub like "Here they are:" (15 chars) and stop. The post-stream check catches this:
 
 ```typescript
-const isTinyText =
-  anySuccessfulToolCalls &&
-  answerText.trim().length > 0 &&
-  answerText.trim().length < 100;
+const isTinyText = anySuccessfulToolCalls && answerText.trim().length > 0 && answerText.trim().length < 100;
 ```
 
 If the model called tools but produced fewer than 100 characters of answer text, the entire response is discarded and retried with a hardened system prompt.
@@ -160,7 +159,7 @@ for (let attempt = 0; attempt < 10; attempt++) {
 
 The recovery prompt is blunt:
 
-> *MANDATORY INSTRUCTION: Your previous response was a failure — you called tools but produced NO answer text. You are being retried. For this attempt: DO NOT call any tools. IGNORE any available tools. Use only the information you already have and write a complete, well-formatted answer immediately. Even if you have nothing to say, write SOMETHING — a greeting, an apology, anything. Producing NO text is unacceptable. You MUST write at least one sentence.*
+> _MANDATORY INSTRUCTION: Your previous response was a failure — you called tools but produced NO answer text. You are being retried. For this attempt: DO NOT call any tools. IGNORE any available tools. Use only the information you already have and write a complete, well-formatted answer immediately. Even if you have nothing to say, write SOMETHING — a greeting, an apology, anything. Producing NO text is unacceptable. You MUST write at least one sentence._
 
 ### Bonus: Rate-Limit Cascade Prevention
 
@@ -186,15 +185,15 @@ The AI SDK doesn't retry on 400. The outer loop catches it and breaks immediatel
 
 ## opencode vs woss.io: Defense-in-Depth Comparison
 
-| Concern | opencode | woss.io |
-|---|---|---|
-| Loop model | Outer persists (SessionPrompt.loop) | Inner recursion (runRound) |
-| Tools availability | ALWAYS available | Removable per round |
-| Doom detection | Fingerprint + 3x repeat | Fingerprint + 3x repeat + tiny-text |
-| Synthesis forcing | tool-loop-guard terminates | Tools=undefined forces output |
-| Retry count | Interrupt-based | Up to 10 attempts |
-| Prompt hardening | N/A | getDoomLoopRecoveryPrompt() |
-| 429 handling | Falls through to SDK retries | 429→400 short-circuit |
+| Concern            | opencode                            | woss.io                             |
+| ------------------ | ----------------------------------- | ----------------------------------- |
+| Loop model         | Outer persists (SessionPrompt.loop) | Inner recursion (runRound)          |
+| Tools availability | ALWAYS available                    | Removable per round                 |
+| Doom detection     | Fingerprint + 3x repeat             | Fingerprint + 3x repeat + tiny-text |
+| Synthesis forcing  | tool-loop-guard terminates          | Tools=undefined forces output       |
+| Retry count        | Interrupt-based                     | Up to 10 attempts                   |
+| Prompt hardening   | N/A                                 | getDoomLoopRecoveryPrompt()         |
+| 429 handling       | Falls through to SDK retries        | 429→400 short-circuit               |
 
 Both solve the same problem differently. opencode's advantage: tools are always available, so a recovery attempt can still use tools. woss.io's advantage: the model is guaranteed a no-tools round, preventing infinite loops structurally rather than reactively.
 
@@ -243,4 +242,4 @@ All relevant source files in the woss.io repository:
 
 ---
 
-*This post is part of a series on building woss.io — an AI-native personal portfolio. Earlier posts covered the [system prompt positioning fix](/posts/system-prompt-position-matters) and [Macula MCP tool design lessons](/posts/macula-mcp-design-lessons).*
+_This post is part of a series on building woss.io — an AI-native personal portfolio. Earlier posts covered the [system prompt positioning fix](/posts/system-prompt-position-matters) and [Macula MCP tool design lessons](/posts/macula-mcp-design-lessons)._

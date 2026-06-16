@@ -1,6 +1,7 @@
 ---
 published: true
 title: 'About Daniel Maricic'
+description: 'Software developer, open-source contributor, and founder with a passion for building tools that empower developers and drive innovation in the tech ecosystem.'
 date: 2000-01-01
 tags:
   - bio
@@ -8,7 +9,7 @@ tags:
   - software
   - developer
   - open source
-header_image: '[The gang](https://u.macula.link/1dbmd3TfTRilezawVGR0yQ-7)'
+header_image: '[Star trails over Catalonia](https://u.macula.link/6P2P0eXISH-fR6PJzDhlTw-7)'
 ---
 
 ## Professional Summary
@@ -37,7 +38,7 @@ A couple more creative projects I'm particularly fond of: [git-gpg-remote-sign](
 
 ## Job roles I'd love to work in
 
-**Status: Open to opportunities · Q3 2026**
+Status: Always open to opportunities -- that's my motto. But here are some of the roles I'm particularly interested in:
 
 - Fractional CTO or Technical Co-Founder (with focus on building and scaling products)
 - Backend Engineer

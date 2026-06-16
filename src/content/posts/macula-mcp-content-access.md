@@ -1,13 +1,15 @@
 ---
 published: true
----
-
-# Content Graphs for AI: Discovering Creative Work Through Connections
-
-## How AI Agents Navigate Creative Content Like Walking Through a Gallery
-
-*Published: March 2026*
-
+title: 'Content Graphs for AI: Discovering Creative Work Through Connections'
+description: 'How AI agents navigate creative content by following relationships — a conceptual deep-dive into graph-based discovery using a gallery metaphor, comparing graph walks against traditional REST APIs.'
+date: 2026-03-01
+tags:
+  - macula
+  - MCP
+  - content graph
+  - graph traversal
+  - REST
+  - API design
 ---
 
 ## The Gallery
@@ -137,8 +139,8 @@ Sarah doesn't need to manually update her portfolio across multiple platforms. M
 
 Content graphs fundamentally change how agents interact with data. Compare a graph walk to traditional REST:
 
-|              | Graph Walk                       | REST                     |
-| ------------ | -------------------------------- | ------------------------ |
+|                  | Graph Walk                       | REST                     |
+| ---------------- | -------------------------------- | ------------------------ |
 | **Mental model** | Nodes and relationships          | Endpoints and URLs       |
 | **Discovery**    | Describe what you want           | Know the URL patterns    |
 | **Round trips**  | 1-2 calls                        | 3+ sequential requests   |
@@ -240,48 +242,48 @@ _These tool names map to the content graph operations described above._
 
 ### All 4 Tools
 
-| Tool              | Description                                                                                                                                                                                                                                                                                        |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool                | Description                                                                                                                                                                                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `traverse`          | Universal discovery — navigate relationships across 6 from types × 10 edges. Supports full-text search, keyword lookup, user profiles, file/directory info, and all previous specialized operations. Images included in all traversal results (`contains` and `tagged_files` follow rendition chains). |
-| `get_file`          | Get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` param for selective retrieval.                                                                                                                                      |
-| `get_file_metadata` | Get full EXIF/XMP/IPTC metadata. Optional `a` parameter for specific metadata fields.                                                                                                                                                                                                                |
-| `get_users`         | Batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                               |
+| `get_file`          | Get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` param for selective retrieval.                                                                                                                                        |
+| `get_file_metadata` | Get full EXIF/XMP/IPTC metadata. Optional `a` parameter for specific metadata fields.                                                                                                                                                                                                                  |
+| `get_users`         | Batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                                   |
 
 #### Replaced Tools
 
-| Old Tool                    | Replacement                                                                                |
-| --------------------------- | ------------------------------------------------------------------------------------------ |
-| `get_file_presets`            | `get_file(fields: ['presets'])`                                                              |
-| `get_file_json_schema`        | Removed — schema exposed via tool metadata                                                 |
-| `get_metadata_json_schema`    | Removed — schema exposed via tool metadata                                                 |
-| `get_node(type: 'file')`      | `traverse(edge: 'info', from: { type: 'file', unifiedId })`                                  |
+| Old Tool                      | Replacement                                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| `get_file_presets`            | `get_file(fields: ['presets'])`                                                                |
+| `get_file_json_schema`        | Removed — schema exposed via tool metadata                                                     |
+| `get_metadata_json_schema`    | Removed — schema exposed via tool metadata                                                     |
+| `get_node(type: 'file')`      | `traverse(edge: 'info', from: { type: 'file', unifiedId })`                                    |
 | `get_node(type: 'user')`      | `traverse(edge: 'profile', from: { type: 'user', nickname })` or `get_users(nicknames: [...])` |
-| `get_node(type: 'directory')` | `traverse(edge: 'info', from: { type: 'directory', pathCid })`                               |
-| `get_user(nickname)`          | `get_users(nicknames: [nickname])`                                                           |
-| `search(query)`               | `traverse(from: { type: 'root' }, edge: 'search', query)`                                    |
-| `search_keywords(search)`     | `traverse(from: { type: 'root' }, edge: 'keywords', query)`                                  |
-| `list_files_by_license`       | `traverse(from: { type: 'license', license }, edge: 'has_license')`                          |
-| `list_files_for_ai`           | `traverse(filter: { allowAI: true })`                                                        |
-| `list_user_files`             | `traverse(from: { type: 'user', nickname }, edge: 'uploads')`                                |
-| `list_random_files`           | `traverse(from: { type: 'root' }, edge: 'random')`                                           |
-| `list_files_by_keyword`       | `traverse(from: { type: 'keyword', keyword }, edge: 'tagged_files')`                         |
-| `get_directory`               | `traverse(edge: 'info', from: { type: 'directory', pathCid })`                               |
-| `get_directory_files`         | `traverse(from: { type: 'directory', pathCid }, edge: 'contains')`                           |
+| `get_node(type: 'directory')` | `traverse(edge: 'info', from: { type: 'directory', pathCid })`                                 |
+| `get_user(nickname)`          | `get_users(nicknames: [nickname])`                                                             |
+| `search(query)`               | `traverse(from: { type: 'root' }, edge: 'search', query)`                                      |
+| `search_keywords(search)`     | `traverse(from: { type: 'root' }, edge: 'keywords', query)`                                    |
+| `list_files_by_license`       | `traverse(from: { type: 'license', license }, edge: 'has_license')`                            |
+| `list_files_for_ai`           | `traverse(filter: { allowAI: true })`                                                          |
+| `list_user_files`             | `traverse(from: { type: 'user', nickname }, edge: 'uploads')`                                  |
+| `list_random_files`           | `traverse(from: { type: 'root' }, edge: 'random')`                                             |
+| `list_files_by_keyword`       | `traverse(from: { type: 'keyword', keyword }, edge: 'tagged_files')`                           |
+| `get_directory`               | `traverse(edge: 'info', from: { type: 'directory', pathCid })`                                 |
+| `get_directory_files`         | `traverse(from: { type: 'directory', pathCid }, edge: 'contains')`                             |
 
 ### All 4 Prompts
 
-| Prompt | Description |
-|--------|-------------|
-| `browse_user` | Explore a creator's profile, directories, and published files via user → directory → file navigation |
-| `display_media` | Display files (images, video, audio) in markdown with optimal renditions and presets |
-| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns |
-| `inspect_metadata` | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs |
+| Prompt              | Description                                                                                          |
+| ------------------- | ---------------------------------------------------------------------------------------------------- |
+| `browse_user`       | Explore a creator's profile, directories, and published files via user → directory → file navigation |
+| `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                 |
+| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                    |
+| `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs            |
 
 ### Resources (2)
 
-| Resource URI | Description |
-|-------------|-------------|
-| `instructions` | Service documentation and usage guidelines for AI agents |
+| Resource URI            | Description                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `instructions`          | Service documentation and usage guidelines for AI agents                                                            |
 | `/.well-known/mcp.json` | Auto-discovery metadata — MCP clients find our server at `https://u.macula.link/.well-known/mcp.json` automatically |
 
 ---

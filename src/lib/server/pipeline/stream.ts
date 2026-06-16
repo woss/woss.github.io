@@ -154,6 +154,7 @@ export async function streamWithRetry(
   );
 
   // change from 3 to 10 attempts after adding retry-on-doom-loop logic, to give the model more chances to recover with tools disabled
+  const baseSystemPrompt = messages[0].content;
   let irrecoverable = false;
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
@@ -284,17 +285,16 @@ export async function streamWithRetry(
 
       // Retry if answer is empty, doom loop, tiny text, or tool loop detected
       const isTinyText =
-        anySuccessfulToolCalls &&
-        answerText.trim().length > 0 &&
-        answerText.trim().length < TINY_TEXT_THRESHOLD;
+        anySuccessfulToolCalls && answerText.trim().length > 0 && answerText.trim().length < TINY_TEXT_THRESHOLD;
       const isDoomLoop = anySuccessfulToolCalls && answerText.trim().length === 0;
       const isToolLoop = doomLoopDetectedInRound;
 
       // Hallucination guard: Macula tools available, zero calls made, output has Macula URLs
       const maculaToolNames = ['traverse', 'get_users', 'get_file', 'get_file_metadata'];
-      const hasMaculaTools = mcpToolDefs?.some(d => maculaToolNames.includes(d.name)) ?? false;
+      const hasMaculaTools = mcpToolDefs?.some((d) => maculaToolNames.includes(d.name)) ?? false;
       const hasFabricatedUrls = /https?:\/\/(?:u\.)?macula\.link\//i.test(answerText);
-      const isHallucination = hasMaculaTools && !anyStepHadToolCalls && hasFabricatedUrls && answerText.trim().length > 0;
+      const isHallucination =
+        hasMaculaTools && !anyStepHadToolCalls && hasFabricatedUrls && answerText.trim().length > 0;
 
       if (answerText.trim().length === 0 || isDoomLoop || isTinyText || isToolLoop || isHallucination) {
         const reason = isHallucination
@@ -306,19 +306,14 @@ export async function streamWithRetry(
               : 'Stuck loop (tools called, tiny text)';
         log.warn`${reason}, retrying (attempt ${attempt + 1})`;
         if (messages.length > 0 && messages[0].role === 'system') {
-          if (isHallucination) {
-            messages[0] = {
-              ...messages[0],
-              content: messages[0].content + '\n\nWARNING — Your previous response contained fabricated Macula URLs. You did not call any Macula tools to retrieve real data. MANDATORY: You MUST call Macula tools (traverse, get_users, get_file) to get actual file data. Do NOT generate URLs from memory.',
-            };
-          } else {
-            messages[0] = {
-              ...messages[0],
-              content:
-                messages[0].content +
-                '\n\n' + getDoomLoopRecoveryPrompt(),
-            };
-          }
+          // Reset to base system prompt + current retry's recovery prompt (avoid unbounded growth)
+          const recovery = isHallucination
+            ? 'WARNING — Your previous response contained fabricated Macula URLs. You did not call any Macula tools to retrieve real data. MANDATORY: You MUST call Macula tools (traverse, get_users, get_file) to get actual file data. Do NOT generate URLs from memory.'
+            : getDoomLoopRecoveryPrompt();
+          messages[0] = {
+            ...messages[0],
+            content: baseSystemPrompt + '\n\n' + recovery,
+          };
         }
         lastError = new Error(reason);
         // Disable tools sooner — drop on attempt 2 instead of 3
@@ -339,7 +334,9 @@ export async function streamWithRetry(
       // The AI SDK already retried 3x internally before throwing here.
       const msg = lastError.message.toLowerCase();
       const nonRecoverable = [
-        'rate limit', 'rate_limit', ' 429 ',
+        'rate limit',
+        'rate_limit',
+        ' 429 ',
         'not supported',
         'model not found',
         'process has terminated',

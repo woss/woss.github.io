@@ -200,15 +200,15 @@ The result: roughly 60% of questions never hit the LLM at full depth. Cache hand
 The chat is the heart of the site. Every question hits a pipeline that looks like this:
 
 > User types question
->   → save message, return 202 (generation runs in background)
->   → early gates (relevance filter, polite-only path, cache check)
->   → embed query (Transformers.js, local ONNX)
->   → classify query (centroid similarity: RAG? tool? hybrid?)
->   → if RAG: vector search (USearch, top-k chunks) → build prompt with context
->   → classify tool needs (keyword fast path + LLM fallback)
->   → load MCP tools (GitHub, Macula)
->   → stream LLM response with multi-round invariant tool calling
->   → save answer + emit SSE done event
+> → save message, return 202 (generation runs in background)
+> → early gates (relevance filter, polite-only path, cache check)
+> → embed query (Transformers.js, local ONNX)
+> → classify query (centroid similarity: RAG? tool? hybrid?)
+> → if RAG: vector search (USearch, top-k chunks) → build prompt with context
+> → classify tool needs (keyword fast path + LLM fallback)
+> → load MCP tools (GitHub, Macula)
+> → stream LLM response with multi-round invariant tool calling
+> → save answer + emit SSE done event
 
 Under the hood: the two-layer relevance gate and chat-lock mechanism. Before any processing, a lightweight LLM check (`isRelevant()`) determines if the question is about Daniel's professional portfolio. If not, the AI returns a firm refusal — and permanently locks the chat (`chat.locked = 1` in SQLite) so future messages are rejected at the API level. A webhook fires to log the event. Polite messages (thanks, bye) bypass the gate entirely.
 
@@ -217,8 +217,8 @@ Under the hood: the two-layer relevance gate and chat-lock mechanism. Before any
 The streaming pipeline uses the [Vercel AI SDK](https://sdk.vercel.ai/docs) with Effect.ts for typed event streaming:
 
 > chatStreamWithTools()
->   → Effect.Stream<LLMEvent>
->   → text-delta, reasoning-delta, tool-call, tool-result, step-finish, finish
+> → Effect.Stream<LLMEvent>
+> → text-delta, reasoning-delta, tool-call, tool-result, step-finish, finish
 
 Each SSE event from the LLM is parsed and emitted as typed LLMEvent objects — text deltas for real-time token display, tool call events for rendering MCP tool execution status, step-finish events for tracking reasoning progression.
 
@@ -241,9 +241,9 @@ When a question comes in, we embed it locally, search the vector index for the t
 
 > You are an AI assistant for woss.io.
 > Answer based on these sources:
->   [1] "Experience: Ipsos Simstore" — Senior DevOps, Platform Architect...
->   [2] "Post: Building opencode-visualizer" — Deno, SQLite, ANSI...
->   [3] "Experience: Web3 Foundation Grants" — Substrate, WASM...
+> [1] "Experience: Ipsos Simstore" — Senior DevOps, Platform Architect...
+> [2] "Post: Building opencode-visualizer" — Deno, SQLite, ANSI...
+> [3] "Experience: Web3 Foundation Grants" — Substrate, WASM...
 >
 > If the answer isn't in the sources, use available MCP tools.
 
@@ -345,17 +345,20 @@ The career history page was a design challenge. Most portfolio sites show a bori
 The data model is simple markdown files with YAML frontmatter:
 
 > ---
+>
 > company: 'Ipsos Simstore'
 > role: 'Senior DevOps, Platform Architect & AI Adoption Lead'
 > startDate: '2023-08'
 > endDate: null # current position
 > company_tags:
->   - market research
->   - data-driven insights
-> skills:
->   - aws
->   - terraform
->   - kubernetes
+>
+> - market research
+> - data-driven insights
+>   skills:
+> - aws
+> - terraform
+> - kubernetes
+>
 > ---
 
 15 entries spanning Daniel's career — from founding startups to Web3 Foundation grants to DevOps architecture. Each entry renders as a horizontal bar positioned absolutely along a timeline axis, with `startDate` and `endDate` mapping to CSS `left` and `width`.
@@ -367,15 +370,18 @@ Users can click any entry for full details, or use "Copy as Markdown" / "Copy as
 Blog posts are markdown files in `src/content/posts/` with YAML frontmatter:
 
 > ---
+>
 > title: 'Building opencode-visualizer: A Terminal Dashboard...'
 > description: 'A terminal dashboard for OpenCode usage data...'
 > date: 2026-06-04
 > featured: true
 > tags:
->   - opencode
->   - CLI tools
->   - Deno
-> header_image: '[Alt](https://example.com/image.png)'
+>
+> - opencode
+> - CLI tools
+> - Deno
+>   header_image: '[Alt](https://example.com/image.png)'
+>
 > ---
 
 The build pipeline ingests them into SQLite:

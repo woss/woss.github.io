@@ -1,17 +1,9 @@
 import { fail } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
-import {
-  getPosts,
-  createChat,
-  getChat,
-  deleteChat,
-  getUserChatCount,
-  getOrCreateUserAgent,
-} from '$lib/server/db';
+import { getPosts, createChat, getChat, deleteChat, getUserChatCount, getOrCreateUserAgent } from '$lib/server/db';
 import { callWebhook } from '$lib/server/webhooks';
 import { CAT, createLogger } from '$lib/server/logger';
 import { config } from '$lib/config';
-
 
 export async function load() {
   const allPosts = getPosts();
@@ -41,7 +33,6 @@ export async function load() {
 const log = createLogger(CAT.app);
 
 export const actions = {
-
   create: async (event: RequestEvent) => {
     const { request } = event;
 

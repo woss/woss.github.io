@@ -1,4 +1,12 @@
-import { addMessage, getChatMessageCount, getMessages, lockChat, getOffTopicCount, incrementOffTopicCount, type StoredMessage } from '$lib/server/db';
+import {
+  addMessage,
+  getChatMessageCount,
+  getMessages,
+  lockChat,
+  getOffTopicCount,
+  incrementOffTopicCount,
+  type StoredMessage,
+} from '$lib/server/db';
 import { embedText } from '$lib/server/embed';
 import { checkCache } from '$lib/server/llm-cache';
 import { publishLive, publishPersistent } from '$lib/server/chat-events';
@@ -65,7 +73,11 @@ export async function handleEarlyGates(
     const maculaKeyword = await needsMaculaTools(text, ctxMessages);
     const wordCount = text.split(/\s+/).filter(Boolean).length;
     if (!githubKeyword && !maculaKeyword && wordCount <= 6 && ctxMessages?.length) {
-      classifyResult = await classifyToolNeeds(text, ctxMessages, AbortSignal.timeout(config().openai.toolClassifyTimeoutMs));
+      classifyResult = await classifyToolNeeds(
+        text,
+        ctxMessages,
+        AbortSignal.timeout(config().openai.toolClassifyTimeoutMs),
+      );
     }
     const hasToolIntent =
       githubKeyword ||
@@ -81,7 +93,15 @@ export async function handleEarlyGates(
         log.info`Off-topic question strike ${count}/3 for chat ${chatId}`;
         if (count >= 3) {
           lockChat(chatId);
-          const errMsgId = addMessage({ userId, role: 'assistant', content: '', chatId, irrecoverable: true, error: "I can only answer questions about Daniel Maricic's professional portfolio and experience.", userAgentId });
+          const errMsgId = addMessage({
+            userId,
+            role: 'assistant',
+            content: '',
+            chatId,
+            irrecoverable: true,
+            error: "I can only answer questions about Daniel Maricic's professional portfolio and experience.",
+            userAgentId,
+          });
           await callWebhook({
             type: 'chatLocked',
             chatId,
@@ -94,7 +114,14 @@ export async function handleEarlyGates(
           });
         } else {
           const remaining = 3 - count;
-          const errMsgId = addMessage({ userId, role: 'assistant', content: '', chatId, error: `I can only answer questions about Daniel Maricic's professional portfolio and experience. This chat will be locked after ${remaining} more off-topic question${remaining === 1 ? '' : 's'}.`, userAgentId });
+          const errMsgId = addMessage({
+            userId,
+            role: 'assistant',
+            content: '',
+            chatId,
+            error: `I can only answer questions about Daniel Maricic's professional portfolio and experience. This chat will be locked after ${remaining} more off-topic question${remaining === 1 ? '' : 's'}.`,
+            userAgentId,
+          });
           publishPersistent(chatId, 'error', {
             message: `I can only answer questions about Daniel Maricic's professional portfolio and experience.`,
             messageId: errMsgId,
@@ -112,7 +139,14 @@ export async function handleEarlyGates(
     publishLive(chatId, 'status', { step: 'generating' });
     try {
       const politeResponse = await generatePoliteResponse(text, abortController.signal);
-      const msgId = addMessage({ userId, role: 'assistant', content: politeResponse, sources: '', chatId, userAgentId });
+      const msgId = addMessage({
+        userId,
+        role: 'assistant',
+        content: politeResponse,
+        sources: '',
+        chatId,
+        userAgentId,
+      });
       publishPersistent(chatId, 'done', {
         answer: politeResponse,
         sources: [],
@@ -141,7 +175,14 @@ export async function handleEarlyGates(
     embedding = await embedText(text);
   } catch (e) {
     log.warn`Failed to embed query text: ${e}`;
-    const errMsgId = addMessage({ userId, role: 'assistant', content: '', chatId, error: 'Failed to generate embedding', userAgentId });
+    const errMsgId = addMessage({
+      userId,
+      role: 'assistant',
+      content: '',
+      chatId,
+      error: 'Failed to generate embedding',
+      userAgentId,
+    });
     publishPersistent(chatId, 'error', { message: 'Failed to generate embedding', messageId: errMsgId });
     return { handled: true };
   }
@@ -156,7 +197,9 @@ export async function handleEarlyGates(
       const ce = await embedText(cacheText);
       cacheEmbeddingData = ce.data;
     } catch (error) {
-      log.error('Failed to generate composite embedding', { error: error instanceof Error ? error.message : String(error) });
+      log.error('Failed to generate composite embedding', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       /* fallback */
     }
   }
@@ -169,7 +212,14 @@ export async function handleEarlyGates(
   }
   if (cached) {
     log.info`📦 cache HIT for "${text.slice(0, 100)}"`;
-    const msgId = addMessage({ userId, role: 'assistant', content: cached.answer, sources: cached.sources, chatId, userAgentId });
+    const msgId = addMessage({
+      userId,
+      role: 'assistant',
+      content: cached.answer,
+      sources: cached.sources,
+      chatId,
+      userAgentId,
+    });
     const sources = parseSources(cached.sources);
     const elapsed = performance.now() - startTime;
     publishPersistent(chatId, 'done', {

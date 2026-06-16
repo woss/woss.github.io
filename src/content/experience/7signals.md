@@ -1,5 +1,5 @@
 ---
-company: 7Signals Consultancy Ltd
+company: '7Signals Consultancy Ltd'
 role: Founder
 location: Remote
 company_tags:

@@ -1,13 +1,16 @@
 ---
 published: true
----
-
-# Designing MCP Servers for How LLMs Think: Lessons from Building a Content Graph
-
-## Three Iterations That Taught Us Tool Design Is LLM UX
-
-*Published: June 2026*
-
+title: 'Designing MCP Servers for How LLMs Think: Lessons from Building a Content Graph'
+description: "A design retrospective on three iterations of MCP server refinement driven by observing real LLM behavior — tool design is LLM UX, and a tool an LLM doesn't understand is a tool that might as well not exist."
+date: 2026-06-01
+tags:
+  - macula
+  - MCP
+  - LLM
+  - tool design
+  - UX
+  - content graph
+  - prompt engineering
 ---
 
 ## The Premise
@@ -16,7 +19,7 @@ We set out to build an MCP server for a content platform — files, users, direc
 
 What we didn't expect was how much we'd have to unlearn.
 
-Every iteration revealed something about how LLMs actually consume tool definitions. Not how we *thought* they consumed them, not how the spec says they consume them — how they *actually* behave when given a server with tools, prompts, and resources.
+Every iteration revealed something about how LLMs actually consume tool definitions. Not how we _thought_ they consumed them, not how the spec says they consume them — how they _actually_ behave when given a server with tools, prompts, and resources.
 
 This is the design retrospective. The iterations. The surprises. The lessons.
 
@@ -30,7 +33,7 @@ To an LLM, it was a minefield.
 
 The problem wasn't that the tools didn't work. It was that the LLM couldn't reliably choose between them. Given 14 options, it would guess. Sometimes it guessed `get_user_profile` when it should have called `search_files`. Sometimes it hallucinated parameters because it couldn't remember which tool required which inputs.
 
-This isn't an LLM failing — it's a *design* failing. Fourteen tools means fourteen descriptions for the LLM to parse, fourteen input schemas to understand, fourteen decisions to make. Every additional tool increases cognitive load on the model.
+This isn't an LLM failing — it's a _design_ failing. Fourteen tools means fourteen descriptions for the LLM to parse, fourteen input schemas to understand, fourteen decisions to make. Every additional tool increases cognitive load on the model.
 
 The fix wasn't better descriptions. It was fewer tools.
 
@@ -49,6 +52,7 @@ traverse({ from, edge })
 `from` is where you start (a user, a keyword, a directory, a root). `edge` is the relationship you follow (uploads, tagged_files, contains, search, random). The tool returns the nodes at the other end.
 
 This collapsed 14 tools into 4 total:
+
 - **traverse** — graph navigation (was 11 tools)
 - **get_file** — file detail reader
 - **get_file_metadata** — EXIF/XMP reader
@@ -70,7 +74,7 @@ We renamed:
 - Added `htmlPageUrl` (the human-readable page)
 - Added `buyPageUrl` (the purchase/license page)
 
-Suddenly, the LLM stopped guessing. When it needed to display an image, it used `rawDataUrl`. When it needed to link to a page, it used `htmlPageUrl`. The field names *were* the documentation.
+Suddenly, the LLM stopped guessing. When it needed to display an image, it used `rawDataUrl`. When it needed to link to a page, it used `htmlPageUrl`. The field names _were_ the documentation.
 
 **Lesson**: A field called `url` is useless to an LLM. A field called `rawDataUrl` is self-documenting. Name fields for the model, not for your internal conventions.
 
@@ -82,7 +86,7 @@ The LLM kept using `_links.raw` in traverse output to construct image URLs. And 
 
 We removed `_links` from traverse output entirely.
 
-Traverse is for *discovery*. You find files, then use `get_file` to get the full detail — including `_links`. Two tools, two responsibilities, no nested ambiguity.
+Traverse is for _discovery_. You find files, then use `get_file` to get the full detail — including `_links`. Two tools, two responsibilities, no nested ambiguity.
 
 The `_links` object stayed in `get_file` output where it belongs — a consumption endpoint that returns the complete picture.
 
@@ -109,12 +113,12 @@ Each prompt teaches the LLM a pattern. Not instructions — patterns. The LLM re
 4 tools, 4 prompts, 1 resource
 ```
 
-| Tool | Purpose |
-|------|---------|
-| traverse | Graph navigation — discover files, users, directories, keywords |
-| get_file | Full file metadata including _links, AI info, copyright |
-| get_file_metadata | Raw EXIF/XMP/IPTC technical data |
-| get_users | Batch user profile lookup |
+| Tool              | Purpose                                                         |
+| ----------------- | --------------------------------------------------------------- |
+| traverse          | Graph navigation — discover files, users, directories, keywords |
+| get_file          | Full file metadata including \_links, AI info, copyright        |
+| get_file_metadata | Raw EXIF/XMP/IPTC technical data                                |
+| get_users         | Batch user profile lookup                                       |
 
 That's it. Four entry points. The entire content platform behind a graph-shaped interface.
 
@@ -130,7 +134,7 @@ That's it. Four entry points. The entire content platform behind a graph-shaped 
 
 **Graph shape matches LLM cognition.** LLMs think in associations, not endpoints. A traversal tool maps naturally to how LLMs reason about connected data. One tool beats fourteen every time.
 
-**Iterate on LLM behavior, not documentation.** Every iteration in this story was driven by watching what the LLM *actually did* with the tools, not by what we *wanted* it to do. Field names, tool boundaries, prompt structure — all changed based on observed LLM behavior.
+**Iterate on LLM behavior, not documentation.** Every iteration in this story was driven by watching what the LLM _actually did_ with the tools, not by what we _wanted_ it to do. Field names, tool boundaries, prompt structure — all changed based on observed LLM behavior.
 
 **Name fields for the LLM.** `rawDataUrl` beats `url`. `htmlPageUrl` beats `page`. Descriptive field names eliminate guesswork. The LLM doesn't have domain knowledge — give it everything it needs in the name.
 

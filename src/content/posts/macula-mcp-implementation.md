@@ -1,13 +1,16 @@
 ---
 published: true
----
-
-# Building a Content Graph MCP Server: Graph-Walk API Design for AI Agents
-
-## How We Built Macula's Unified Link MCP with a Single Traversal Tool
-
-*Published: March 2026*
-
+title: 'Building a Content Graph MCP Server: Graph-Walk API Design for AI Agents'
+description: 'Production architecture for a public MCP server — stateless graph-walk API with 4 tools, defense-in-depth security, the image rendition chain bug, and why abstract tool descriptions cause LLMs to hallucinate.'
+date: 2026-03-01
+tags:
+  - macula
+  - MCP
+  - content graph
+  - API design
+  - security
+  - TypeScript
+  - SurrealDB
 ---
 
 ## Introduction
@@ -89,9 +92,9 @@ Three round trips, three different URL patterns, versioned endpoints, and the ag
 
 ```javascript
 // One call: walk edge from user to files
-traverse({ from: { type: 'user', nickname: 'woss' }, edge: 'uploads' })
+traverse({ from: { type: 'user', nickname: 'woss' }, edge: 'uploads' });
 // Second call only if agent needs deeper metadata
-get_file_metadata({ unifiedId })
+get_file_metadata({ unifiedId });
 ```
 
 Two calls, a single tool, no URL patterns, no versioning. The agent thinks in entities and relationships — the same structure the graph model provides.
@@ -146,15 +149,15 @@ export const GetFileInputSchema = z.object({
 
 We implemented multiple layers of security:
 
-| Layer | Protection |
-|-------|------------|
-| **Slow-down** | Progressive delays after 100 requests |
-| **Rate limiting** | Hard limit at 200 requests/minute |
-| **Input validation** | Zod schemas reject invalid input |
-| **Input sanitization** | Remove dangerous characters |
-| **SQL injection** | Parameterized queries |
-| **Request timeout** | 30 seconds max |
-| **Tool annotations** | readOnly hints for agents |
+| Layer                  | Protection                            |
+| ---------------------- | ------------------------------------- |
+| **Slow-down**          | Progressive delays after 100 requests |
+| **Rate limiting**      | Hard limit at 200 requests/minute     |
+| **Input validation**   | Zod schemas reject invalid input      |
+| **Input sanitization** | Remove dangerous characters           |
+| **SQL injection**      | Parameterized queries                 |
+| **Request timeout**    | 30 seconds max                        |
+| **Tool annotations**   | readOnly hints for agents             |
 
 ## Architecture
 
@@ -195,12 +198,12 @@ One graph-walk tool + three leaf readers.
 
 `traverse` is the primary navigation tool — it walks edges between graph nodes. `get_file`, `get_file_metadata`, and `get_users` are terminal operations that read leaf data (file details, metadata, user profiles). They terminate the traversal at a node rather than continuing across edges.
 
-| Tool | Input | Description |
-|------|-------|-------------|
-| `traverse` | `from`, `edge`, `filter?`, `limit?`, `after?`, `query?` | Graph walk: navigate from a starting node across a named edge to discover connected nodes. 11 valid `from`-`edge` pairs across 6 node types and 10 edge types. Full-text search via `edge: search` + `query`. Keyword search via `edge: keywords`. User profiles via `edge: profile`. File/directory details via `edge: info`. Cursor pagination via `after`. Filters: what, allowAI, nickname. Images work correctly — `contains` and `tagged_files` follow both direct file and rendition chains. |
-| `get_file` | `unifiedId`, `fields?` | Leaf reader: get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` for JSONPath-based selective field retrieval. |
-| `get_file_metadata` | `unifiedId, a?` | Leaf reader: get full EXIF/XMP/IPTC metadata. Optional `a` for specific metadata fields. |
-| `get_users` | `nicknames` | Leaf reader: batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found. |
+| Tool                | Input                                                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `traverse`          | `from`, `edge`, `filter?`, `limit?`, `after?`, `query?` | Graph walk: navigate from a starting node across a named edge to discover connected nodes. 11 valid `from`-`edge` pairs across 6 node types and 10 edge types. Full-text search via `edge: search` + `query`. Keyword search via `edge: keywords`. User profiles via `edge: profile`. File/directory details via `edge: info`. Cursor pagination via `after`. Filters: what, allowAI, nickname. Images work correctly — `contains` and `tagged_files` follow both direct file and rendition chains. |
+| `get_file`          | `unifiedId`, `fields?`                                  | Leaf reader: get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` for JSONPath-based selective field retrieval.                                                                                                                                                                                                                                                                                                         |
+| `get_file_metadata` | `unifiedId, a?`                                         | Leaf reader: get full EXIF/XMP/IPTC metadata. Optional `a` for specific metadata fields.                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `get_users`         | `nicknames`                                             | Leaf reader: batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                                                                                                                                                                                                                   |
 
 The `traverse` tool alone replaced seven specialized tools via its 11 valid traversals. The three leaf readers handle everything else.
 
@@ -212,20 +215,20 @@ The `traverse` tool alone replaced seven specialized tools via its 11 valid trav
 
 We reduced from 14 specialized prompts to 4 task-oriented prompts. Rather than naming prompts after tool names, each prompt describes a **user goal** — what the agent should accomplish, not which tool it should use.
 
-| Prompt | Description | Wraps |
-|--------|-------------|-------|
-| `browse_user` | Explore a creator's profile, directories, and published files via user → directory → file navigation | `traverse`, `get_users` |
-| `display_media` | Display files (images, video, audio) in markdown with optimal renditions and presets | `get_file` |
-| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns | `traverse` |
-| `inspect_metadata` | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs | `get_file`, `get_file_metadata` |
+| Prompt              | Description                                                                                          | Wraps                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `browse_user`       | Explore a creator's profile, directories, and published files via user → directory → file navigation | `traverse`, `get_users`         |
+| `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                 | `get_file`                      |
+| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                    | `traverse`                      |
+| `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs            | `get_file`, `get_file_metadata` |
 
 Key design choice: prompts are named for the **task** not the **tool**. An agent doesn't "call the traverse prompt" — it "browses a user" or "explores a directory." This lowers the activation energy for agents to use the prompts effectively.
 
 ## Resources
 
-| Resource URI | Description |
-|-------------|-------------|
-| `instructions` | Service usage guidelines for agents |
+| Resource URI            | Description                                                                                                                              |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `instructions`          | Service usage guidelines for agents                                                                                                      |
 | `/.well-known/mcp.json` | Auto-discovery metadata — returns `{name, url, transport, version, description}` so MCP clients can connect without manual configuration |
 
 The `/.well-known/mcp.json` endpoint implements the [MCP auto-discovery specification](https://modelcontextprotocol.io). MCP-compatible clients can detect our server automatically without manual URL configuration by checking this well-known URI.
@@ -240,11 +243,7 @@ We strip dangerous characters before any processing:
 const DANGEROUS_CHARS_REGEX = /[<>'";&\\]/g;
 
 export function sanitizeInput(input: string, maxLength = 100): string {
-  return input
-    .replace(DANGEROUS_CHARS_REGEX, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, maxLength);
+  return input.replace(DANGEROUS_CHARS_REGEX, '').replace(/\s+/g, ' ').trim().slice(0, maxLength);
 }
 ```
 
@@ -282,22 +281,22 @@ await instance.register(fastifyRateLimit, {
 
 ## Input Validation Rules
 
-| Field | Constraints |
-|-------|-------------|
-| `unifiedId` | 1-64 chars, regex `^[a-zA-Z0-9_-]+$` |
-| `nickname` | 1-32 chars, regex `^[a-zA-Z0-9_]+$` |
-| `pathCid` | 1-200 chars |
-| `keyword` / `search` | 1-100 chars (search: min 2) |
-| `query` | 2-200 chars |
-| `limit` | 1-100 |
-| `page` | ≥ 0 or ≥ 1 |
-| `after` | Base64url cursor string |
-| `edge` | Enum: `uploads`, `tagged_files`, `has_license`, `contains`, `random`, `recent`, `search`, `keywords`, `profile`, `info` |
-| `from.type` file variant | `unifiedId` when `from.type` is `file` |
-| `query` | 2-200 chars (required for `edge: search` or `edge: keywords`) |
-| `from.type` | Enum: `user`, `keyword`, `license`, `directory`, `root` |
-| `filter.what` | Enum: `all`, `images`, `videos`, `files` |
-| `filter.allowAI` | Boolean |
+| Field                    | Constraints                                                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `unifiedId`              | 1-64 chars, regex `^[a-zA-Z0-9_-]+$`                                                                                    |
+| `nickname`               | 1-32 chars, regex `^[a-zA-Z0-9_]+$`                                                                                     |
+| `pathCid`                | 1-200 chars                                                                                                             |
+| `keyword` / `search`     | 1-100 chars (search: min 2)                                                                                             |
+| `query`                  | 2-200 chars                                                                                                             |
+| `limit`                  | 1-100                                                                                                                   |
+| `page`                   | ≥ 0 or ≥ 1                                                                                                              |
+| `after`                  | Base64url cursor string                                                                                                 |
+| `edge`                   | Enum: `uploads`, `tagged_files`, `has_license`, `contains`, `random`, `recent`, `search`, `keywords`, `profile`, `info` |
+| `from.type` file variant | `unifiedId` when `from.type` is `file`                                                                                  |
+| `query`                  | 2-200 chars (required for `edge: search` or `edge: keywords`)                                                           |
+| `from.type`              | Enum: `user`, `keyword`, `license`, `directory`, `root`                                                                 |
+| `filter.what`            | Enum: `all`, `images`, `videos`, `files`                                                                                |
+| `filter.allowAI`         | Boolean                                                                                                                 |
 
 ## Development vs Production
 
@@ -310,15 +309,15 @@ This allows easy local testing while keeping production secure.
 
 ## Results
 
-| Metric | Value |
-|--------|-------|
-| Tools | 1 graph-walk + 3 leaf readers |
-| Prompts | 4 |
-| Resources | 2 |
-| Security layers | 6 |
-| Code complexity | Low |
-| Dependencies | Minimal |
-| Scalability | Horizontal |
+| Metric          | Value                         |
+| --------------- | ----------------------------- |
+| Tools           | 1 graph-walk + 3 leaf readers |
+| Prompts         | 4                             |
+| Resources       | 2                             |
+| Security layers | 6                             |
+| Code complexity | Low                           |
+| Dependencies    | Minimal                       |
+| Scalability     | Horizontal                    |
 
 ## Lessons Learned
 
@@ -562,4 +561,4 @@ The key insight: **graph-shaped APIs are a natural fit for LLM agents**. A singl
 
 ---
 
-*Built with Fastify, TypeScript, Prisma, Redis, and ❤️*
+_Built with Fastify, TypeScript, Prisma, Redis, and ❤️_

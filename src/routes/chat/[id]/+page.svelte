@@ -19,7 +19,7 @@
  import { matchSlashCommand } from '$lib/chat/slash-commands';
  import { sendChatMessage } from '$lib/chat/send';
  import { appendQueryParams } from '$lib/utils/utm';
- import { connectSSE, resetStreamingState, sseState, getActiveToolCount, getCompletedToolCount } from '$lib/stores/chat-sse.svelte';
+ import { connectSSE, disconnectSSE, resetStreamingState, sseState, getActiveToolCount, getCompletedToolCount } from '$lib/stores/chat-sse.svelte';
  import { createChat as createChatApi, deleteChat as deleteChatApi } from '$lib/chat/chat-crud';
  import { USER_ID_KEY } from '$lib/chat/constants';
  import { showMobileSidebar } from '$lib/stores/mobile-sidebar';
@@ -370,10 +370,25 @@
  return true;
  }
 
- return false;
+  return false;
  }
 
- function retry(): void {
+async function handleStop(): Promise<void> {
+  if (!currentChatId) return;
+  // Close client-side SSE connection
+  disconnectSSE();
+  // Tell server to abort the generation
+  try {
+    await fetch(`/chat/${currentChatId}?/abort`, { method: 'POST' });
+  } catch {
+    /* ignore network errors */
+  }
+  // Reset loading state
+  isLoading = false;
+  resetStreamingState();
+}
+
+  function retry(): void {
  if (isLoading) return;
  const text = lastSentText || [...messages].reverse().find(m => m.role === 'user')?.text || '';
  if (!text) return;
@@ -791,52 +806,41 @@
  oncancelDelete={() => (showDeleteConfirm = null)}
  fullHeight
  />
- <!-- ─── Main Chat Area ─── -->
- <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
- <!-- Messages area -->
- <div class="flex-1 overflow-y-auto overflow-x-hidden overscroll-behavior-contain" bind:this={messageListEl}>
- <div class="mx-auto w-full max-w-[720px] py-2">
- {#if !hasMessages && !isLoading}
- <!-- Empty state with suggested questions -->
- <div class="flex flex-col items-center gap-8 px-8 max-md:px-4 min-h-[60vh] pt-8">
- <p class="text-on-surface-variant text-lg max-md:text-base">No messages yet</p>
- <p class="text-on-surface-variant text-sm">Type a message below or pick a question.</p>
- </div>
- {:else}
- <!-- Message list -->
- <div class="flex flex-col gap-2">
- {#each messages as message, i (message.id)}
- <MsgCard
- {message}
- isLoading={i === messages.length - 1 && isLoading}
- isLast={i === messages.length - 1}
- streamingToolValues={i === messages.length - 1 ? streamingToolValues : []}
- {now}
- {userId}
- {chatId}
- onretry={retry}
- onreport={handleReport}
- onToggleSidebar={(tab: 'sources' | 'tools') => openSidebar(message.id, tab)}
- />
- {/each}
- </div>
- {/if}
-
- {#if hasMessages}
- <div bind:this={bottomSentinelEl} aria-hidden="true" class="h-px"></div>
- {/if}
- </div>
- </div>
-
- {#if !hasMessages && !isLoading}
- <div class="pb-2">
- <div class="mx-auto w-full max-w-[720px] px-6 max-md:px-1">
- <SuggestedQuestions
- onquestionclick={(q: string) => sendMessage(q)}
- />
- </div>
- </div>
- {/if}
+  <!-- ─── Main Chat Area ─── -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+  {#if !hasMessages && !isLoading}
+  <!-- Empty state: vertically centered -->
+  <div class="flex-1 flex flex-col items-center justify-center gap-8 px-8 max-md:px-4">
+  <p class="text-on-surface-variant text-lg max-md:text-base">No messages yet</p>
+  <p class="text-on-surface-variant text-sm">Type a message below or pick a question.</p>
+  <SuggestedQuestions variant="cards" onquestionclick={(q: string) => sendMessage(q)} />
+  </div>
+  {:else}
+  <!-- Messages area -->
+  <div class="flex-1 overflow-y-auto overflow-x-hidden overscroll-behavior-contain" bind:this={messageListEl}>
+  <div class="mx-auto w-full max-w-[720px] py-2">
+  <div class="flex flex-col gap-2">
+  {#each messages as message, i (message.id)}
+  <MsgCard
+  {message}
+  isLoading={i === messages.length - 1 && isLoading}
+  isLast={i === messages.length - 1}
+  streamingToolValues={i === messages.length - 1 ? streamingToolValues : []}
+  {now}
+  {userId}
+  {chatId}
+  onretry={retry}
+  onreport={handleReport}
+  onToggleSidebar={(tab: 'sources' | 'tools') => openSidebar(message.id, tab)}
+  />
+  {/each}
+  </div>
+  {#if hasMessages}
+  <div bind:this={bottomSentinelEl} aria-hidden="true" class="h-px"></div>
+  {/if}
+  </div>
+  </div>
+  {/if}
 
  <ContactForm bind:showContactForm {userId} {chatId} bind:contactDismissed />
 
@@ -879,8 +883,9 @@
  currentStatus={sseState.currentStatus}
  bind:inputEl
  {userId}
- onsend={(text: string) => sendMessage(text)}
- oncreateChat={createChat}
+  onsend={(text: string) => sendMessage(text)}
+  onstop={handleStop}
+  oncreateChat={createChat}
  />
  </div>
  </div>

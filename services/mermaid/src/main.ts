@@ -94,7 +94,11 @@ async function initBrowser(): Promise<void> {
 
   // Kill lightpanda on Deno exit
   globalThis.addEventListener('unload', () => {
-    try { proc.kill('SIGTERM'); } catch { /* ok */ }
+    try {
+      proc.kill('SIGTERM');
+    } catch {
+      /* ok */
+    }
   });
 
   // Wait for CDP server to be ready
@@ -169,11 +173,17 @@ async function renderMermaid(code: string): Promise<string> {
   })()`;
 
   console.log(`[${ts()}] Runtime.evaluate (mermaid render, ${code.length} chars)`);
-  const result = await cdpCommand(rootWs, ++msgId, 'Runtime.evaluate', {
-    expression,
-    awaitPromise: true,
-    returnByValue: true,
-  }, pageSessionId);
+  const result = await cdpCommand(
+    rootWs,
+    ++msgId,
+    'Runtime.evaluate',
+    {
+      expression,
+      awaitPromise: true,
+      returnByValue: true,
+    },
+    pageSessionId,
+  );
 
   const value = result.result?.result?.value as string | undefined;
   if (!value) throw new Error('No SVG returned from mermaid render');
@@ -200,9 +210,7 @@ async function handler(req: Request): Promise<Response> {
 
     const svg = await Promise.race([
       renderMermaid(code),
-      new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error('Render timeout')), RENDER_TIMEOUT)
-      ),
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('Render timeout')), RENDER_TIMEOUT)),
     ]);
 
     console.log(`[${ts()}] render success, SVG length=${svg.length}`);

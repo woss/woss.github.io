@@ -1,7 +1,11 @@
 ---
 title: 'How to close all gitlab issues for a project in bulk'
-date: null
-tags: []
+date: 2021-12-15
+tags:
+  - gitlab
+  - automation
+  - scripting
+  - project management
 excerpt: 'How to close all gitlab issues for a project in bulk Make a folder called closeAllIssues then copy this and save it to the file named closeAllIssues.js'
 description: 'Script to bulk close all open GitLab issues for a project using the GitLab API'
 published: true

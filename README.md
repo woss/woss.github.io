@@ -119,6 +119,30 @@ After changing content, rebuild the search index:
 pnpm run build-index
 ```
 
+### Markdown Extensions
+
+Blog posts support GitHub-style admonition callouts. Use them inside blockquotes to highlight important information:
+
+```markdown
+> [!INFO]
+> Your file will be processed within 24 hours.
+
+> [!WARNING]
+> This operation cannot be undone.
+
+> [!ERROR]
+> Connection failed. Check your credentials.
+
+> [!SUCCESS]
+> Migration completed successfully.
+```
+
+Renders as color-coded callout boxes with left border accent and tinted background.
+
+Supported types: `INFO`, `WARNING`, `ERROR`, `SUCCESS`.
+
+Implemented via custom rehype plugin (`src/lib/server/rehype-admonitions.ts`) — no extra dependencies.
+
 ## Supported LLMs
 
 The AI backend expects OpenAI-compatible JSON tool calling format. Compatible local models:

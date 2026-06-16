@@ -50,11 +50,7 @@ function extractText(el: Element): string {
 export function rehypeMermaidTabs() {
   return (tree: Root) => {
     walkElement(tree, (node, index, parent) => {
-      if (
-        node.tagName !== 'pre' ||
-        !node.children ||
-        node.children.length === 0
-      ) {
+      if (node.tagName !== 'pre' || !node.children || node.children.length === 0) {
         return;
       }
 
@@ -77,10 +73,7 @@ export function rehypeMermaidTabs() {
         type: 'element',
         tagName: 'div',
         properties: {
-          className: [
-            'mermaid-tabs', 'my-6', 'rounded-lg',
-            'border', 'border-slate-700', 'overflow-hidden',
-          ],
+          className: ['mermaid-tabs', 'my-6', 'rounded-lg', 'border', 'border-slate-700', 'overflow-hidden'],
         },
         children: [
           // Tab bar
@@ -97,8 +90,13 @@ export function rehypeMermaidTabs() {
                 tagName: 'button',
                 properties: {
                   className: [
-                    'px-4', 'py-2', 'text-sm', 'font-medium',
-                    'text-green-400', 'border-b-2', 'border-green-400',
+                    'px-4',
+                    'py-2',
+                    'text-sm',
+                    'font-medium',
+                    'text-green-400',
+                    'border-b-2',
+                    'border-green-400',
                   ],
                   'data-tab': 'source',
                   role: 'tab',
@@ -111,8 +109,13 @@ export function rehypeMermaidTabs() {
                 tagName: 'button',
                 properties: {
                   className: [
-                    'px-4', 'py-2', 'text-sm', 'font-medium',
-                    'text-slate-400', 'border-b-2', 'border-transparent',
+                    'px-4',
+                    'py-2',
+                    'text-sm',
+                    'font-medium',
+                    'text-slate-400',
+                    'border-b-2',
+                    'border-transparent',
                   ],
                   'data-tab': 'diagram',
                   role: 'tab',
@@ -142,10 +145,7 @@ export function rehypeMermaidTabs() {
                 type: 'element',
                 tagName: 'div',
                 properties: {
-                  className: [
-                    'flex', 'items-center', 'justify-center',
-                    'py-8', 'text-slate-400', 'gap-2',
-                  ],
+                  className: ['flex', 'items-center', 'justify-center', 'py-8', 'text-slate-400', 'gap-2'],
                 },
                 children: [
                   // Spinning circle SVG
@@ -162,7 +162,9 @@ export function rehypeMermaidTabs() {
                         type: 'element',
                         tagName: 'circle',
                         properties: {
-                          cx: '12', cy: '12', r: '10',
+                          cx: '12',
+                          cy: '12',
+                          r: '10',
                           stroke: 'currentColor',
                           'stroke-width': '4',
                           class: 'opacity-25',

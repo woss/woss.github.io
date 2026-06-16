@@ -98,7 +98,7 @@ export async function GET(event: RequestEvent): Promise<Response> {
 
   // Embed query and search vector database
   const embedding = await embedText(sanitized);
-  const dbResults = searchChunks(embedding.data, 10, typeFilter);
+  const dbResults = searchChunks(embedding.data, 216, typeFilter);
 
   // Filter by similarity threshold, strip internal fields
   const results: ResultResponse[] = dbResults

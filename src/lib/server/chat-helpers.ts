@@ -41,10 +41,10 @@ export function tryRenameChat(chatId: string, text: string): void {
  * Daniel/project references fall through to the LLM-based classifyToolNeeds fallback
  * in handleEarlyGates instead of returning false immediately.
  */
-export async function needsGithubTools(
+export function needsGithubTools(
   text: string,
   ctxMessages?: { role: string; content: string }[],
-): Promise<boolean> {
+): boolean {
   const t = text.toLowerCase();
   const referencesDaniel = /\b(daniel(?:'?s)?|woss|anagolay|macula)\b/i.test(t);
   const contextReferencesDaniel =
@@ -69,10 +69,10 @@ export async function needsGithubTools(
  * Same fast-path pattern as needsGithubTools — short messages without Daniel/project
  * references fall through to classifyToolNeeds in handleEarlyGates.
  */
-export async function needsMaculaTools(
+export function needsMaculaTools(
   text: string,
   ctxMessages?: { role: string; content: string }[],
-): Promise<boolean> {
+): boolean {
   const t = text.toLowerCase();
   const referencesDaniel = /\b(daniel(?:'?s)?|woss|macula)\b/i.test(t);
   const contextReferencesDaniel =
@@ -109,6 +109,19 @@ export async function isRelevant(
   const politePattern =
     /^(thank(s| you|you!)|thanks|cheers|ty|thx|great|awesome|perfect|got it|ok|okay|sure|nice|good|cool|that('s| is) all|that helps|bye|have a good|contact|hire|reach out|get in touch|talk to|speak with)/i;
   if (politePattern.test(question.trim())) {
+    return true;
+  }
+
+  // Fast bypass for known relevant keywords — brand names, person names, assistant name
+  const relevantKeywords = /\b(haistlin|woss|daniel|maricic)\b/i;
+  if (relevantKeywords.test(question.trim())) {
+    return true;
+  }
+
+  // Short "who" questions (≤3 words) are about the assistant (Haistlin)
+  const trimmed = question.trim();
+  const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+  if (wordCount <= 3 && /\bwho\b/i.test(trimmed)) {
     return true;
   }
 
@@ -240,16 +253,4 @@ export function parseSources(json: string): RawSource[] {
   }
 }
 
-/**
- * Sanitize raw user input — strip scripts, HTML tags, event handlers, and
- * javascript: URIs. Returns trimmed safe text.
- */
-export function sanitizeText(raw: string): string {
-  return raw
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<[^>]*>/g, '')
-    .replace(/\bon\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/\bon\w+\s*=\s*'[^']*'/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .trim();
-}
+

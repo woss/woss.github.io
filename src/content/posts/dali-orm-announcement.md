@@ -11,8 +11,13 @@ tags:
   - database
   - query builder
   - migrations
+  - dali
+audience: general
 header_image: '[Future in the city](https://u.macula.link/HR7CSIPkTFOBV8xVNmVUxg-7?preset=sys_lg)'
 ---
+
+> [!WARNING]
+> Dali ORM is in early alpha. Expect breaking changes as I iterate towards 1.0. Feedback and contributions are welcome!
 
 You've used SurrealDB. You know SurrealQL. You write raw queries, hand-roll validation, and debug runtime errors at 2 AM. There's a better way.
 
@@ -84,9 +89,9 @@ TypeScript infers the full shape of your table. When you use `users` in queries,
 
 The ORM gives you a solid set of column types to work with:
 
-- `string()`, `int()`, `float()`, `bool()` - Basic types
+- `string()`, `int()`, `float()`, `bool()`, `uuid()` - Basic types
 - `datetime()`, `duration()`, `decimal()` - Time and precision types
-- `array()` - String arrays for multi-value fields
+- `array()` - Arrays for multi-value fields
 - `object()` - Nested objects for complex structures
 - `record(table)` - Foreign keys to other tables
 
@@ -368,7 +373,7 @@ Our migration engine takes heavy inspiration from [Drizzle ORM](https://orm.driz
 
 ```typescript
 // dali-orm.config.ts
-import type { Config } from '@woss/dali-orm/migration/api';
+import type { Config } from '@woss/dali-orm/migration/config';
 
 const config: Config = {
   url: 'ws://localhost:10101',

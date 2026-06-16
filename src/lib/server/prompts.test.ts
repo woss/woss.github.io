@@ -55,9 +55,7 @@ describe('prompts', () => {
 
   describe('getRelevanceCheckUserPrompt', () => {
     it('without context matches snapshot', () => {
-      expect(
-        getRelevanceCheckUserPrompt('What is your experience with React?'),
-      ).toMatchSnapshot();
+      expect(getRelevanceCheckUserPrompt('What is your experience with React?')).toMatchSnapshot();
     });
 
     it('with context matches snapshot', () => {
@@ -81,9 +79,7 @@ describe('prompts', () => {
     });
 
     it('with context matches snapshot', () => {
-      expect(
-        getToolClassifierUserPrompt('show repos', "User asked about Daniel's projects"),
-      ).toMatchSnapshot();
+      expect(getToolClassifierUserPrompt('show repos', "User asked about Daniel's projects")).toMatchSnapshot();
     });
   });
 
