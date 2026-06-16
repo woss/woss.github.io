@@ -20,8 +20,6 @@
     "strict": true,
     "verbatimModuleSyntax": false,
     "moduleResolution": "bundler",
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   }
 }

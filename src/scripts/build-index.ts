@@ -24,27 +24,10 @@ const POSTS_DIR = join(process.cwd(), 'src', 'content', 'posts');
 const EXPERIENCE_DIR = join(process.cwd(), 'src', 'content', 'experience');
 
 const args = process.argv.slice(2);
-const reset = args.includes('--reset');
 const update = args.includes('--update');
 
 await initLogger((process.env.LOG_LEVEL as 'trace' | 'debug' | 'info' | 'warning' | 'error') || 'info');
 const log = createLogger(CAT.search);
-
-if (reset) {
-  throw new Error('Reset flag is no longer supported.');
-  // const rl = createInterface({ input: process.stdin, output: process.stdout });
-  // const answer = await new Promise<string>((resolve) => {
-  //   rl.question(
-  //     'WARNING: This will delete all search index data (chunks, page_content, vector index). User data (chats, messages) will NOT be affected. Continue? [y/N] ',
-  //     resolve,
-  //   );
-  // });
-  // rl.close();
-  // if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
-  //   log.info`Reset cancelled.`;
-  //   process.exit(0);
-  // }
-}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -220,17 +203,6 @@ export async function processFile(file: ContentItem, chunkOffset: number): Promi
 }
 
 // ---------------------------------------------------------------------------
-// Database helpers
-// ---------------------------------------------------------------------------
-
-function resetDatabase(): void {
-  const db = getDb();
-  db.exec('DELETE FROM chunks');
-  db.exec('DELETE FROM page_posts');
-  db.exec('DELETE FROM page_experience');
-}
-
-// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -252,7 +224,17 @@ async function buildIndex(): Promise<void> {
       tmp.exec('PRAGMA journal_mode = WAL');
       tmp.exec('PRAGMA foreign_keys = ON');
       for (const stmt of statements) {
-        if (stmt) tmp.exec(`${stmt};`);
+        if (stmt) {
+          try {
+            tmp.exec(`${stmt};`);
+          } catch (e) {
+            if (stmt.toUpperCase().includes('ALTER TABLE')) {
+              log.warn`Migration skipped (column likely exists): ${stmt.slice(0, 100)}`;
+            } else {
+              throw e;
+            }
+          }
+        }
       }
       tmp.close();
       log.info`Database created successfully.`;
@@ -261,11 +243,6 @@ async function buildIndex(): Promise<void> {
     }
   }
 
-  if (reset) {
-    closeDb();
-    resetDatabase();
-    log.info`Reset: deleted existing database and index`;
-  }
   if (await centroidDataChanged(log)) {
     log.info`Computing and saving centroids...`;
     const { toolCentroid, ragCentroid, metaCentroid, queries, vectors } = await embedAndComputeCentroids(log);
@@ -443,7 +420,7 @@ async function buildIndex(): Promise<void> {
         // Read part_of_series slug from frontmatter (resolved to ID in second pass)
         const seriesSlug = data.part_of_series ? String(data.part_of_series) : null;
         db.prepare(
-           `INSERT INTO page_posts (slug, hash, content, toc, title, description, date, tags, status, excerpt, header_image, featured, position, part_of_series, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) ON CONFLICT(slug) DO UPDATE SET hash = excluded.hash, content = excluded.content, toc = excluded.toc, title = excluded.title, description = excluded.description, date = excluded.date, tags = excluded.tags, status = excluded.status, excerpt = excluded.excerpt, header_image = excluded.header_image, featured = excluded.featured, position = excluded.position, part_of_series = excluded.part_of_series, updated_at = excluded.updated_at`,
+          `INSERT INTO page_posts (slug, hash, content, toc, title, description, date, tags, status, excerpt, header_image, featured, position, part_of_series, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) ON CONFLICT(slug) DO UPDATE SET hash = excluded.hash, content = excluded.content, toc = excluded.toc, title = excluded.title, description = excluded.description, date = excluded.date, tags = excluded.tags, status = excluded.status, excerpt = excluded.excerpt, header_image = excluded.header_image, featured = excluded.featured, position = excluded.position, part_of_series = excluded.part_of_series, updated_at = excluded.updated_at`,
         ).run(
           entry.slug,
           entry.hash,
