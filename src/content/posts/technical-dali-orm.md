@@ -21,7 +21,7 @@ audience: developers
 header_image: '[DaliORM logo](https://u.macula.link/OhwxSXORQUCgirpGcMJfDg-7?preset=sys_lg)'
 ---
 
-This post is a technical reference for developers who already know DaliORM from the introductory post and want to understand how it works under the hood. It covers the migration system architecture, CLI command design, schema definition APIs, programmatic integration points, and the DDL layer that powers everything.
+This post is a technical reference for developers who already know DaliORM from the [announcement post](./dali-orm-announcement) and want to understand how it works under the hood. It covers the migration system architecture, CLI command design, schema definition APIs, programmatic integration points, and the DDL layer that powers everything.
 
 Whether you're evaluating DaliORM for your project, contributing to its development, or just curious about how a migration-first SurrealDB ORM is built — this is the place.
 

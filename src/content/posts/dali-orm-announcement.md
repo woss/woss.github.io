@@ -3,7 +3,7 @@ published: true
 title: 'Type-Safe SurrealDB: Meet the ORM That Ships'
 featured: true
 description: 'Introducing a new ORM for SurrealDB that delivers type-safe query building without abstraction overhead. Your schema becomes your TypeScript, and your queries chain like they should. Built on the official SurrealDB SDK, this ORM gives you compile-time validation, autocomplete, and a fluent API that maps directly to SurrealQL. Say goodbye to runtime errors and hello to a better way to work with SurrealDB.'
-date: 2026-06-03
+date: 2026-06-12
 tags:
   - surrealdb
   - orm
@@ -17,21 +17,29 @@ header_image: '[Future in the city](https://u.macula.link/HR7CSIPkTFOBV8xVNmVUxg
 ---
 
 > [!WARNING]
-> Dali ORM is in early alpha. Expect breaking changes as I iterate towards 1.0. Feedback and contributions are welcome!
+> Dali ORM is in early alpha. Expect breaking changes and bugs as I iterate towards 1.0. DO NOT use in production. Feedback and contributions are welcome!
+
+> [!INFO]
+> **TL;DR** — DaliORM is a type-safe query builder and migration system for SurrealDB.
+> Pure TypeScript type inference, no code generation. Immutable builders map 1:1 to
+> SurrealQL. Define your schema once — types, autocomplete, and migrations all derive
+> from it. Migration-first with a Drizzle-inspired workflow.
 
 You've used SurrealDB. You know SurrealQL. You write raw queries, hand-roll validation, and debug runtime errors at 2 AM. There's a better way.
 
 DaliORM gives you type-safe query building without abstraction overhead. Your schema becomes your TypeScript. Your queries chain like they should.
 
-## Why We Built This
+## Why I Built This
 
 SurrealDB is genuinely exciting. It's not just another document store—it's a multi-model database that handles documents and graphs seamlessly. You can model complex relationships without the ORM dance that other databases require. Live queries keep your UI in sync automatically. The embedded mode makes it perfect for testing and edge deployments. And the flexible schema means you're not fighting rigidity when your data evolves.
 
-TypeScript should work the same way. The type system catches bugs before they hit production. Autocomplete accelerates your workflow. Refactoring becomes safe—you rename a field and your IDE updates every reference.
+TypeScript should work the same way. The type system catches bugs before they hit production. Autocomplete accelerates your workflow. Refactoring becomes safe—you rename a field and your IDE updates every reference. Initially i was using the Valibot schema validation library to define my schema in code, but it felt clunky and disconnected from the actual database schema. I wanted something that was designed for this purpose, that could serve as a single source of truth for both my database and my TypeScript types. Yes, "parse don't validate" is a great approach, it tracks the shape of your data as it flows through your application, but I wanted to take it a step further and have my schema definitions directly inform my query builders and migrations. I wanted to define my tables and columns in TypeScript, and have that drive everything else. Also, i wanted to learn something new and have fun building a tool that I wish existed when I started working with SurrealDB.
+
+Let's take the schema libraries out of the picture for a moment, shall we?
 
 Here's the problem: when you write raw SurrealQL, you lose all of that. Your IDE sees strings. TypeScript sees `any`. A typo in a column name doesn't error—it crashes at runtime. Refactoring means grep-based manual labor across your codebase.
 
-We built this ORM to bridge that gap. Not by hiding SurrealQL behind abstraction, but by making TypeScript understand it.
+I built this ORM to bridge that gap. Not by hiding SurrealQL behind abstraction, but by making TypeScript understand it.
 
 ## The Problem
 
@@ -65,7 +73,7 @@ This ORM differs:
 - **Migration-first** - Schema drives migrations, not the other way around
 - **Minimal runtime** - Core is tiny, no heavy dependencies
 
-**Built on the official SurrealDB SDK** - We wrap `surrealdb` (the official Node.js client), not reimplementing the connection layer. This means WebSocket, HTTP, and embedded modes all work out of the box, and we benefit from every SDK update.
+**Built on the official SurrealDB SDK** - I wrap `surrealdb` (the official Node.js client), not reimplementing the connection layer. This means WebSocket, HTTP, and embedded modes all work out of the box, and we benefit from every SDK update.
 
 ## Defining Schema
 
@@ -367,7 +375,7 @@ That means these errors surface at compile time, not runtime:
 
 Schema changes require migrations. The ORM includes a MigrationRunner that keeps your database in sync with your code.
 
-Our migration engine takes heavy inspiration from [Drizzle ORM](https://orm.drizzle.team/) (beta)—the best migration system in the TypeScript ecosystem. We aim for that same clarity: simple files, clear direction, and no magic.
+The migration engine takes heavy inspiration from [Drizzle ORM](https://orm.drizzle.team/) (beta)—the best migration system in the TypeScript ecosystem. I aim for that same clarity: simple files, clear direction, and no magic.
 
 ### Configuration
 

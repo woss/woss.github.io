@@ -41,7 +41,7 @@ export async function classifyToolNeeds(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: config().openai.model,
+        model: config().openai.toolClassifyModel ?? config().openai.model,
         provider: { reasoning_type: 'hidden' },
         extra_body: { reasoning_effort: 'none' },
         messages: [
