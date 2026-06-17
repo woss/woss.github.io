@@ -44,9 +44,3 @@ export function nameToInitial(name: string, category?: string): string {
   return match ? match[0].toUpperCase() : '?';
 }
 
-export function nameToAvatarData(name: string, category?: string): { color: string; initial: string } {
-  return {
-    color: nameToColor(name, category),
-    initial: nameToInitial(name, category),
-  };
-}
