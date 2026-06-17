@@ -163,52 +163,56 @@
  chatsLoaded = true;
  }
 
- async function loadMessages(): Promise<void> {
- if (!chatId) return;
- stickToBottom = true;
- try {
- const res = await fetch(`/api/chat/${chatId}/messages`);
- if (res.ok) {
- const data = await res.json();
+  async function loadMessages(): Promise<void> {
+  if (!chatId) return;
+  stickToBottom = true;
+  try {
+  const res = await fetch(`/api/chat/${chatId}/messages`);
+  if (res.ok) {
+  const data = await res.json();
 
- // Guard: if server has no messages but local state already populated
- // (e.g. user sent a message before this fetch resolved), don't overwrite.
- if (data.messages.length === 0 && messages.length > 0 && isLoading) return;
+  // Guard: if server has no messages but local state already populated
+  // (e.g. user sent a message before this fetch resolved), don't overwrite.
+  if (data.messages.length === 0 && messages.length > 0 && isLoading) return;
 
- messages = data.messages.map((m: Record<string, unknown>) => ({
- id: m.id as string,
- role: m.role as 'user' | 'assistant',
- text: m.content as string,
- error: m.error as string | undefined,
- irrecoverable: m.irrecoverable as boolean | undefined,
- queryType: (m.queryType as string) || undefined,
- sources: m.sources ? JSON.parse(m.sources as string) : undefined,
- timestamp: new Date(m.createdAt as string).getTime() || Date.now(),
- createdAt: m.createdAt as string,
- tokensIn: (m.tokensIn as number) || 0,
- tokensOut: (m.tokensOut as number) || 0,
- durationMs: (m.durationMs as number) || 0,
- deletedAt: m.deletedAt as string | undefined,
- toolCalls: m.toolCalls as ToolCallInfo[] || [],
- reaction: (m.reaction as ChatMessage['reaction']) || undefined,
- savedReason: (m.savedReason as string) || undefined,
- }));
+  // Fetch reactions for assistant messages BEFORE mapping into $state
+  // so reaction data is baked into the initial objects — avoids post-mutation
+  // reactivity issues with $state + .filter()-derived arrays.
+  const rawAssistantMessages = data.messages.filter((m: Record<string, unknown>) => m.role === 'assistant');
+  const reactionPromises = rawAssistantMessages.map((m: Record<string, unknown>) => fetchReaction(m.id as string));
+  const reactionResults = await Promise.allSettled(reactionPromises);
+  const reactionMap = new Map<string, { type: 'up' | 'down' | 'heart'; reason: string }>();
+  for (let i = 0; i < rawAssistantMessages.length; i++) {
+  const result = reactionResults[i];
+  if (result.status === 'fulfilled' && result.value) {
+  reactionMap.set(rawAssistantMessages[i].id as string, result.value);
+  }
+  }
 
- // Load reactions for assistant messages in parallel
- const assistantMessages = messages.filter((msg) => msg.role === 'assistant');
- const reactionResults = await Promise.allSettled(assistantMessages.map((msg) => fetchReaction(msg.id)));
- for (let i = 0; i < assistantMessages.length; i++) {
- const result = reactionResults[i];
- if (result.status === 'fulfilled' && result.value) {
- assistantMessages[i].reaction = result.value;
- assistantMessages[i].savedReason = result.value.reason || '';
- }
- }
- }
- } catch {
- /* ignore */
- }
- }
+  // Map messages with reactions included
+  messages = data.messages.map((m: Record<string, unknown>) => ({
+  id: m.id as string,
+  role: m.role as 'user' | 'assistant',
+  text: m.content as string,
+  error: m.error as string | undefined,
+  irrecoverable: m.irrecoverable as boolean | undefined,
+  queryType: (m.queryType as string) || undefined,
+  sources: m.sources ? JSON.parse(m.sources as string) : undefined,
+  timestamp: new Date(m.createdAt as string).getTime() || Date.now(),
+  createdAt: m.createdAt as string,
+  tokensIn: (m.tokensIn as number) || 0,
+  tokensOut: (m.tokensOut as number) || 0,
+  durationMs: (m.durationMs as number) || 0,
+  deletedAt: m.deletedAt as string | undefined,
+  toolCalls: m.toolCalls as ToolCallInfo[] || [],
+  reaction: reactionMap.get(m.id as string) || (m.reaction as ChatMessage['reaction']) || undefined,
+  savedReason: reactionMap.get(m.id as string)?.reason || (m.savedReason as string) || undefined,
+  }));
+  }
+  } catch {
+  /* ignore */
+  }
+  }
 
  async function createChat(): Promise<void> {
  if (!canCreateChat) return;
