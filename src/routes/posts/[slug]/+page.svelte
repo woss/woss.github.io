@@ -8,6 +8,7 @@
   import Seo from '$lib/components/Seo.svelte';
   import { appendQueryParams } from '$lib/utils/utm';
   import CopyComponent from '$lib/components/CopyComponent.svelte';
+  import WorkflowReplacer from '$lib/components/WorkflowReplacer.svelte';
 
   type Post = {
     slug: string;
@@ -40,6 +41,7 @@
       nav: { prev: NavLink; next: NavLink };
       imageMeta: ImageMeta | null;
       series: { title: string; items: { slug: string; title: string }[]; currentSlug: string } | null;
+      workflowFiles: { label: string; json: string; placeholders: { key: string; label: string; hint?: string }[] }[] | null;
     };
   } = $props();
 
@@ -392,6 +394,15 @@
             <!-- eslint-disable-next-line svelte/no-at-html-tags -->
             {@html data.html}
           </div>
+
+          {#if data.workflowFiles}
+            <div class="mt-8">
+              <h2 class="font-heading text-xl/tight md:text-2xl font-bold tracking-[-0.03em] m-0 mb-4 text-white">
+                Embedded Workflow
+              </h2>
+              <WorkflowReplacer workflowFiles={data.workflowFiles} />
+            </div>
+          {/if}
 
           <div
             class="h-[2px] bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] rounded-[1px] my-8"

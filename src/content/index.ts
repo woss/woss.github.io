@@ -15,6 +15,17 @@ export interface ExperienceEntry {
   excerpt: string;
 }
 
+export interface WorkflowFilePlaceholder {
+  key: string;
+  label: string;
+  hint?: string;
+}
+export interface WorkflowFileEntry {
+  label: string;
+  file: string;
+  placeholders: WorkflowFilePlaceholder[];
+}
+
 export interface BlogPost {
   slug: string;
   title: string;
@@ -27,6 +38,7 @@ export interface BlogPost {
   headerImage?: { alt: string; url: string };
   id?: number;
   partOfSeries?: number;
+  workflowFiles?: WorkflowFileEntry[];
 }
 
 // Re-export for backward compatibility

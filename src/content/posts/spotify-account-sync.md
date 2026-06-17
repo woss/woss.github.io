@@ -12,6 +12,16 @@ tags:
   - n8n
   - Automation
 header_image: '[Space whale](https://u.macula.link/_tYCpNQaQE6LlhF_6LDD6w-7)'
+workflow_files:
+  - label: "Spotify Sync Workflow"
+    file: "spotify-workflow.json"
+    placeholders:
+      - key: surrealdb-cred-id
+        label: "SurrealDB Credential ID"
+        hint: "Found in n8n URL: /credential/surrealdb-cred-id"
+      - key: spotify-cred-id
+        label: "Spotify Credential ID"
+        hint: "Found in n8n URL: /credential/spotify-cred-id"
 ---
 
 Spotify has long felt like a necessary evil for musicians and fans, offering [reach at the cost of dignity](https://www.midiaresearch.com/blog/some-artists-are-leaving-spotify-again-heres-whats-different-now), and meager payouts while burying independent artists under algorithmic noise. This year, watching the AI-generated music flooding the platform, Spotify did little to protect original musicians, pushing them further to the margins. And the recent Daniel Ek's investment in surveillance and combat AI tech might have been the last straw, leading to [quite a few artists walking away](https://www.rollingstone.com/music/music-features/artists-left-spotify-ceo-daniel-ek-military-tech-1235425098/) - and many users followed.
@@ -112,46 +122,9 @@ Boom. You've laid the groundwork for your Spotify independence — and stuck it 
 
 # Workflow creation
 
-Every credential will have a different n8n internal ID, you can do either of the following:
+Every credential will have a different n8n internal ID. The workflow JSON below includes placeholder values — replace them with your actual credential IDs, then copy the final JSON and import it into n8n.
 
-- to change manually each node in the flow to use correct credential
-- or copy the json to text editor of your choice and replace placeholders with the correct values.
-
-- n8n workflow json, expand this then copy this and paste it into text editor
-
-  ```json
-  // Paste your workflow JSON here
-  ```
-
-### Replacing placeholders in JSON
-
-Once you copied the json to text editor search for `surrealdb-cred-id`, it should be inside the structure like this:
-
-```json
-...
-"credentials": {
-  "surrealDbApi": {
-    "id": "surrealdb-cred-id",
-    "name": "SurrealDB spotify"
-  }
-}
-...
-```
-
-Replace ALL occurrences with the ID which you can get when you click on the credential in the UI. The ID is in the URL, just before the `?uiContext=credentials_list`.
-
-Do exactly the same for Spotify, but in this case search for `spotify-cred-id`. You should see it in this structure:
-
-```json
-...
-"credentials": {
-  "spotifyOAuth2Api": {
-    "id": "spotify-cred-id",
-    "name": "Spotify account"
-  }
-}
-...
-```
+> The workflow JSON is embedded below. Replace the credential IDs, then copy and import into n8n.
 
 ---
 

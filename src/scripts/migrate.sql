@@ -210,4 +210,5 @@ CREATE TABLE
 ALTER TABLE messages ADD COLUMN irrecoverable INTEGER DEFAULT 0;
 ALTER TABLE messages ADD COLUMN trace_id TEXT;
 ALTER TABLE chats ADD COLUMN trace_id TEXT;
+ALTER TABLE page_posts ADD COLUMN workflow_files TEXT;
 

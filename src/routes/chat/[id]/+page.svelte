@@ -487,15 +487,21 @@ async function handleStop(): Promise<void> {
  }
  });
 
- // Auto-send from page state (pending message from home page)
- let autoSent = $state(false);
- $effect(() => {
- if (!browser || !userId || !chatId || isLoading || autoSent) return;
- const pending = (page.state as { q?: string })?.q;
- if (!pending) return;
- autoSent = true;
- sendMessage(pending);
- });
+	// Auto-send from page state or URL param (pending message from home page)
+	let autoSent = $state(false);
+	$effect(() => {
+		if (!browser || !userId || !chatId || isLoading || autoSent) return;
+		const pending = (page.state as { q?: string })?.q || page.url.searchParams.get('q');
+		if (!pending) return;
+		autoSent = true;
+		sendMessage(pending);
+		// Clean up URL param to prevent re-sending on refresh
+		const url = new URL(window.location.href);
+		if (url.searchParams.has('q')) {
+			url.searchParams.delete('q');
+			history.replaceState(null, '', url.toString());
+		}
+	});
 
  // Global keyboard shortcuts
  $effect(() => {

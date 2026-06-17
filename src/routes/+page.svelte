@@ -20,6 +20,7 @@
   import { showMobileSidebar } from '$lib/stores/mobile-sidebar';
   import ContactForm from '$lib/components/ContactForm.svelte';
   import { randomUUID } from '$lib/utils/random-uuid';
+import { toast } from 'svelte-sonner';
 
   let userId = $state('');
   let messageText = $state('');
@@ -102,6 +103,7 @@
   });
 
   function handleSuggestedClick(question: string): void {
+    if (!userId) return; // userId not yet initialized from localStorage
     messageText = question;
     sendMessage(question);
   }
@@ -143,12 +145,14 @@
       const actionData = body.data != null ? parse(body.data) : {};
       if (body.type === 'failure' || !actionData.id) {
         isLoading = false;
+        toast.error('Failed to create chat. Please try again.');
         return;
       }
       const chatId = actionData.id as string;
-      await goto(resolve(`/chat/${chatId}`), { state: { q: trimmed } });
-    } catch {
+      await goto(resolve(`/chat/${chatId}?q=${encodeURIComponent(trimmed)}`));
+    } catch (e) {
       isLoading = false;
+      toast.error('Failed to create chat.');
     }
   }
 

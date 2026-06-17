@@ -1,6 +1,8 @@
 import { error } from '@sveltejs/kit';
 import { getPosts } from '$lib/server/db';
 import { renderMarkdown } from '$lib/server/markdown';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 type HeaderImage = { alt: string; url: string } | null;
 
@@ -36,6 +38,25 @@ export async function load({ params }: { params: Record<string, string> }) {
         /* ignore */
       }
     }
+  }
+
+  // Load workflow files with placeholder replacements
+  let workflowFiles: {
+    label: string;
+    json: string;
+    placeholders: { key: string; label: string; hint?: string }[];
+  }[] | null = null;
+  if ((currentRaw as any).workflowFiles?.length) {
+    const wfEntries = (currentRaw as any).workflowFiles as {
+      label: string;
+      file: string;
+      placeholders: { key: string; label: string; hint?: string }[];
+    }[];
+    workflowFiles = wfEntries.map((wf) => ({
+      label: wf.label,
+      json: readFileSync(join(process.cwd(), 'static', 'files', wf.file), 'utf-8'),
+      placeholders: wf.placeholders,
+    }));
   }
 
   const current = {
@@ -117,5 +138,6 @@ export async function load({ params }: { params: Record<string, string> }) {
     html: h1Stripped,
     nav,
     imageMeta,
+    workflowFiles,
   };
 }

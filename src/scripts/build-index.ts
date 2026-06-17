@@ -251,12 +251,12 @@ async function buildIndex(): Promise<void> {
   }
 
   if (await centroidDataChanged(log)) {
-    log.info`Computing and saving centroids...`;
+    log.info`Computing and saving centroids... [centroids]`;
     const { toolCentroid, ragCentroid, metaCentroid, queries, vectors } = await embedAndComputeCentroids(log);
     await saveCentroids({ toolCentroid, ragCentroid, metaCentroid, queries, vectors }, log);
-    log.info`Done.`;
+    log.info`Done. [centroids]`;
   } else {
-    log.info`Centroid data unchanged. Skipping centroid computation.`;
+    log.info`Centroid data unchanged. Skipping centroid computation. [centroids]`;
   }
 
   // Free BGE model memory (~1.3GB) before chunk embedding phase
@@ -375,7 +375,7 @@ async function buildIndex(): Promise<void> {
   const seriesMap = new Map<string, string | null>();
 
   for (const entry of changedEntries) {
-    log.debug`  ${entry.slug}…`;
+    log.info`  Processing ${entry.slug}…`;
     try {
       // Re-read file to get parsed content
       let dir: string;
@@ -429,7 +429,7 @@ async function buildIndex(): Promise<void> {
         // Read part_of_series slug from frontmatter (resolved to ID in second pass)
         const seriesSlug = data.part_of_series ? String(data.part_of_series) : null;
         db.prepare(
-          `INSERT INTO page_posts (slug, hash, content, toc, title, description, date, tags, status, excerpt, header_image, featured, position, part_of_series, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) ON CONFLICT(slug) DO UPDATE SET hash = excluded.hash, content = excluded.content, toc = excluded.toc, title = excluded.title, description = excluded.description, date = excluded.date, tags = excluded.tags, status = excluded.status, excerpt = excluded.excerpt, header_image = excluded.header_image, featured = excluded.featured, position = excluded.position, part_of_series = excluded.part_of_series, updated_at = excluded.updated_at`,
+          `INSERT INTO page_posts (slug, hash, content, toc, title, description, date, tags, status, excerpt, header_image, featured, position, part_of_series, workflow_files, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now')) ON CONFLICT(slug) DO UPDATE SET hash = excluded.hash, content = excluded.content, toc = excluded.toc, title = excluded.title, description = excluded.description, date = excluded.date, tags = excluded.tags, status = excluded.status, excerpt = excluded.excerpt, header_image = excluded.header_image, featured = excluded.featured, position = excluded.position, part_of_series = excluded.part_of_series, workflow_files = excluded.workflow_files, updated_at = excluded.updated_at`,
         ).run(
           entry.slug,
           entry.hash,
@@ -445,6 +445,7 @@ async function buildIndex(): Promise<void> {
           data.featured ? 1 : 0,
           data.position ?? null,
           null, // part_of_series — resolved in second pass below
+          data.workflow_files ? JSON.stringify(data.workflow_files) : null,
         );
         seriesMap.set(entry.slug, seriesSlug);
 

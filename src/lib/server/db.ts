@@ -712,20 +712,21 @@ function getPosts(slug?: string): {
   featured: boolean;
   position: number | null;
   partOfSeries: number | null;
+  workflowFiles: { label: string; file: string; placeholders: { key: string; label: string; hint?: string }[] }[] | null;
 }[] {
   const db = getDb();
   let rows;
   if (slug) {
     rows = queryRows<Record<string, unknown>>(
       db.prepare(
-        'SELECT id, slug, content, toc, title, description, date, tags, status, excerpt, header_image, featured, position, part_of_series FROM page_posts WHERE slug = ?',
+        'SELECT id, slug, content, toc, title, description, date, tags, status, excerpt, header_image, featured, position, part_of_series, workflow_files FROM page_posts WHERE slug = ?',
       ),
       slug,
     );
   } else {
     rows = queryRows<Record<string, unknown>>(
       db.prepare(
-        'SELECT id, slug, content, toc, title, description, date, tags, status, excerpt, header_image, featured, position, part_of_series FROM page_posts',
+        'SELECT id, slug, content, toc, title, description, date, tags, status, excerpt, header_image, featured, position, part_of_series, workflow_files FROM page_posts',
       ),
     );
   }
@@ -752,6 +753,10 @@ function getPosts(slug?: string): {
       featured: Number(r.featured) === 1,
       position: r.position != null ? Number(r.position) : null,
       partOfSeries: r.part_of_series != null ? Number(r.part_of_series) : null,
+      workflowFiles: (() => {
+        try { return JSON.parse(String(r.workflow_files ?? 'null')); }
+        catch { return null; }
+      })(),
     };
   });
 }
