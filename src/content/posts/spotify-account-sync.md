@@ -11,17 +11,17 @@ tags:
   - SurrealDB
   - n8n
   - Automation
-header_image: '[Space whale](https://u.macula.link/_tYCpNQaQE6LlhF_6LDD6w-7)'
+header_image: '[Space whale](https://u.macula.link/KdGkDiG_S-SqfqDpIJE-Sw-7)'
 workflow_files:
-  - label: "Spotify Sync Workflow"
-    file: "spotify-workflow.json"
+  - label: 'Spotify Sync Workflow'
+    file: 'spotify-workflow.json'
     placeholders:
       - key: surrealdb-cred-id
-        label: "SurrealDB Credential ID"
-        hint: "Found in n8n URL: /credential/surrealdb-cred-id"
+        label: 'SurrealDB Credential ID'
+        hint: 'Found in n8n URL: /credential/surrealdb-cred-id'
       - key: spotify-cred-id
-        label: "Spotify Credential ID"
-        hint: "Found in n8n URL: /credential/spotify-cred-id"
+        label: 'Spotify Credential ID'
+        hint: 'Found in n8n URL: /credential/spotify-cred-id'
 ---
 
 Spotify has long felt like a necessary evil for musicians and fans, offering [reach at the cost of dignity](https://www.midiaresearch.com/blog/some-artists-are-leaving-spotify-again-heres-whats-different-now), and meager payouts while burying independent artists under algorithmic noise. This year, watching the AI-generated music flooding the platform, Spotify did little to protect original musicians, pushing them further to the margins. And the recent Daniel Ek's investment in surveillance and combat AI tech might have been the last straw, leading to [quite a few artists walking away](https://www.rollingstone.com/music/music-features/artists-left-spotify-ceo-daniel-ek-military-tech-1235425098/) - and many users followed.
@@ -68,37 +68,13 @@ You can configure it as you wish; the best way is to create a user with the pass
 
 If you don't have the SurrealDB Cloud account you can register for free using [this link](https://app.surrealdb.com/referral?code=lg2fb6brc5qjmjvp).
 
-Create namespace:
-
-![Cloud based instance. Create namespace](https://u.macula.link/CoGOi0c6QqW29Jm5amt22Q-7?preset=sys_md)
-
-Cloud based instance. Create namespace
-
-![Create new Database](https://u.macula.link/bzb11TC_TEyofu1UXSSHzA-7?preset=sys_md)
-
-Create new Database
-
-Next step is to set up Database authentication
-
-![Database auth - new system user](https://u.macula.link/BJL4y-95TLCdXlwHJ54naQ-7?preset=sys_md)
-
-Select `New system user`
-
-![SurrealDB - select new system user](https://u.macula.link/d_nOhDQlRpery5wIM9xqew-7?preset=sys_md)
-
-Create user and password
+Create a namespace called `spotify`, then a new database. Set up a system user with a password — this is what n8n will use to connect.
 
 ![SurrealDB - create user credentials](https://u.macula.link/s7owKIM7QyOX8Dr4sTZSQQ-7?preset=sys_md)
 
 ## Step Four: Connect SurrealDB and n8n
 
-Now, go to your n8n and create a credential. Search for SurrealDB
-
-![n8n credential - search SurrealDB](https://u.macula.link/PddO7ktaTK6emjANv7N3pg-7?preset=sys_md)
-
-And click continue.
-
-Fill in the details and save. The `Connection String` you can find when you click on SurrealDB dashboard and select `Instance actions`. From there you can `Copy hostname`. This should be Saved and tested.
+Now, go to your n8n and create a credential. Search for SurrealDB, click continue, then fill in the details and save. The `Connection String` you can find when you click on SurrealDB dashboard and select `Instance actions`. From there you can `Copy hostname`. This should be Saved and tested.
 
 ![n8n - SurrealDB connection details form](https://u.macula.link/ati9JcaUTcaEJ6c3NvYtCg-7?preset=sys_md)
 
@@ -193,29 +169,15 @@ live select id from playlist_track;
 
 Make sure once you execute this you switch to `Live` mode.
 
-![SurrealDB - live query results](https://u.macula.link/kG9IXqbzTWeVoPaYpnnQOQ-7?preset=sys_md)
+Metrics are only available in the cloud, not in the Surrealist desktop.
 
-Metrics are only available in the cloud, not in the Surrealist desktop
+The JSON workflow is in the replacer above — paste it into n8n to see the full visual layout. Here's the full diagram:
 
-![SurrealDB cloud - metrics dashboard](https://u.macula.link/_tYCpNQaQE6LlhF_6LDD6w-7?preset=sys_md)
-
-- Workflow screenshots
-
-  ![Workflow - sync following artists](https://u.macula.link/FzgR7B1FTpeNVcKb5XPKQg-7?preset=sys_md)
-
-  ![Workflow - sync playlists](https://u.macula.link/ZdH1oCxvTaiuE3d5zgeGtQ-7?preset=sys_md)
-
-  ![Workflow - sync liked tracks](https://u.macula.link/dA_L7GA7Rt6pXYOKm9q76A-7?preset=sys_md)
-
-  ![Workflow - sync playlist tracks](https://u.macula.link/1uR7-lVYSNSiqk7gokPeEA-7?preset=sys_md)
-
-  ![Workflow - full diagram](https://u.macula.link/JYYFiP0KQpiLtgf_XqEGgw-7?preset=sys_md)
+![Workflow - full diagram](https://u.macula.link/JYYFiP0KQpiLtgf_XqEGgw-7?preset=sys_md)
 
 ## My Stats
 
 Here's the thing about carrying 15 years of music history: it fits in 93MB. Just metadata, no audio files — passports for every track, not the bags themselves.
-
-![Library stats - storage usage](https://u.macula.link/P_78hjb5Tj-qlcLLO6w4Ag-7?preset=sys_md)
 
 From this table you can see that I have 23526 tracks synced, across the playlists and `My library` which we call `Likes`. I have 116 playlists and 16102 albums that are extracted from the songs(tracks). Whats yours?
 

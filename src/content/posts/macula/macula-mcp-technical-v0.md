@@ -1,6 +1,6 @@
 ---
 published: true
-title: 'Building a Public MCP Server: From Zero to Production'
+title: 'v1: The MCP Server That Taught Us What Not to Do'
 description: 'Production architecture for a public, read-only MCP server serving AI agents without authentication — covering stateless design, Zod validation, defense-in-depth security, rate limiting, SQL injection prevention, and lessons learned from implementing Maculas Unified Link MCP.'
 date: 2026-03-01
 tags:

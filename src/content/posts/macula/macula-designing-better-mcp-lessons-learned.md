@@ -1,6 +1,6 @@
 ---
 published: true
-title: 'Designing MCP Servers for How LLMs Think: Lessons from Building a Content Graph'
+title: 'Designing MCP Servers for How LLMs Think'
 description: "A design retrospective on three iterations of MCP server refinement driven by observing real LLM behavior — tool design is LLM UX, and a tool an LLM doesn't understand is a tool that might as well not exist."
 date: 2026-06-01
 tags:
@@ -11,7 +11,7 @@ tags:
   - UX
   - content graph
   - prompt engineering
-header_image: '[Macula Content Graph Visualization](https://u.macula.link/DFEBUzIJSEyiF8PnbbDANA-7)'
+header_image: '[Macula Content Graph Visualization](https://u.macula.link/Pi4guk9pQGebQU0lWPIGxQ-7)'
 ---
 
 ## The Premise

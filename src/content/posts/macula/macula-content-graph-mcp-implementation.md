@@ -1,6 +1,6 @@
 ---
 published: true
-title: 'Building a Content Graph MCP Server: Graph-Walk API Design for AI Agents'
+title: 'A Public MCP Server in Production: Stateless, Graph-Shaped, and Battle-Tested'
 description: 'Production architecture for a public MCP server — stateless graph-walk API with 4 tools, defense-in-depth security, the image rendition chain bug, and why abstract tool descriptions cause LLMs to hallucinate.'
 date: 2026-03-01
 tags:

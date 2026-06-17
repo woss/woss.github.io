@@ -9,6 +9,10 @@ export default defineConfig({
   },
   ssr: {
     noExternal: ['sv5ui'],
-    external: true,
+  },
+  build: {
+    rollupOptions: {
+      external: ['node:sqlite'],
+    },
   },
 });

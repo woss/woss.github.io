@@ -1,6 +1,6 @@
 ---
 published: true
-title: 'Making Content Accessible to AI: How Macula MCP Connects AI Agents to Creative Work'
+title: 'Macula Meets MCP: Giving AI Agents Structured Access to Creative Work'
 description: 'A conceptual dive into how Macula uses the Model Context Protocol (MCP) to let AI agents discover, explore, and reason about creative content — covering 14 tools, 14 prompts, real-world use cases, and the ecosystem advantage for photographers.'
 date: 2026-03-01
 tags:

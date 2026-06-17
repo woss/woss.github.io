@@ -1,6 +1,6 @@
 ---
 published: true
-title: 'Content Graphs for AI: Discovering Creative Work Through Connections'
+title: 'Your Content Is a Gallery, Not a Filing Cabinet: Graph Discovery for AI Agents'
 description: 'How AI agents navigate creative content by following relationships — a conceptual deep-dive into graph-based discovery using a gallery metaphor, comparing graph walks against traditional REST APIs.'
 date: 2026-06-17
 tags:
