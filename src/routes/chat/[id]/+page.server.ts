@@ -52,8 +52,8 @@ export const actions: Actions = {
     if (!text) return fail(400, { error: 'text is required' });
     if (text.length > 500) return fail(400, { error: 'text must be 500 characters or fewer' });
 
-    let maxChunks = parseInt(String(fd.get('maxChunks') ?? '6'), 10);
-    if (!Number.isInteger(maxChunks) || maxChunks < 1 || maxChunks > 20) maxChunks = 6;
+    let maxChunks = parseInt(String(fd.get('maxChunks') ?? '8'), 10);
+    if (!Number.isInteger(maxChunks) || maxChunks < 1 || maxChunks > 20) maxChunks = 8;
 
     if (!userId || typeof userId !== 'string') return fail(400, { error: 'userId required' });
 

@@ -14,7 +14,7 @@ header_image: '[Star trails over Catalonia](https://u.macula.link/6P2P0eXISH-fR6
 
 ## Professional Summary
 
-I break things. Then I fix them. Then I write tools so nobody else has to break them the same way.
+I'm Daniel Maricic. I break things, fix them, and write tools so nobody else breaks them the same way.
 
 I'm a software developer and architect with over a decade of experience building robust, high-performance systems — and occasionally setting things on fire (metaphorically, mostly). My work spans the full stack: designing blockchain protocols in Rust and TypeScript, building modern web applications with SvelteKit, managing Kubernetes clusters, and writing developer tooling that makes teams around the world more productive.
 
@@ -28,11 +28,45 @@ I believe the best code is the code you don't have to write. Elegant, maintainab
 
 ## Career Overview
 
-My career includes founding a software consultancy ([7Signals Consultancy Ltd](https://github.com/woss)), a blockchain protocol startup ([Anagolay Network](https://github.com/anagolay)) and building a copyright and licensing system for any multimedia ([Kelp.Digital](https://kelp.digital) and [Macula.link](https://macula.link)), leading engineering teams at agencies like Nord Software, and contributing to projects across fintech, digital media, and decentralized identity. I've written Web3 Foundation grants, spoken at developer conferences, and mentored junior engineers. My experience spans early-stage startups and established product teams — I've seen software built at every scale, from a garage to a grid.
+My career includes founding a software consultancy ([7Signals Consultancy Ltd](https://github.com/woss)), a blockchain protocol startup ([Anagolay Network](https://github.com/anagolay)), and building [Kelp.Digital](https://kelp.digital) and [Macula.link](https://macula.link) — a content rights and asset management platform where I acted as solo founder and engineer, writing 44,000 lines of TypeScript and owning every layer from infrastructure to user experience. I've also led engineering teams at agencies like Nord Software, and contributed to projects across fintech, digital media, and decentralized identity. I've written Web3 Foundation grants, spoken at developer conferences, and mentored junior engineers. My experience spans early-stage startups and established product teams — I've seen software built at every scale, from a garage to a grid.
+
+## Technical Founder — Kelp.digital & Macula.link
+
+My flagship project. Kelp.digital is a content rights platform that uses cryptography to issue legally binding digital certificates for intellectual property. Macula.link is the asset management system behind it — a full-stack platform I built from scratch as a solo technical founder.
+
+I acted as founder, architect, and sole engineer: designing the protocol, building the infrastructure, writing every line of production code. The system spans a content delivery network, a SvelteKit front-end, a custom MCP server for AI integration, a Lightroom plugin supporting that automatically syncs to Macula, and 44,000 lines of TypeScript across the stack. It runs on my own cluster with QuestDB for time-series data, SurrealDB for the asset graph and V2 analytics, and PostgreSQL as main database.
+
+This is where I proved I could carry a product from zero to production alone — owning every layer from infrastructure to user experience.
+
+## Key Projects
+
+I've built across the full spectrum — from blockchain protocols to developer tooling to content rights platforms.
+
+### Anagolay Network
+
+A blockchain-based rights management protocol where I went from zero to grant-winning founder. [github.com/anagolay](https://github.com/anagolay)
+
+### Kelp.digital / Macula.link
+
+Kelp is the brand and business built around content rights — protecting creators' IP through cryptography. Macula is the platform itself: a full-stack content rights management system built with SvelteKit, Sharp, ExifTool, QuestDB, and SurrealDB. It includes a custom MCP server for AI agent integration and a Lightroom plugin — 44,000 lines of TypeScript I wrote personally. [kelp.digital](https://kelp.digital) · [macula.link](https://macula.link)
+
+### DaliORM and DaliMemory
+
+A type-safe SurrealDB ORM published as `@woss/dali-orm`. [github.com/woss/dali-orm](https://github.com/woss/dali/tree/main/packages/dali-orm).
+
+AI-native memory tool built on SurrealDB with mcp and distributed as the OCI, published as `@woss/dali-memory`. [github.com/woss/dali-memory](https://github.com/woss/dali/tree/main/packages/dali-memory).
+
+### woss.io
+
+An AI-native personal portfolio with streaming LLM chat and RAG. [woss.io](https://woss.io) · [github.com/woss/woss.io](https://github.com/woss/woss.io)
+
+### Other notable projects
+
+[aws-lambda-layer-sharp](https://github.com/woss/aws-lambda-layer-sharp), [git-gpg-remote-sign](https://github.com/woss/git-gpg-remote-sign), [exiftool-action](https://github.com/woss/exiftool-action), [elmo](https://github.com/woss/elmo) (IPFS-based link management), and [opencode-visualizer](https://github.com/woss/opencode-visualizer).
 
 ## Open Source
 
-Beyond pnpm, rushstack, and sharp, I maintain several open-source projects including the dali monorepo ([github.com/woss/dali](https://github.com/woss/dali)) — containing DaliORM (type-safe ORM for SurrealDB, npm `@woss/dali-orm`) and DaliMemory (AI memory tool based on SurrealDB, npm `@woss/dali-memory`) — as well as Macula (a private decentralized asset management platform), and various developer tooling libraries. I believe in building in public and contributing to the ecosystem that makes modern web development possible.
+Beyond pnpm, rushstack, and sharp, I maintain several open-source projects including the dali monorepo ([github.com/woss/dali-orm](https://github.com/woss/dali/tree/main/packages/dali-orm)) — containing DaliORM (type-safe ORM for SurrealDB, npm `@woss/dali-orm`) and DaliMemory (AI memory tool based on SurrealDB, npm `@woss/dali-memory`) — as well as Macula (a private decentralized asset management platform), and various developer tooling libraries. I believe in building in public and contributing to the ecosystem that makes modern web development possible.
 
 A couple more creative projects I'm particularly fond of: [git-gpg-remote-sign](https://github.com/woss/git-gpg-remote-sign) — a tool for signing git commits and tags with GPG keys stored on remote servers, and [elmo](https://github.com/woss/elmo) — an Efficient Link Management and Organization tool built entirely on IPFS for storage and retrieval of links and content.
 
@@ -41,6 +75,7 @@ A couple more creative projects I'm particularly fond of: [git-gpg-remote-sign](
 Status: Always open to opportunities -- that's my motto. But here are some of the roles I'm particularly interested in:
 
 - Fractional CTO or Technical Co-Founder (with focus on building and scaling products)
+- Helping startups build AI-powered products (with focus on developer experience and AI safety)
 - Backend Engineer
 - Infrastructure Engineer
 - Developer Tooling Engineer

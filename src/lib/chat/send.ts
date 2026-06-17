@@ -48,7 +48,7 @@ export async function sendChatMessage(
     const fd = new FormData();
     fd.set('text', trimmed);
     fd.set('userId', userId);
-    fd.set('maxChunks', '6');
+    fd.set('maxChunks', '8');
 
     const response = await fetch(`/chat/${chatId}?/ask`, {
       method: 'POST',

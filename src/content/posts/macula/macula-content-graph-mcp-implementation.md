@@ -11,6 +11,7 @@ tags:
   - security
   - TypeScript
   - SurrealDB
+header_image: '[Macula Content Graph Visualization](https://u.macula.link/URMl_ZDDQh2rbEyeo7xngQ-7)'
 ---
 
 ## Introduction
@@ -66,7 +67,7 @@ traverse({ from, edge })                         Returns
 
 Separate leaf-reader tools (different return shapes):
 
-```
+```plaintext
 ├── get_file(unifiedId, fields?)         → Full file metadata + assets + presets
 ├── get_file_metadata(unifiedId, a?)     → EXIF/XMP/IPTC technical metadata
 └── get_users(nicknames[])               → Batch user profile lookup
@@ -80,7 +81,7 @@ A REST API for the same data requires endpoint discovery and multiple round trip
 
 **REST approach:**
 
-```
+```plaintext
 GET /user/woss/uploads       → [file IDs]
   → GET /file/{id}           → file metadata
   → GET /file/{id}/metadata  → EXIF/XMP data
@@ -161,7 +162,7 @@ We implemented multiple layers of security:
 
 ## Architecture
 
-```
+```plaintext
 ┌──────────────────────────────────────────────────────────────┐
 │                         AI Agent                               │
 └─────────────────────────────┬─────────────────────────────────┘
@@ -389,7 +390,7 @@ The graph model shines when traversals chain together. Here are three common wal
 
 ### Walk 1: Browse a photographer's portfolio
 
-```
+```plaintext
 traverse({ from:{type:'user', nickname:'sarah'}, edge:'profile' })
 │
 ├── Returns: user profile + directories
@@ -407,7 +408,7 @@ User → directory → files. The agent discovers albums exist (from profile), t
 
 ### Walk 2: Search → filter by license → inspect metadata
 
-```
+```plaintext
 traverse({ from:{type:'root'}, edge:'search', query:'mountain landscape' })
 │
 ├── Returns: FileNode[] matching search query
@@ -423,7 +424,7 @@ Full-text discovery → license-filtered narrowing → leaf-reader inspection.
 
 ### Walk 3: Random discovery → inspect → find more by same creator
 
-```
+```plaintext
 traverse({ from:{type:'root'}, edge:'random', limit:5 })
 │
 ├── Returns: 5 random files

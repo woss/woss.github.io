@@ -2,7 +2,7 @@
 published: true
 title: 'Content Graphs for AI: Discovering Creative Work Through Connections'
 description: 'How AI agents navigate creative content by following relationships — a conceptual deep-dive into graph-based discovery using a gallery metaphor, comparing graph walks against traditional REST APIs.'
-date: 2026-03-01
+date: 2026-06-17
 tags:
   - macula
   - MCP
@@ -10,6 +10,7 @@ tags:
   - graph traversal
   - REST
   - API design
+header_image: '[Content Graph Visualization](https://u.macula.link/Kh9NMfIeSUakGgg3sOL12w-7)'
 ---
 
 ## The Gallery
@@ -81,7 +82,7 @@ The agent starts with a broad search, narrows by license and content type, inspe
 
 An agent analyzes what creators are making to understand emerging trends.
 
-```
+```sh
 traverse({ from:{type:'user', nickname:'creator1'}, edge:'profile' })
 │
 ├── Returns: profile + directory listing (albums)
@@ -139,12 +140,12 @@ Sarah doesn't need to manually update her portfolio across multiple platforms. M
 
 Content graphs fundamentally change how agents interact with data. Compare a graph walk to traditional REST:
 
-|                  | Graph Walk                       | REST                     |
-| ---------------- | -------------------------------- | ------------------------ |
-| **Mental model** | Nodes and relationships          | Endpoints and URLs       |
-| **Discovery**    | Describe what you want           | Know the URL patterns    |
-| **Round trips**  | 1-2 calls                        | 3+ sequential requests   |
-| **Versioning**   | Edge definitions evolve          | New endpoint versions    |
+|                  | Graph Walk                             | REST                     |
+| ---------------- | -------------------------------------- | ------------------------ |
+| **Mental model** | Nodes and relationships                | Endpoints and URLs       |
+| **Discovery**    | Describe what you want                 | Know the URL patterns    |
+| **Round trips**  | 1-2 calls                              | 3+ sequential requests   |
+| **Versioning**   | Edge definitions evolve                | New endpoint versions    |
 | **Agent fit**    | Natural (entity→relation→entity) | Translation layer needed |
 
 With REST, an agent fetching all CC-BY images by a specific user needs: (1) look up user ID, (2) query user's files, (3) filter by license server-side or client-side. With a graph walk, the agent starts at the user, follows the license edge, and arrives at the result in one conceptual step.
@@ -242,12 +243,12 @@ _These tool names map to the content graph operations described above._
 
 ### All 4 Tools
 
-| Tool                | Description                                                                                                                                                                                                                                                                                            |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tool                | Description                                                                                                                                                                                                                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `traverse`          | Universal discovery — navigate relationships across 6 from types × 10 edges. Supports full-text search, keyword lookup, user profiles, file/directory info, and all previous specialized operations. Images included in all traversal results (`contains` and `tagged_files` follow rendition chains). |
-| `get_file`          | Get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` param for selective retrieval.                                                                                                                                        |
-| `get_file_metadata` | Get full EXIF/XMP/IPTC metadata. Optional `a` parameter for specific metadata fields.                                                                                                                                                                                                                  |
-| `get_users`         | Batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                                   |
+| `get_file`          | Get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` param for selective retrieval.                                                                                                                                         |
+| `get_file_metadata` | Get full EXIF/XMP/IPTC metadata. Optional `a` parameter for specific metadata fields.                                                                                                                                                                                                                   |
+| `get_users`         | Batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                                    |
 
 #### Replaced Tools
 
@@ -272,12 +273,12 @@ _These tool names map to the content graph operations described above._
 
 ### All 4 Prompts
 
-| Prompt              | Description                                                                                          |
-| ------------------- | ---------------------------------------------------------------------------------------------------- |
+| Prompt              | Description                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
 | `browse_user`       | Explore a creator's profile, directories, and published files via user → directory → file navigation |
-| `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                 |
-| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                    |
-| `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs            |
+| `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                   |
+| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                      |
+| `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs              |
 
 ### Resources (2)
 
@@ -324,4 +325,4 @@ We're continuing to expand our toolset based on real usage patterns. If you're b
 
 ---
 
-_For technical details on our MCP implementation, see [Building a Public MCP Server: From Zero to Production](./mcp-implementation.md)._
+_For technical details on our MCP implementation, see [Building a Public MCP Server: From Zero to Production](./macula-content-graph-mcp-implementation)._

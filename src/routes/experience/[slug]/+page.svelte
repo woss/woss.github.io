@@ -2,9 +2,8 @@
  import { resolve } from '$app/paths';
  import { page } from '$app/state';
  import type { ExperienceEntry } from '$lib/../content/index';
- import { toast } from 'svelte-sonner';
- import { copyToClipboard } from '$lib/utils/clipboard';
  import Seo from '$lib/components/Seo.svelte';
+ import CopyComponent from '$lib/components/CopyComponent.svelte';
 
  type NavLink = { slug: string; company: string; role: string } | null;
 
@@ -12,7 +11,8 @@
  data: {
  entry: ExperienceEntry;
  html: string;
- nav: { prev: NavLink; next: NavLink }
+ nav: { prev: NavLink; next: NavLink };
+ markdown: string;
  }
  } = $props();
 
@@ -22,20 +22,6 @@
  const raf = requestAnimationFrame(() => { visible = true; });
  return () => cancelAnimationFrame(raf);
  });
-
- async function copyEntry() {
- try {
- const res = await fetch(`/api/content/experience/${data.entry.slug}`);
- const json = await res.json();
- if (copyToClipboard(json.markdown)) {
- toast.success('Copied as Markdown');
- } else {
- toast.error('Failed to copy');
- }
- } catch {
- toast.error('Failed to copy');
- }
- }
 
  function formatDate(dateStr: string): string {
  const d = new Date(dateStr + '-01');
@@ -59,16 +45,7 @@
  <header class="mb-6">
  <div class="flex items-center gap-2 mb-2">
  <p class="font-mono text-sm text-secondary uppercase tracking-[0.08em] m-0">{data.entry.company}</p>
- <button
- class="flex items-center justify-center size-7 bg-transparent border border-[rgba(255,255,255,0.08)] rounded-md text-on-surface-variant cursor-pointer transition-colors duration-150 shrink-0 p-0 hover:text-primary hover:border-primary"
- onclick={copyEntry}
- aria-label="Copy as markdown"
- title="Copy as markdown"
- >
- <svg class="block" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
- <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
- </svg>
- </button>
+ <CopyComponent text={data.markdown} toastMessage="Copied as Markdown" label="Copy as markdown" />
  </div>
  <h1 class="font-heading text-3xl text-primary m-0 mb-3 leading-[1.2]">{data.entry.role}</h1>
  <p class="font-mono text-sm text-on-surface-variant m-0">

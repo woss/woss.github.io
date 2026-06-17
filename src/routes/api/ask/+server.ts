@@ -82,7 +82,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
     });
   }
 
-  const maxChunks = body.maxChunks ?? 6;
+  const maxChunks = body.maxChunks ?? 8;
   if (!Number.isInteger(maxChunks) || maxChunks < 1 || maxChunks > 20) {
     return new Response(JSON.stringify({ error: "'maxChunks' must be an integer between 1 and 20" }), {
       status: 400,

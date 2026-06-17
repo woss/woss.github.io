@@ -84,6 +84,44 @@ The restructured prompt (commit 07016c5):
 
 The anti-hallucination rule now sits in the **primacy zone** — immediately after the model understands its role, before any other instruction can dilute its weight.
 
+### The Consolidation
+
+The single-rule fix was followed by a full prompt consolidation
+(commit `43bcd29` on Jun 12). All system prompts — the base identity,
+the tool instructions, the refusal rules, the Macula and GitHub MCP
+instructions — were scattered across 7 files before the consolidation.
+After: one file, one review surface.
+
+The consolidation didn't change the primacy insight. The anti-hallucination
+rule stayed at position 2. But it did surface something else: new rules
+added to individual files (like "NO INFERRING FROM DIR NAMES" for Macula
+tools) were also in weak positions. They got promoted during the merge.
+
+A second change introduced the "SHOW YOUR WORK" rule — requiring the
+model to include links and source references in its answers. This was
+placed right behind the anti-hallucination rule, in the same primacy zone.
+The position was intentional: if the model reads "never fabricate" first
+and then "always cite sources" second, those two rules reinforce each
+other structurally.
+
+The persona also evolved. The original prompt opened with:
+
+> You represent Daniel Maricic's professional portfolio...
+
+The restructured prompt opens with:
+
+> I am Haistlin — Daniel Maricic's digital presence...
+
+The shift from "you represent" to "I am" is subtle but deliberate — the
+model adopts a consistent first-person identity rather than a detached
+representation. This change was placed in the primacy position as well,
+immediately above the anti-hallucination rule.
+
+**Net result**: the system prompt grew from ~50 lines to ~130 lines, but
+the critical behavioral rules all sit in the primacy zone. The middle
+section handles tool-specific instructions and MCP configurations —
+information the model needs contextually, not behaviorally.
+
 ## The Primacy Heatmap
 
 ```mermaid
@@ -104,9 +142,9 @@ Instructions placed in the primacy zone get disproportionate attention. The midd
 The full system prompt as it runs today:
 
 ```
-You represent Daniel Maricic's professional portfolio and personal
-development. Answer questions about his skills, experience, projects,
-career history, and hobbies.
+I am Haistlin — Daniel Maricic's digital presence and professional
+portfolio. Answer questions about his skills, experience, projects,
+career history, and hobbies on his behalf.
 
 CRITICAL — ANTI-HALLUCINATION RULE: Never fabricate, invent, or guess
 any data — including PR numbers, issue numbers, commit SHAs, dates,
@@ -117,12 +155,17 @@ unverified data.
 
 Start with provided context. If context lacks the answer, use available
 tools to find real data. No invention. Never mention company names,
-roles, or projects not found in context or tool results...
+roles, or projects not found in context or tool results.
 
-[style instructions, formatting rules, GitHub link conventions...]
+SHOW YOUR WORK: Include links and references to your tool output so the
+user can verify or explore further. When you retrieve data from a tool,
+link to the source when possible.
+
+[MCP tool rules, style instructions, GitHub link conventions...]
 
 CRITICAL — REFUSAL RULE: If the user asks about anything NOT related
-to Daniel Maricic...
+to Daniel Maricic, his professional work, his open-source projects
+(DaliORM, Macula, woss.io), or his hobbies...
 ```
 
 The original "no invention" text remains verbatim on line 4 — but it's now **reinforced** by the primary rule above it. The model reads the constraint first, then sees it echoed in the details. It's not redundant — it's layered reinforcement.
@@ -139,4 +182,4 @@ The original "no invention" text remains verbatim on line 4 — but it's now **r
 
 ---
 
-_Part of the [Building woss.io](/posts/new-woss-io) series. The full system prompt evolution is tracked in [commit 07016c5](https://github.com/woss/woss.io/commit/07016c5) on the `v1` branch._
+_Part of the [Building woss.io](/posts/new-woss-io) series. The prompt evolution is tracked in commits [07016c5](https://github.com/woss/woss.io/commit/07016c5) (position fix) and [43bcd29](https://github.com/woss/woss.io/commit/43bcd29) (consolidation)._

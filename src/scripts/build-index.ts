@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import GithubSlugger from 'github-slugger';
 import { Index, MetricKind, ScalarKind } from 'usearch';
 import Database from 'better-sqlite3';
@@ -60,8 +60,10 @@ export interface ProcessResult {
 
 interface FileEntry {
   slug: string;
+  relativePath: string;
   type: 'post' | 'experience';
   hash: string;
+  dirTag?: string;
 }
 
 /**
@@ -126,15 +128,16 @@ function extractToc(content: string): { id: string; text: string; level: number 
 }
 
 /**
- *  Read all markdown files from a directory and return their paths. Returns an empty array if the directory doesn't exist.
- * @param dir The directory to read markdown files from.
- * @returns An array of markdown file paths.
+ * Recursively walk a directory and yield all markdown file paths.
+ * @param dir The directory to walk.
  */
-function readMarkdownFiles(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((f) => f.endsWith('.md'))
-    .map((f) => join(dir, f));
+function* walkMdFiles(dir: string): Generator<string> {
+  if (!existsSync(dir)) return;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) yield* walkMdFiles(fullPath);
+    else if (entry.name.endsWith('.md')) yield fullPath;
+  }
 }
 
 /**
@@ -144,18 +147,22 @@ function readMarkdownFiles(dir: string): string[] {
 function readFileEntries(): FileEntry[] {
   const entries: FileEntry[] = [];
 
-  for (const fp of readMarkdownFiles(POSTS_DIR)) {
+  for (const fp of walkMdFiles(POSTS_DIR)) {
     const raw = readFileSync(fp, 'utf-8');
-    const slug = fp.split('/').pop()?.replace(/\.md$/, '') || '';
+    const relativePath = fp.replace(POSTS_DIR + '/', '');
+    const slug = basename(relativePath, '.md');
+    const dirTag = relativePath.includes('/') ? relativePath.split('/')[0] : undefined;
     const hash = createHash('sha256').update(raw).digest('hex');
-    entries.push({ slug, type: 'post', hash });
+    entries.push({ slug, relativePath, type: 'post', hash, dirTag });
   }
 
-  for (const fp of readMarkdownFiles(EXPERIENCE_DIR)) {
+  for (const fp of walkMdFiles(EXPERIENCE_DIR)) {
     const raw = readFileSync(fp, 'utf-8');
-    const slug = fp.split('/').pop()?.replace(/\.md$/, '') || '';
+    const relativePath = fp.replace(EXPERIENCE_DIR + '/', '');
+    const slug = basename(relativePath, '.md');
+    const dirTag = relativePath.includes('/') ? relativePath.split('/')[0] : undefined;
     const hash = createHash('sha256').update(raw).digest('hex');
-    entries.push({ slug, type: 'experience', hash });
+    entries.push({ slug, relativePath, type: 'experience', hash, dirTag });
   }
 
   return entries;
@@ -375,7 +382,7 @@ async function buildIndex(): Promise<void> {
       if (entry.type === 'post') dir = POSTS_DIR;
       else if (entry.type === 'experience') dir = EXPERIENCE_DIR;
       else continue;
-      const fp = join(dir, `${entry.slug}.md`);
+      const fp = join(dir, entry.relativePath);
       const raw = readFileSync(fp, 'utf-8');
       const { data, content } = await parseFrontmatter(raw);
 
@@ -395,6 +402,7 @@ async function buildIndex(): Promise<void> {
         const rawDate = data.date;
         date = rawDate instanceof Date ? rawDate.toISOString() : rawDate ? String(rawDate) : null;
         tags = [...new Set<string>(Array.isArray(data.tags) ? data.tags.map(String) : [])];
+        if (entry.dirTag) tags = [...new Set([...tags, entry.dirTag])];
       } else {
         const company = String(data.company ?? '');
         const role = String(data.role ?? '');
@@ -402,6 +410,7 @@ async function buildIndex(): Promise<void> {
         const rawStartDate = data.startDate;
         date = rawStartDate instanceof Date ? rawStartDate.toISOString() : rawStartDate ? String(rawStartDate) : null;
         tags = [...new Set<string>(Array.isArray(data.skills) ? data.skills.map(String) : [])];
+        if (entry.dirTag) tags = [...new Set([...tags, entry.dirTag])];
       }
 
       // Process date fields that may be Date objects from frontmatter parsing

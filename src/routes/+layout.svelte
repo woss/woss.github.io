@@ -7,6 +7,18 @@
 
   import '../app.css';
 
+  // Font @font-face declarations (font-display: swap — mitigated by preload)
+  import '@fontsource-variable/ibm-plex-sans';
+  import '@fontsource-variable/ibm-plex-sans/wght-italic.css';
+  import '@fontsource/ibm-plex-mono/400.css';
+  import '@fontsource/ibm-plex-mono/700.css';
+
+  // Font WOFF2 URLs for preload hints in <svelte:head>
+  import ibmPlexSansNormal from '@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-wght-normal.woff2?url';
+  import ibmPlexSansItalic from '@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-wght-italic.woff2?url';
+  import ibmPlexMono400 from '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2?url';
+  import ibmPlexMono700 from '@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-700-normal.woff2?url';
+
   let avatarUrl = $derived(appendQueryParams('https://u.macula.link/@woss/avatar', page.data.queryParams));
 
   let { children } = $props();
@@ -96,6 +108,10 @@
 <svelte:head>
   <link rel="icon" href={avatarUrl} />
   <link rel="apple-touch-icon" href={avatarUrl} />
+  <link rel="preload" href={ibmPlexSansNormal} as="font" crossorigin="anonymous" type="font/woff2" />
+  <link rel="preload" href={ibmPlexSansItalic} as="font" crossorigin="anonymous" type="font/woff2" />
+  <link rel="preload" href={ibmPlexMono400} as="font" crossorigin="anonymous" type="font/woff2" />
+  <link rel="preload" href={ibmPlexMono700} as="font" crossorigin="anonymous" type="font/woff2" />
 </svelte:head>
 
 {#if !isChatPage}

@@ -183,6 +183,46 @@ if (response.status === 429) {
 
 The AI SDK doesn't retry on 400. The outer loop catches it and breaks immediately.
 
+### Bonus: The RAG Safety Net
+
+There's one more failure mode that doesn't look like a tool loop but
+shares the same root cause: the model gets stuck without tools, and RAG
+never fires.
+
+In the original architecture, the RAG retrieval step was gated by a
+`needsAnyTool` flag:
+
+```typescript
+// Before: RAG only runs when tools are needed
+if (needsAnyTool) {
+  ragResults = await retrieveContext(query);
+}
+```
+
+This made sense in isolation — why fetch RAG context if the model has
+tools to find the data itself? But the logic broke in practice: when a
+user asked something that didn't match any MCP tool signature, the
+classifier returned `needsAnyTool = false`, RAG never ran, and the
+model received zero context. No tools, no RAG, nothing.
+
+The fix (commit `bfbf993` on Jun 10) removed the gate entirely:
+
+```typescript
+// After: RAG always runs, regardless of tool needs
+ragResults = await retrieveContext(query);
+```
+
+RAG now runs on **every** query. If tools are also needed, both fire.
+If no tools are needed, the model still gets RAG context. The cost is
+a database query and embedding comparison — milliseconds — and the
+benefit is that the model never faces a blank context window.
+
+This fix complements the tool loop defenses in a specific way: it
+reduces the pressure on the tool system. When the model already has
+relevant context from RAG, it's less likely to keep calling tools
+to "verify" things it already knows. Fewer tool calls means fewer
+opportunities for loops.
+
 ## opencode vs woss.io: Defense-in-Depth Comparison
 
 | Concern            | opencode                            | woss.io                             |

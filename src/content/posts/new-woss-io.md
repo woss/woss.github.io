@@ -17,7 +17,7 @@ tags:
   - SQLite
   - web development
   - portfolio
-header_image: '[Space whale](https://u.macula.link/Z1TIROJeSMmFYnmvlCOPLg-7?preset=sys_md)'
+header_image: '[Space whale](https://u.macula.link/Z1TIROJeSMmFYnmvlCOPLg-7)'
 ---
 
 The old woss.io was static. A simple portfolio page, blog posts rendered from markdown, a contact form. It worked, but it didn't reflect how I actually work — with AI tools daily, building systems that reason, search, and generate.

@@ -130,6 +130,41 @@ I pulled MiMo from the classifier route. It fell back to the main model (DeepSee
 
 The real win wasn't a faster model — it was **having the option to swap models per-component**, even if the first swap candidate didn't work out.
 
+### A Related Problem: The RAG Query Classifier
+
+The tool classifier isn't the only classifier in the system. There's a
+parallel classification step — `classifyQuery` in `query-classifier.ts` —
+that determines whether a query needs RAG context (`rag`), tool
+execution (`tool`), both (`hybrid`), or neither (`meta`).
+
+The original RAG classifier had its own gate bug. RAG retrieval was
+guarded by a `needsAnyTool` flag — if the tool classifier said no tools,
+RAG was skipped entirely. This created a blind spot: queries that needed
+neither GitHub nor Macula tools (like "summarize the conversation" or
+"What projects have you worked on?") got no RAG context either.
+
+The fix was trivial — remove the gate:
+
+```typescript
+// Before
+if (needsAnyTool) {
+  ragResults = await retrieveContext(query);
+}
+
+// After
+ragResults = await retrieveContext(query);
+```
+
+RAG now runs on every query, independent of tool classification. The
+classifiers still serve their original purpose — the tool classifier
+determines which MCP tools to load, the query classifier determines how
+to route the request — but neither can starve the model of context
+anymore.
+
+The lesson applies to both classifiers: **a classifier should gate what
+it classifies, not what its neighbors do.** The tool classifier decides
+which tools. It shouldn't also decide whether RAG runs.
+
 ## The Deeper Lesson
 
 This is a case study in a pattern I've seen across the entire woss.io stack: **defaulting to the biggest gun**.

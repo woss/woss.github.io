@@ -112,6 +112,7 @@ export async function load({ params }: { params: Record<string, string> }) {
       excerpt: current.excerpt,
       headerImage: current.headerImage,
       toc: current.toc,
+      body: current.body,
     },
     html: h1Stripped,
     nav,

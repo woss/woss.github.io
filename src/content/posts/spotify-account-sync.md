@@ -3,38 +3,32 @@ published: true
 title: 'Spotify Account sync to SurrealDB with n8n'
 featured: true
 description: 'How i built a workflow to sync my Spotify account to SurrealDB using n8n, and how you can do it too.'
-date: 2026-06-06
+date: 2026-05-06
 tags:
-  - woss.io
-  - SvelteKit
-  - Svelte 5
-  - Tailwind CSS
-  - AI
-  - RAG
-  - vector search
-  - MCP
+  - Spotify
+  - Data ownership
   - TypeScript
-  - SQLite
-  - web development
-  - portfolio
-header_image: '[Space whale](https://u.macula.link/_tYCpNQaQE6LlhF_6LDD6w-7?preset=sys_md)'
+  - SurrealDB
+  - n8n
+  - Automation
+header_image: '[Space whale](https://u.macula.link/_tYCpNQaQE6LlhF_6LDD6w-7)'
 ---
 
-Spotify has long felt like a necessary evil for musicians and fans, offering [reach at the cost of dignity](https://www.midiaresearch.com/blog/some-artists-are-leaving-spotify-again-heres-whats-different-now), and meager payouts while burying independent artists under algorithmic noise. This year, watching the AI-generated music flooding the platform, Spotify did little to protect original musicians, pushing them further to the margins. And the recent Daniel Ek’s investment in surveillance and combat AI tech might have been the last straw, leading to [quite a few artists walking away](https://www.rollingstone.com/music/music-features/artists-left-spotify-ceo-daniel-ek-military-tech-1235425098/) - and many users followed.
+Spotify has long felt like a necessary evil for musicians and fans, offering [reach at the cost of dignity](https://www.midiaresearch.com/blog/some-artists-are-leaving-spotify-again-heres-whats-different-now), and meager payouts while burying independent artists under algorithmic noise. This year, watching the AI-generated music flooding the platform, Spotify did little to protect original musicians, pushing them further to the margins. And the recent Daniel Ek's investment in surveillance and combat AI tech might have been the last straw, leading to [quite a few artists walking away](https://www.rollingstone.com/music/music-features/artists-left-spotify-ceo-daniel-ek-military-tech-1235425098/) - and many users followed.
 
-> “If it’s available on something that doesn’t reflect who I am, then it doesn’t have a place there.” Fenn Wilson
+> “If it's available on something that doesn't reflect who I am, then it doesn't have a place there.” Fenn Wilson
 
-Now Spotify doesn’t just flatten the music and artists’ value, it erases what makes music personal.
+Now Spotify doesn't just flatten the music and artists' value, it erases what makes music personal.
 
-But with all that, as someone who has 116 playlists with over 25000 songs saved and organized over 15 years of using the platform, ‘walking away’ didn't sound all that easy… After all, Spotify did a great job of tying us to our own music preferences and history.
+But with all that, as someone who has 116 playlists with over 25000 songs saved and organized over 15 years of using the platform, 'walking away' didn't sound all that easy… After all, Spotify did a great job of tying us to our own music preferences and history.
 
 But enough is enough. Over the last weekend, I built a workflow tool to reclaim my music collections and playlists from Spotify. It took some time, but was definitely worth it. I am not sure what is the replacement for Spotify, but now at least I have my data synced, ready for the next platform.
 
-Here’s how you can do it too — just follow these steps.
+Here's how you can do it too — just follow these steps.
 
 # Prep work
 
-I decided to use n8n for automation and SurrealDB as a storage layer. This tutorial doesn’t require any programming knowledge, everything is done for you. What is required are few cloud services and few API keys.
+I decided to use n8n for automation and SurrealDB as a storage layer. This tutorial doesn't require any programming knowledge, everything is done for you. What is required are few cloud services and few API keys.
 
 ## Step One: self-hosted n8n only
 
@@ -62,7 +56,7 @@ Follow the installation documentation on the official website for self hosted ve
 
 You can configure it as you wish; the best way is to create a user with the password for a database. In our example database is called `spotify`.
 
-If you don’t have the SurrealDB Cloud account you can register for free using [this link](https://app.surrealdb.com/referral?code=lg2fb6brc5qjmjvp).
+If you don't have the SurrealDB Cloud account you can register for free using [this link](https://app.surrealdb.com/referral?code=lg2fb6brc5qjmjvp).
 
 Create namespace:
 
@@ -181,13 +175,13 @@ The workflow consists of four major parts:
 
 The last one, `Sync playlist tracks` is the biggest one and most complex. This sub flow fetches all the playlists I have and all the tracks in these playlists, then processes them — creating different relations, creating track records and extracting, creating albums and creating relations to tracks. At the end of the sync you will have a graph of your library. As we decided to use the SurrealDB, we are creating relations as the [Graph Edges](https://surrealdb.com/docs/surrealdb/models/graph#creating-edges-relationships) like `likes_track` or `playlist_track` .
 
-We also implemented DB checks, where needed, to minimize calls to Spotify API because we don’t want to trigger `Too many requests` error. We’ve accomplished this by combining the custom http n8n nodes and native Spotify integration.
+We also implemented DB checks, where needed, to minimize calls to Spotify API because we don't want to trigger `Too many requests` error. We've accomplished this by combining the custom http n8n nodes and native Spotify integration.
 
 ![Database design image with relations and table names.](https://u.macula.link/gH6WZ7Y4SruO2InnawnZNg-7?preset=sys_md)
 
 Database design image with relations and table names.
 
-In my case, a library building spanning a decade, with over twenty thousand tracks, I needed the simplicity and robustness when it comes to the inserting and updating the data. It’s a good thing that SurrealDB has amazing functionality called `UPSERT` that is really fast, the way it works is to define a unique index and start using it — new records get created, existing ones get updated. This simplifies the workflow a lot, because I don’t have to make extra calls and implement logic for the new vs existing record.
+In my case, a library building spanning a decade, with over twenty thousand tracks, I needed the simplicity and robustness when it comes to the inserting and updating the data. It's a good thing that SurrealDB has amazing functionality called `UPSERT` that is really fast, the way it works is to define a unique index and start using it — new records get created, existing ones get updated. This simplifies the workflow a lot, because I don't have to make extra calls and implement logic for the new vs existing record.
 
 Important thing to notice is that due to some, for the lack of better word, weirdness in n8n and SurrealDB node package I had to implement many hacks like `restructuring the payload` or checks that relations exist, etc …
 
@@ -205,7 +199,7 @@ For example; If you use Query Node in SurrealDB and set the Retry Count to `0` i
 
 Spotify API responses:
 
-There is one playlist in my library that gets synced all the time, it’s called [`must know`](https://open.spotify.com/playlist/4DbKOVVmWllXWpCmGLWCjR?si=26854f33abd04e77), it says in the Spotify app that contains 133 songs, but the API returns 134, and the sync always runs for that playlist. I went on debugging it and noticed that I have left myself clues if something obvious cannot be processed like “mandatory” track key in the list of items from the API response. It turns out that they allow for the `track` to be `null`, no ID no nothing just an empty reference.
+There is one playlist in my library that gets synced all the time, it's called [`must know`](https://open.spotify.com/playlist/4DbKOVVmWllXWpCmGLWCjR?si=26854f33abd04e77), it says in the Spotify app that contains 133 songs, but the API returns 134, and the sync always runs for that playlist. I went on debugging it and noticed that I have left myself clues if something obvious cannot be processed like “mandatory” track key in the list of items from the API response. It turns out that they allow for the `track` to be `null`, no ID no nothing just an empty reference.
 
 ![Spotify API - null track field in response](https://u.macula.link/PsdqFcn-SkOy8bAMpdKIUw-7?preset=sys_md)
 

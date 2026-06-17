@@ -1,15 +1,15 @@
 ---
 published: true
-title: "Making Content Accessible to AI: How Macula's MCP Works"
-description: "An introductory walkthrough of Macula's public MCP server — 10 tools and 14 prompts connecting AI agents to millions of creative files with full metadata, licensing, and graph-based discovery."
+title: 'Making Content Accessible to AI: How Macula MCP Connects AI Agents to Creative Work'
+description: 'A conceptual dive into how Macula uses the Model Context Protocol (MCP) to let AI agents discover, explore, and reason about creative content — covering 14 tools, 14 prompts, real-world use cases, and the ecosystem advantage for photographers.'
 date: 2026-03-01
 tags:
   - macula
   - MCP
-  - AI agents
   - content discovery
-  - creative content
-  - Model Context Protocol
+  - AI agents
+  - API design
+header_image: '[Making Content Accessible to AI](https://u.macula.link/tY372ROkTd-nvcoFnh9bHw-7)'
 ---
 
 ## The Challenge of AI Content Discovery
@@ -36,30 +36,28 @@ When an AI agent connects to Macula's MCP server, it establishes a connection to
 4. **Get metadata** including AI generation information, licensing details, and technical specifications
 5. **Discover content** through random exploration or curated suggestions
 
-### The 10 Tools
+### The 14 Tools
 
-We built 10 specialized tools organized by domain:
+We built 14 specialized tools organized by domain:
 
-**File Tools**
+**File Discovery**
 
 - Get detailed information about any published file
 - Retrieve technical metadata (EXIF, XMP, IPTC)
 - List available renditions and presets
-- Get JSON schemas for type-safe code generation
+- Find files by license type or AI usage permissions
 
-**Node Access**
+**User Exploration**
 
-- Retrieve a single node (user, file, or directory) by type with all metadata inline
+- Access creator profiles and their public directories
+- Browse paginated collections of someone's work
+- Discover random content for exploration or inspiration
 
-**Search**
+**Search & Navigation**
 
-- Full-text fuzzy search across file titles and keywords using similarity matching
 - Search our keyword taxonomy
-
-**Content Navigation**
-
-- Traverse relationships: navigate from users, keywords, licenses, or directories along graph edges (uploads, tagged_files, has_license, contains) to discover related content
-- Random content discovery and recent content listing via root node
+- Find all files tagged with a specific keyword
+- Navigate through user directory structures
 
 ### The 14 Prompts
 
@@ -93,28 +91,28 @@ Beyond individual tools, we built pre-configured prompts for common workflows:
 
 An AI agent working on a blog post about sustainable architecture could:
 
-1. Use `search` to fuzzy-find files matching "sustainable architecture" across titles and keywords
-2. Use `get_file` or `get_node` to examine specific candidates
-3. Use `traverse` with `from: { type: "license", license: "Attribution (CC BY)" }` and `edge: "has_license"` to find only CC-BY images
+1. Use `search_keywords` to find files tagged with "sustainable" or "green building"
+2. Use `get_file` to examine specific candidates
+3. Use `list_files_by_license` to find only CC-BY images
 4. Use `get_file_presets` to find the right resolution for web display
 
 ### Use Case 2: Building a Content Dataset
 
 A researcher building a training dataset could:
 
-1. Use `traverse` with `filter: { allowAI: true }` to find content permitted for AI training
-2. Use `traverse` with `from: { type: "license", license: "..." }` and `edge: "has_license"` to filter by specific licenses
+1. Use `list_files_for_ai` with `allowed: "DMI-ALLOWED"` to find permitted content
+2. Use `license_discovery` to filter by specific licenses
 3. Use `get_file_metadata` to extract technical specifications
-4. Page through results using cursor-based pagination via the `after` parameter
+4. Iterate through paginated results using `list_user_files`
 
 ### Use Case 3: Creator Research
 
 An agent analyzing creative trends could:
 
-1. Use `get_node` with `type: "user"` to access a creator's profile
-2. Use `traverse` with `from: { type: "user", nickname: "..." }` and `edge: "uploads"` to browse their published files
-3. Use `traverse` with `from: { type: "directory", pathCid: "..." }` and `edge: "contains"` to explore specific directories
-4. Use `creator_ecosystem` prompt to find related creators
+1. Use `get_user` to access a creator's profile
+2. Use `directory_deep_dive` to explore their organization
+3. Use `list_user_files` to analyze their output patterns
+4. Use `creator_ecosystem` to find related creators
 
 ### Use Case 4: AI-Powered Photographer Portfolio
 
@@ -126,8 +124,8 @@ She connects Manus AI to Macula's MCP server, and here's what happens:
 
 Sarah asks Manus to "Show me my recently published travel photos and their details." Manus:
 
-1. Uses `get_node` with `type: "user"` to access Sarah's profile
-2. Uses `traverse` with `from: { type: "user", nickname: "sarah" }` and `edge: "uploads"` to see her published images
+1. Uses `get_user` to access Sarah's profile and see her directories
+2. Uses `list_user_files` to see her published images with `sort: "desc"`
 3. Uses `get_file` to get detailed metadata for specific images
 4. Presents her with a summary of her portfolio
 
@@ -135,8 +133,8 @@ Sarah asks Manus to "Show me my recently published travel photos and their detai
 
 A client needs a photographer for a sustainable architecture magazine. Sarah asks Manus to "Prepare a portfolio of my architectural and nature photography, filtered by CC-BY license." Manus:
 
-1. Uses `traverse` with `from: { type: "user", nickname: "sarah" }`, `edge: "uploads"`, and `filter: { what: "images" }`
-2. Uses `traverse` with `from: { type: "license", license: "Attribution (CC BY)" }` and `edge: "has_license"` to filter by CC-BY
+1. Uses `list_user_files` with `show: "images"`
+2. Uses `list_files_by_license` to filter by "Attribution (CC BY)"
 3. Uses `get_file_metadata` to get technical specs for each image
 4. Compiles a presentation-ready summary with image links, dimensions, and license info
 
@@ -144,7 +142,7 @@ A client needs a photographer for a sustainable architecture magazine. Sarah ask
 
 A travel blog wants to feature Sarah's Iceland photography. The blog's AI agent (connected to Macula via MCP):
 
-1. Uses `traverse` with `from: { type: "keyword", keyword: "iceland" }` and `edge: "tagged_files"`
+1. Uses `list_files_by_keyword` with `keyword: "iceland"`
 2. Uses `get_file` to examine candidates and their details
 3. Uses `get_file_presets` to grab the right image sizes
 4. Generates an article draft with properly attributed images
@@ -156,8 +154,8 @@ Sarah gets attribution. The blog gets content. Everyone wins.
 
 Sarah wants to see which of her images are enabled for AI training. Manus:
 
-1. Uses `traverse` with `filter: { allowAI: true }` to see content permitted for AI training
-2. Uses `search` to find specific files and review their data mining settings
+1. Uses `list_files_for_ai` with `allowed: "DMI-ALLOWED"` to see her AI-friendly images
+2. Uses `list_files_for_ai` with `allowed: "DMI-UNSPECIFIED"` to see images without a setting
 3. Helps Sarah decide which additional images to enable for data mining
 
 **The Key Benefit**
@@ -198,35 +196,15 @@ For developers building AI-powered applications:
 
 ```javascript
 // Example: Finding CC-licensed images
-const response = await mcpClient.callTool('traverse', {
-  from: { type: 'license', license: 'Attribution (CC BY)' },
-  edge: 'has_license',
+const response = await mcpClient.callTool('list_files_by_license', {
+  license: 'Attribution (CC BY)',
   limit: 10,
+  page: 0,
 });
 
 // Example: Getting file metadata
 const fileData = await mcpClient.callTool('get_file', {
   unifiedId: 'abc123xyz',
-});
-
-// Example: Finding images tagged with "iceland" via keyword traversal
-const response = await mcpClient.callTool('traverse', {
-  from: { type: 'keyword', keyword: 'iceland' },
-  edge: 'tagged_files',
-  filter: { what: 'images' },
-  limit: 20,
-});
-
-// Example: Full-text search across file titles
-const results = await mcpClient.callTool('search', {
-  query: 'sustainable architecture',
-  limit: 10,
-});
-
-// Example: Getting a single node by type
-const userNode = await mcpClient.callTool('get_node', {
-  type: 'user',
-  nickname: 'sarah',
 });
 ```
 
@@ -234,9 +212,9 @@ The MCP interface abstracts away our internal implementation. You don't need to 
 
 ## Complete Reference
 
-### All 10 Tools
+### All 14 Tools
 
-#### File Tools (5)
+#### File Tools (6)
 
 | Tool                       | Description                                                                                                            |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -245,37 +223,30 @@ The MCP interface abstracts away our internal implementation. You don't need to 
 | `get_file_presets`         | Get available renditions (sys_sm, sys_lg, open_graph, etc.) with size and MIME info                                    |
 | `get_file_json_schema`     | Get the JSON Schema for the get_file tool output                                                                       |
 | `get_metadata_json_schema` | Get the JSON Schema for the metadata tool output                                                                       |
+| `list_files_for_ai`        | List files filtered by data mining allowance (DMI-ALLOWED or DMI-UNSPECIFIED)                                          |
 
-#### Node Tools (1)
+#### User Tools (3)
 
-| Tool       | Description                                                                                                                                                                                                                        |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_node` | Get a single node (user, file, or directory) by type. For user: profile with avatarUrl, bio, fileCount. For file: full FileNode with title, owner, license, keywords, directory info, url. For directory: pathCid, name, fileCount |
+| Tool                | Description                                                                     |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `get_user`          | Get user profile — name, bio, directories, stats                                |
+| `list_user_files`   | List user's files (paginated). Filter by type: images, videos, audio, documents |
+| `list_random_files` | Get random files for discovery and inspiration                                  |
 
-#### Search Tools (2)
+#### Directory Tools (2)
 
-| Tool              | Description                                                                                                                                        |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search_keywords` | Search the keyword taxonomy                                                                                                                        |
-| `search`          | Full-text search over file titles using fuzzy matching. Returns ranked FileNode results with rich metadata. Supports cursor pagination via `after` |
+| Tool                  | Description                                    |
+| --------------------- | ---------------------------------------------- |
+| `get_directory`       | Get directory metadata by nickname and pathCid |
+| `get_directory_files` | Get paginated files from a directory           |
 
-#### Navigation Tools (1)
+#### Search Tools (3)
 
-| Tool       | Description                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `traverse` | Discover content by navigating relationships. Start from a node type (user, keyword, license, directory, root) and traverse an edge (uploads, tagged_files, has_license, contains, random, recent). Use `filter.what` (images/videos/files/all), `filter.allowAI`, and `filter.nickname` to narrow results. Returns rich FileNode objects with title, owner, keywords, license, url — use `after` cursor for pagination |
-
-#### Removed Tools (replaced by traverse)
-
-| Old Tool                | Replaced By                                               |
-| ----------------------- | --------------------------------------------------------- |
-| `list_files_by_license` | `traverse(from={type:"license"...}, edge="has_license")`  |
-| `list_files_for_ai`     | `traverse(filter={allowAI:true})`                         |
-| `list_user_files`       | `traverse(from={type:"user"...}, edge="uploads")`         |
-| `list_random_files`     | `traverse(from={type:"root"}, edge="random")`             |
-| `list_files_by_keyword` | `traverse(from={type:"keyword"...}, edge="tagged_files")` |
-| `get_directory`         | `get_node(type="directory")`                              |
-| `get_directory_files`   | `traverse(from={type:"directory"...}, edge="contains")`   |
+| Tool                    | Description                                                   |
+| ----------------------- | ------------------------------------------------------------- |
+| `search_keywords`       | Search the keyword taxonomy                                   |
+| `list_files_by_keyword` | Get all files tagged with a specific keyword                  |
+| `list_files_by_license` | List files by license type (CC BY, All Rights Reserved, etc.) |
 
 ### All 14 Prompts
 
@@ -339,4 +310,4 @@ We're continuing to expand our toolset based on real usage patterns. If you're b
 
 ---
 
-_For technical details on our MCP implementation, see [Building a Public MCP Server: From Zero to Production](./mcp-implementation.md)._
+_For technical details on our MCP implementation, see [Building a Public MCP Server: From Zero to Production](./macula-mcp-technical-v0)._

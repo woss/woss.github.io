@@ -84,6 +84,7 @@
                   <img
                     src={appendQueryParams(base + '?preset=sys_xl', qp)}
                     alt={post.headerImage.alt}
+                    loading="lazy"
                     class="w-full aspect-2/1 object-cover"
                   />
                 </picture>

@@ -1,6 +1,6 @@
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
-import { interRegular } from './font';
+import { ibmPlexSansRegular, ibmPlexSansBold } from './font';
 
 export async function renderOgImage(title: string, description?: string): Promise<Uint8Array> {
   const svg = await satori(
@@ -16,7 +16,7 @@ export async function renderOgImage(title: string, description?: string): Promis
           alignItems: 'center',
           backgroundColor: '#0f0f0f',
           color: '#f0f0f0',
-          fontFamily: 'Inter',
+          fontFamily: 'IBM Plex Sans Variable',
           padding: '60px 80px',
           position: 'relative',
         },
@@ -77,14 +77,14 @@ export async function renderOgImage(title: string, description?: string): Promis
       height: 630,
       fonts: [
         {
-          name: 'Inter',
-          data: interRegular,
+          name: 'IBM Plex Sans Variable',
+          data: ibmPlexSansRegular,
           weight: 400,
           style: 'normal',
         },
         {
-          name: 'Inter',
-          data: interRegular,
+          name: 'IBM Plex Sans Variable',
+          data: ibmPlexSansBold,
           weight: 700,
           style: 'normal',
         },

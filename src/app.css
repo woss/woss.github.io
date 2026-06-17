@@ -3,9 +3,9 @@
 
 @theme {
   /* ─── Typography Fonts ─── */
-  --font-heading: 'SS Standard', 'Akkurat Mono', 'SF Mono', 'Fira Code', monospace;
-  --font-body: 'Inter', 'SF Pro', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+  --font-heading: 'IBM Plex Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-body: 'IBM Plex Sans Variable', 'SF Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
 
   /* ─── Line Heights ─── */
   --leading-tight: 1.15;

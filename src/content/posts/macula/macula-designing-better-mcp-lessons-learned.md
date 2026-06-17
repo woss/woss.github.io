@@ -11,6 +11,7 @@ tags:
   - UX
   - content graph
   - prompt engineering
+header_image: '[Macula Content Graph Visualization](https://u.macula.link/DFEBUzIJSEyiF8PnbbDANA-7)'
 ---
 
 ## The Premise
