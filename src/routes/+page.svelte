@@ -15,7 +15,7 @@
   const MAX_CHARS = 500;
 
   import ChatSidebar from '$lib/components/ChatSidebar.svelte';
-  import HomeChatInput from '$lib/components/HomeChatInput.svelte';
+  import ChatInput from '$lib/components/ChatInput.svelte';
   import { config } from '$lib/config';
   import { showMobileSidebar } from '$lib/stores/mobile-sidebar';
   import ContactForm from '$lib/components/ContactForm.svelte';
@@ -24,7 +24,7 @@
   let userId = $state('');
   let messageText = $state('');
   let isLoading = $state(false);
-  let inputEl: HTMLTextAreaElement | undefined = $state();
+  let inputEl: HTMLElement | undefined = $state();
 
   interface Chat {
     id: string;
@@ -197,12 +197,13 @@
       >
         {#if canCreateChat}
           <div class="w-full max-w-200 flex flex-col gap-5">
-            <HomeChatInput
+            <ChatInput
               bind:messageText
               bind:isLoading
               bind:inputEl
               onsend={sendMessage}
               onsuggested={handleSuggestedClick}
+              variant="home"
             />
           </div>
         {:else}
