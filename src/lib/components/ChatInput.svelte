@@ -209,23 +209,18 @@
  </div>
  <!-- Bottom toolbar -->
  <div class="flex items-center justify-between px-3 pb-3 max-md:justify-end">
- <div>
- {#if messagesCount > 0}
- <span class="font-mono text-xs text-on-surface-variant max-md:hidden"
- >{messagesCount}/{maxMessages} messages</span
- >
- {/if}
- </div>
+  <div>
+  <span class="font-mono text-xs text-on-surface-variant max-md:hidden"
+  >{messagesCount}/{maxMessages} messages</span
+  >
+  </div>
  <div class="flex-1 text-center px-2 max-md:hidden">
  <p class="text-xs text-on-surface-variant">AI can make mistakes. Verify important information.</p>
  </div>
- {#if charCount > 0}
- <span
- class="font-mono text-xs text-on-surface-variant"
- class:text-secondary={isOverLimit}
- >{charCount}/{MAX_CHARS}</span
- >
- {/if}
+  <span
+  class="font-mono text-xs text-on-surface-variant"
+  class:text-secondary={isOverLimit}
+  >{charCount}/{MAX_CHARS}</span>
  </div>
  </div>
  </form>

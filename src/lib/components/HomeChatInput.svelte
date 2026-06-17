@@ -103,12 +103,10 @@
  <div class="flex-1 text-center px-2 max-md:hidden">
  <p class="text-xs text-on-surface-variant">AI can make mistakes. Verify important information.</p>
  </div>
- {#if charCount > 0}
- <span
- class="font-mono text-xs text-on-surface-variant"
- class:text-secondary={isOverLimit}
- >{charCount}/{MAX_CHARS}</span>
- {/if}
+  <span
+  class="font-mono text-xs text-on-surface-variant"
+  class:text-secondary={isOverLimit}
+  >{charCount}/{MAX_CHARS}</span>
  </div>
 </div>
 
