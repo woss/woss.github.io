@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { setupTestUser, createChat } from './chat-helpers';
 
 test.describe('AI chat flow', () => {
   test('home page loads and chat input is visible', async ({ page }) => {
@@ -40,12 +41,14 @@ test.describe('AI chat flow', () => {
     page.on('console', (msg) => logs.push(`[${msg.type()}] ${msg.text()}`));
     page.on('pageerror', (err) => logs.push(`[PAGE_ERROR] ${err.message}`));
 
-    // Navigate directly to a new chat
-    await page.goto('/chat/new', { waitUntil: 'load' });
+    setupTestUser(page);
+    const chatId = await createChat(page);
+    // Navigate directly to the chat
+    await page.goto(`/chat/${chatId}`, { waitUntil: 'load' });
     await page.waitForTimeout(1000);
 
     // Verify the input is present
-    const textarea = page.locator('textarea').first();
+    const textarea = page.locator('[role="textbox"]');
     await expect(textarea).toBeVisible({ timeout: 5000 });
 
     // Check for console errors
