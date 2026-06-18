@@ -7,7 +7,7 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeSlug from 'rehype-slug';
 import rehypeStringify from 'rehype-stringify';
 import { rehypeMermaidTabs } from './rehype-mermaid-tabs.ts';
-import matter from 'gray-matter';
+import { load } from 'js-yaml';
 import type { Root, Element, Text } from 'hast';
 
 function walkElement(
@@ -121,11 +121,17 @@ export async function renderMarkdown(content: string): Promise<string> {
 
 /**
  * Parse frontmatter from markdown content using js-yaml.
- * Returns { frontmatter, body } where body has frontmatter stripped.
+ * Returns { data, content } where content has frontmatter stripped.
  */
-export async function parseMarkdownFrontmatter(content: string): Promise<matter.GrayMatterFile<string>> {
-  const m = matter(content);
-  return m;
+export async function parseMarkdownFrontmatter(content: string): Promise<{ data: Record<string, unknown>; content: string }> {
+  const YAML_FM_RE = /^---\n([\s\S]*?)\n---\n?/;
+  const match = content.match(YAML_FM_RE);
+  if (match) {
+    const data = (load(match[1]) as Record<string, unknown>) ?? {};
+    const body = content.slice(match[0].length);
+    return { data, content: body };
+  }
+  return { data: {}, content };
 }
 
 

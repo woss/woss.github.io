@@ -1,6 +1,7 @@
 ---
 published: false
 title: "The 7-Second Classifier: Why Your Smallest Task Shouldn't Run on Your Biggest Model"
+slug: 'llm-task-classifier'
 description: 'How woss.io was using a 600B-parameter reasoning model to answer "is this github, macula, or none?" — and the lessons from routing it to something saner.'
 date: 2026-06-16
 tags:

@@ -1,8 +1,9 @@
 ---
 published: true
 title: 'Key Projects'
+slug: 'projects'
 description: 'A comprehensive overview of flagship projects from Daniel Maricic — spanning blockchain protocols, developer tooling, content rights platforms, and open-source ecosystems.'
-date: 2000-01-01
+date: 1990-01-01
 tags:
   - projects
   - open source

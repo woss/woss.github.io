@@ -21,23 +21,28 @@ export const load: PageServerLoad = async ({ url }) => {
 
 export const actions: Actions = {
   create: async (event) => {
-    const fd = await event.request.formData();
-    const userId = fd.get('userId')?.toString();
-    if (!userId) return fail(400, { error: 'userId is required' });
+    try {
+      const fd = await event.request.formData();
+      const userId = fd.get('userId')?.toString();
+      if (!userId) return fail(400, { error: 'userId is required' });
 
-    const chatCount = getUserChatCount(userId);
-    if (chatCount >= clientConfig.public.maxChats) {
-      return fail(400, { error: `Maximum of ${clientConfig.public.maxChats} chats reached` });
+      const chatCount = getUserChatCount(userId);
+      if (chatCount >= clientConfig.public.maxChats) {
+        return fail(400, { error: `Maximum of ${clientConfig.public.maxChats} chats reached` });
+      }
+
+      const ip = getClientIP(event);
+      const userAgentStr = event.request.headers.get('user-agent');
+      const userAgentId = userAgentStr ? getOrCreateUserAgent(userAgentStr, ip) : undefined;
+
+      const id = createChat(userId, undefined, userAgentId);
+      log.debug`Created chat ${id} for user ${userId}`;
+
+      return { id };
+    } catch (e) {
+      log.error`Failed to create chat: ${e}`;
+      return fail(500, { error: 'Failed to create chat' });
     }
-
-    const ip = getClientIP(event);
-    const userAgentStr = event.request.headers.get('user-agent');
-    const userAgentId = userAgentStr ? getOrCreateUserAgent(userAgentStr, ip) : undefined;
-
-    const id = createChat(userId, undefined, userAgentId);
-    log.debug`Created chat ${id} for user ${userId}`;
-
-    return { id };
   },
 
   delete: async (event) => {

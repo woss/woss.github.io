@@ -15,6 +15,7 @@
     "fmt:check": "prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:cov": "vitest run --coverage",
     "test:e2e": "playwright test",
     "build-index": "tsx src/scripts/build-index.ts"
   },
@@ -31,14 +32,13 @@
     "@types/markdown-it": "^14.1.2",
     "@types/node": "25.9.2",
     "@types/uuid": "^11.0.0",
+    "@vitest/coverage-v8": "^4.1.9",
     "devalue": "^5.8.1",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-better-tailwindcss": "^4.6.0",
     "eslint-plugin-svelte": "^3.17.0",
     "globals": "^17.4.0",
-    "gray-matter": "4.0.3",
-    "isomorphic-dompurify": "^3.17.0",
     "prettier": "^3.8.1",
     "prettier-plugin-svelte": "^3.5.2",
     "svelte": "^5.55.9",
@@ -48,7 +48,7 @@
     "typescript": "5.9.3",
     "typescript-eslint": "^8.58.1",
     "vite": "^8.0.7",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "2.0.48",
@@ -80,6 +80,7 @@
     "geoip-country": "^5.0.202605270000",
     "github-slugger": "2.0.0",
     "highlight.js": "11.11.1",
+    "isomorphic-dompurify": "^3.17.0",
     "js-yaml": "^4.1.1",
     "markdown-it": "^14.2.0",
     "markdown-it-highlightjs": "^4.3.0",

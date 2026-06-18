@@ -127,7 +127,7 @@
         href={resolve('/')}
         class="font-heading text-xl font-bold text-primary no-underline tracking-[-0.02em] hover:text-white transition-colors duration-150"
       >
-        <img src={avatarUrl} alt="woss.io logo" class="size-8" />
+        <img src={avatarUrl} alt="woss.io logo" width="32" height="32" class="size-8" />
       </a>
 
       <div class="hidden md:flex items-center gap-8">

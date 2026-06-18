@@ -1,5 +1,6 @@
 ---
 title: 'How to debug pallet like console.log'
+slug: 'debug-substrate-pallet'
 date: 2021-12-15
 tags: [substrate, rust, tools]
 excerpt: 'How to debug pallet like console.log Sometimes you just need that console.log thing in the substrate based pallet. Here is how i solved the issue, not the prettiest way but it works.'

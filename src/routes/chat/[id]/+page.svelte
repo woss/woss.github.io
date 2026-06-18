@@ -42,7 +42,7 @@
 
  /* ─── Route params ─── */
 
- let chatId = $derived((page.params as { id: string }).id);
+ let chatId = $derived((page.params as { id: string }).id || null);
  let queryText = $state('');
 
  /* ─── State ─── */
@@ -52,6 +52,7 @@
  let sidebarMessageId = $state<string | null>(null);
  let sidebarTab = $state<'sources' | 'tools'>('sources');
  let sidebarVisible = $state(false);
+ let attemptsLeft = $state(0);
 
  function openSidebar(messageId: string, tab: 'sources' | 'tools'): void {
  sidebarMessageId = messageId;
@@ -91,7 +92,7 @@
  : []
  );
  let chatsLoaded = $state(false);
- let currentChatId = $derived<string | null>(chatId || null);
+
  // Local binding proxy for ChatSidebar two-way binding (reacts to store changes)
  // eslint-disable-next-line svelte/no-immutable-reactive — store subscription sync
  $effect(() => {
@@ -131,7 +132,7 @@
  /* ─── Derived ─── */
 
  let hasMessages = $derived(messages.length > 0);
- let currentChat = $derived(chats.find((c) => c.id === currentChatId) ?? null);
+ let currentChat = $derived(chats.find((c) => c.id === chatId) ?? null);
  let currentChatTitle = $derived(currentChat?.title ?? '');
  let canSend = $derived(!isLoading && !currentChat?.locked && messageText.trim().length > 0 && messageText.length <= 500);
 
@@ -220,18 +221,18 @@
  if (id) goto(resolve(`/chat/${id}`));
  }
 
- function confirmDeleteChat(chatId: string): void {
- showDeleteConfirm = chatId;
+ function confirmDeleteChat(id: string): void {
+  showDeleteConfirm = id;
  }
 
- async function deleteChat(chatId: string): Promise<void> {
- if (deleting) return;
- deleting = true;
- showDeleteConfirm = null;
- const ok = await deleteChatApi(userId, chatId);
- if (ok) {
- chats = chats.filter((c) => c.id !== chatId);
- if (currentChatId === chatId) {
+ async function deleteChat(id: string): Promise<void> {
+  if (deleting) return;
+  deleting = true;
+  showDeleteConfirm = null;
+  const ok = await deleteChatApi(userId, id);
+  if (ok) {
+  chats = chats.filter((c) => c.id !== id);
+  if (chatId === id) {
  if (chats.length > 0) {
  goto(resolve(`/chat/${chats[0].id}`));
  } else {
@@ -246,7 +247,7 @@
  const trimmed = text.trim();
  if (!trimmed || trimmed.length > 500 || isLoading) return;
  if (userMessageCount >= config.public.maxMessages) return;
- if (!currentChatId) return;
+ if (!chatId) return;
  // Slash command: centralized dispatch via SLASH_COMMANDS
  if (handleSlashCommand(trimmed)) return;
 
@@ -255,12 +256,12 @@
  isLoading = true;
  if (inputEl) inputEl.style.height = 'auto';
 
- const result = await sendChatMessage(trimmed, userId, currentChatId, messages);
+ const result = await sendChatMessage(trimmed, userId, chatId, messages);
  messages = result.messages;
  stickToBottom = true;
 
- if (result.locked && currentChatId) {
- chats = chats.map((c) => (c.id === currentChatId ? { ...c, locked: true } : c));
+ if (result.locked && chatId) {
+  chats = chats.map((c) => (c.id === chatId ? { ...c, locked: true } : c));
  }
 
  if (result.error) {
@@ -292,7 +293,7 @@
  fetch('/api/leads/contact-intent', {
  method: 'POST',
  headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({ userId, chatId: currentChatId }),
+ body: JSON.stringify({ userId, chatId }),
  }).catch(() => {});
  return true;
  }
@@ -300,14 +301,14 @@
  if (matched.name === 'export_md') {
  messageText = '';
  if (inputEl) inputEl.style.height = 'auto';
- window.open(resolve(`/api/chat/${currentChatId}/export?format=md`), '_blank');
+ window.open(resolve(`/api/chat/${chatId}/export?format=md`), '_blank');
  return true;
  }
 
  if (matched.name === 'export_json') {
  messageText = '';
  if (inputEl) inputEl.style.height = 'auto';
- window.open(resolve(`/api/chat/${currentChatId}/export?format=json`), '_blank');
+ window.open(resolve(`/api/chat/${chatId}/export?format=json`), '_blank');
  return true;
  }
 
@@ -378,12 +379,12 @@
  }
 
 async function handleStop(): Promise<void> {
-  if (!currentChatId) return;
+  if (!chatId) return;
   // Close client-side SSE connection
   disconnectSSE();
   // Tell server to abort the generation
   try {
-    await fetch(`/chat/${currentChatId}?/abort`, { method: 'POST' });
+    await fetch(`/chat/${chatId}?/abort`, { method: 'POST' });
   } catch {
     /* ignore network errors */
   }
@@ -717,36 +718,42 @@ async function handleStop(): Promise<void> {
  loadChats();
  },
 
- onError(data) {
- const { messageId, message, irrecoverable } = data;
+  onError(data) {
+  const { messageId, message, irrecoverable, attemptsLeft: attempts } = data;
 
- // Don't set error on messages already loaded from DB — they have correct state
- if (typeof messageId === 'string' && messages.some((m) => m.id === messageId)) return;
+  // Don't set error on messages already loaded from DB — they have correct state
+  if (typeof messageId === 'string' && messages.some((m) => m.id === messageId)) return;
 
- const last = messages[messages.length - 1];
- if (last?.role !== 'assistant') {
- messages = [
- ...messages,
- {
- id: randomUUID(),
- role: 'assistant' as const,
- text: '',
- timestamp: Date.now(),
- createdAt: '',
- error: message,
- irrecoverable,
- },
- ];
- } else {
- const idx = messages.length - 1;
- messages[idx] = { ...messages[idx], error: message, irrecoverable };
- }
- isLoading = false;
+  const last = messages[messages.length - 1];
+  if (last?.role !== 'assistant') {
+  messages = [
+    ...messages,
+    {
+    id: randomUUID(),
+    role: 'assistant' as const,
+    text: '',
+    timestamp: Date.now(),
+    createdAt: '',
+    error: message,
+    irrecoverable,
+    },
+  ];
+  } else {
+  const idx = messages.length - 1;
+  messages[idx] = { ...messages[idx], error: message, irrecoverable };
+  }
+  isLoading = false;
 
- if (irrecoverable && currentChatId) {
- chats = chats.map((c) => (c.id === currentChatId ? { ...c, locked: true } : c));
- }
- },
+  if (typeof attempts === 'number' && attempts > 0) {
+    toast.warning(`Off-topic question — ${attempts} attempt${attempts > 1 ? 's' : ''} left before chat locks.`);
+  }
+  attemptsLeft = attempts ?? 0;
+
+  if (irrecoverable && chatId) {
+    attemptsLeft = 0;
+    chats = chats.map((c) => (c.id === chatId ? { ...c, locked: true } : c));
+  }
+  },
 
  onContactIntent() {
  if (!contactDismissed) {
@@ -806,8 +813,8 @@ async function handleStop(): Promise<void> {
  </button>
  <ChatSidebar
  {chats}
- {currentChatId}
- {canCreateChat}
+  currentChatId={chatId}
+  {canCreateChat}
  {showDeleteConfirm}
  bind:showMobile={showMobile}
  oncreateChat={createChat}
@@ -838,7 +845,7 @@ async function handleStop(): Promise<void> {
   streamingToolValues={i === messages.length - 1 ? streamingToolValues : []}
   {now}
   {userId}
-  {chatId}
+  chatId={chatId ?? undefined}
   onretry={retry}
   onreport={handleReport}
   onToggleSidebar={(tab: 'sources' | 'tools') => openSidebar(message.id, tab)}
@@ -852,7 +859,7 @@ async function handleStop(): Promise<void> {
   </div>
   {/if}
 
- <ContactForm bind:showContactForm {userId} {chatId} bind:contactDismissed />
+ <ContactForm bind:showContactForm {userId} chatId={chatId ?? undefined} bind:contactDismissed />
 
  <!-- Scroll to bottom -->
  {#if !stickToBottom && hasMessages}
@@ -881,12 +888,13 @@ async function handleStop(): Promise<void> {
  {:else if isOwner}
  <div class="sticky bottom-0 bg-surface pt-2 pb-4">
  <div class="mx-auto w-full max-w-[720px] px-6 max-md:px-1">
- <ChatInput
- bind:messageText
- {isLoading}
- {canSend}
- {currentChat}
- messagesCount={userMessageCount}
+  <ChatInput
+  bind:messageText
+  {isLoading}
+  {canSend}
+  {currentChat}
+  {attemptsLeft}
+  messagesCount={userMessageCount}
  maxMessages={config.public.maxMessages}
  {activeToolCount}
  {completedToolCount}

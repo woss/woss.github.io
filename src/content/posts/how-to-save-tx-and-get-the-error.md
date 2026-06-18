@@ -1,5 +1,6 @@
 ---
 title: 'On saving the TX in substrate'
+slug: 'saving-substrate-transactions'
 date: 2021-12-15
 tags: [substrate, javascript, blockchain]
 excerpt: 'On saving the TX in substrate From the docs: Any transaction will emit events, as a bare minimum this will always be either a system.ExtrinsicSuccess or system.ExtrinsicFailed event for the specific transaction. These provide the overall execution result for the transaction, i.e. execution has succeeded or failed.'

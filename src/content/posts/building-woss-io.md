@@ -1,6 +1,7 @@
 ---
 published: true
 title: 'Building woss.io: A Journey Into AI-Powered Personal Portfolios'
+slug: 'building-woss-io'
 featured: true
 description: 'How we rebuilt woss.io from the ground up — an AI-native personal portfolio with streaming LLM chat, local vector embeddings, MCP tool integration, and a modern SvelteKit 2 stack.'
 date: 2026-06-06
@@ -95,7 +96,7 @@ Entity → Relationship → Entity. The model thinks in associations, not endpoi
 
 I built `traverse` — a single `from(node) → edge(relationship) → results` tool — and collapsed 14 specialized tools into 4: `traverse`, `get_file`, `get_file_metadata`, `get_users`. The LLM stopped guessing. It just navigated.
 
-A few more iterations followed. Renamed `url` to `rawDataUrl` so the LLM knew it was a download link, not a web page. Separated discovery from consumption by removing `_links` from traverse output. Rewrote tool descriptions from graph-theory jargon ("from(node) → edge(relationship) → results") to task-oriented prose ("Explore files by directory, user uploads, or keyword search") after the model hallucinated files because it didn't understand "traverse." Reduced 14 prompts to 4 task-oriented patterns. I documented the full evolution in [Designing MCP Servers for How LLMs Think](/posts/macula-mcp-design-lessons) — it taught me more about how LLMs consume tool APIs than anything else.
+A few more iterations followed. Renamed `url` to `rawDataUrl` so the LLM knew it was a download link, not a web page. Separated discovery from consumption by removing `_links` from traverse output. Rewrote tool descriptions from graph-theory jargon ("from(node) → edge(relationship) → results") to task-oriented prose ("Explore files by directory, user uploads, or keyword search") after the model hallucinated files because it didn't understand "traverse." Reduced 14 prompts to 4 task-oriented patterns. I documented the full evolution in [Designing MCP Servers for How LLMs Think](/posts/designing-mcp-for-llms) — it taught me more about how LLMs consume tool APIs than anything else.
 
 But now the AI had two tool-kits: GitHub (repos, code, issues) and Macula (photos, media, metadata). And zero instructions on which one to grab.
 
@@ -413,7 +414,7 @@ The visual design follows a few principles:
 
 **Local embeddings are viable**. I started this project assuming I'd need an external embedding API (OpenAI, Cohere, etc.). Transformers.js proved me wrong. The BGE model runs comfortably in a $10/month VPS. Inference takes ~50ms per query. No API costs, no rate limits, no data leaving the server.
 
-**MCP changes everything about portfolio AIs**. Without MCP, the LLM would guess about my GitHub projects and fabricate photos. With it, it searches my actual repos, reads my actual code, browses my actual photo portfolio via Macula, lists my actual issues. The difference between "sounds plausible" and "provably correct" is night and day. But none of this worked until I stopped designing tools for developers and started designing them for how LLMs process information — the graph-walk pattern (`traverse`) replacing 14 specialized endpoints was the turning point. [Designing MCP Servers for How LLMs Think](/posts/mcp-design-lessons) documents the full evolution. The first thing I did after getting it working was put on my hiring-manager hat — watched the AI pull my real repos, real PRs, real photos into answers comparing me against specific roles. Things I'd have spent hours digging for myself.
+**MCP changes everything about portfolio AIs**. Without MCP, the LLM would guess about my GitHub projects and fabricate photos. With it, it searches my actual repos, reads my actual code, browses my actual photo portfolio via Macula, lists my actual issues. The difference between "sounds plausible" and "provably correct" is night and day. But none of this worked until I stopped designing tools for developers and started designing them for how LLMs process information — the graph-walk pattern (`traverse`) replacing 14 specialized endpoints was the turning point. [Designing MCP Servers for How LLMs Think](/posts/designing-mcp-for-llms) documents the full evolution. The first thing I did after getting it working was put on my hiring-manager hat — watched the AI pull my real repos, real PRs, real photos into answers comparing me against specific roles. Things I'd have spent hours digging for myself.
 
 **Effect.ts streams beat callbacks**. The first version of the streaming pipeline used raw Node.js callbacks. It was brittle — unhandled errors in middle of a stream would crash the response. Effect.ts's typed `Stream` type provides structured error handling, backpressure, and composability that callbacks cannot match.
 
@@ -423,7 +424,7 @@ The visual design follows a few principles:
 
 **Rate limiting is essential**. An unprotected AI chat endpoint would be bankrupt in hours. The IP-based rate limiter (`src/lib/server/rate-limiter.ts`) uses SQLite for persistent counters with a sliding window — 10 requests per minute, consistently enforced across all endpoints. The system does not block — it slows and warns.
 
-**Your personal site should dogfood your skills**. The site is a showcase, but it's also a testbed. MCP integration, local embeddings, streaming LLM responses — these are technologies I work with daily, and the site proves they work in production. A static portfolio page tells people what you've done. An AI-powered one shows them.
+**Your personal site should prove what you build**. The site is a showcase, but it's also a testbed. MCP integration, local embeddings, streaming LLM responses — these are technologies I work with daily, and the site proves they work in production. A static portfolio page tells people what you've done. An AI-powered one shows them.
 
 - **System prompt position matters as much as content.** The "no invention" rule was on line 84 — sandwiched between identity and style instructions, reading like a suggestion, not a constraint. Research confirms LLMs exhibit primacy bias — instructions at the top carry more weight, middle content gets deprioritized (Wang et al., EMNLP 2023; Cobbina & Zhou, EMNLP 2025). Moving the anti-hallucination rule to the second paragraph — right after role definition — put the most critical instruction in the primacy zone without changing a single word of content. [System Prompt Position Matters](/posts/system-prompt-position-matters) documents the full analysis and restructured prompt.
 

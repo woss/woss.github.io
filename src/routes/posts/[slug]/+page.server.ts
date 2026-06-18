@@ -1,8 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { getPosts } from '$lib/server/db';
 import { renderMarkdown } from '$lib/server/markdown';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { CAT, createLogger } from '$lib/server/logger';
 
 type HeaderImage = { alt: string; url: string } | null;
 
@@ -16,8 +15,9 @@ type ImageMeta = {
   _links?: { raw?: string };
 } | null;
 
-export async function load({ params }: { params: Record<string, string> }) {
+export async function load({ params, fetch }: { params: Record<string, string>; fetch: typeof globalThis.fetch }) {
   const { slug } = params;
+  const log = createLogger(CAT.content);
 
   const allPosts = getPosts();
   const currentRaw = allPosts.find((p) => p.slug === slug);
@@ -52,11 +52,26 @@ export async function load({ params }: { params: Record<string, string> }) {
       file: string;
       placeholders: { key: string; label: string; hint?: string }[];
     }[];
-    workflowFiles = wfEntries.map((wf) => ({
-      label: wf.label,
-      json: readFileSync(join(process.cwd(), 'static', 'files', wf.file), 'utf-8'),
-      placeholders: wf.placeholders,
-    }));
+    const loaded: {
+      label: string;
+      json: string;
+      placeholders: { key: string; label: string; hint?: string }[];
+    }[] = [];
+    for (const wf of wfEntries) {
+      try {
+        const res = await fetch(`/files/${wf.file}`);
+        if (res.ok) {
+          loaded.push({
+            label: wf.label,
+            json: await res.text(),
+            placeholders: wf.placeholders,
+          });
+        }
+      } catch {
+        // skip if file not found
+      }
+    }
+    if (loaded.length > 0) workflowFiles = loaded;
   }
 
   const current = {
@@ -84,7 +99,13 @@ export async function load({ params }: { params: Record<string, string> }) {
       return b.date.localeCompare(a.date);
     });
 
-  const html = await renderMarkdown(current.body);
+  let html: string;
+  try {
+    html = await renderMarkdown(current.body);
+  } catch (e) {
+    log.error`Failed to render markdown for ${slug}: ${e}`;
+    html = '<p>Failed to render post content.</p>';
+  }
   const h1Stripped = html.replace(/^<h1[^>]*>.*?<\/h1>\s*/i, '');
 
   const currentIndex = publishedPosts.findIndex((p) => p.slug === slug);
@@ -102,25 +123,30 @@ export async function load({ params }: { params: Record<string, string> }) {
   // Series siblings
   let series: { title: string; items: { slug: string; title: string }[]; currentSlug: string } | null = null;
 
-  if (currentRaw.partOfSeries) {
-    // This post is part of a series — find root + siblings
-    const root = allPosts.find((p) => p.id === currentRaw.partOfSeries);
-    if (root) {
+  try {
+    if (currentRaw.partOfSeries) {
+      // This post is part of a series — find root + siblings
+      const root = allPosts.find((p) => p.id === currentRaw.partOfSeries);
+      if (root) {
+        const children = allPosts
+          .filter((p) => p.partOfSeries === currentRaw.partOfSeries)
+          .map((p) => ({ slug: p.slug, title: p.title }));
+        const items = [{ slug: root.slug, title: root.title }, ...children];
+        series = { title: root.title, items, currentSlug: slug };
+      }
+    } else if (currentRaw.id) {
+      // This might be a series root — find children
       const children = allPosts
-        .filter((p) => p.partOfSeries === currentRaw.partOfSeries)
+        .filter((p) => p.partOfSeries === currentRaw.id)
         .map((p) => ({ slug: p.slug, title: p.title }));
-      const items = [{ slug: root.slug, title: root.title }, ...children];
-      series = { title: root.title, items, currentSlug: slug };
+      if (children.length > 0) {
+        const items = [{ slug: currentRaw.slug, title: currentRaw.title }, ...children];
+        series = { title: currentRaw.title, items, currentSlug: currentRaw.slug };
+      }
     }
-  } else if (currentRaw.id) {
-    // This might be a series root — find children
-    const children = allPosts
-      .filter((p) => p.partOfSeries === currentRaw.id)
-      .map((p) => ({ slug: p.slug, title: p.title }));
-    if (children.length > 0) {
-      const items = [{ slug: currentRaw.slug, title: currentRaw.title }, ...children];
-      series = { title: currentRaw.title, items, currentSlug: currentRaw.slug };
-    }
+  } catch (e) {
+    log.error`Failed to resolve series for ${slug}: ${e}`;
+    series = null;
   }
 
   return {

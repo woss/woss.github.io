@@ -7,11 +7,38 @@ import GithubSlugger from 'github-slugger';
 import { Index, MetricKind, ScalarKind } from 'usearch';
 import Database from 'better-sqlite3';
 import { parseFrontmatter } from '../content/index.js';
+import { load as parseYaml } from 'js-yaml';
 import { getDb, closeDb } from '../lib/server/db.js';
 import { embedTexts, releaseExtractor } from '../lib/server/embed.js';
 import { chunkContent } from './chunk-content.js';
 import { initLogger, CAT, createLogger } from '../lib/server/logger.js';
 import { centroidDataChanged, embedAndComputeCentroids, saveCentroids } from './seed-data.js';
+
+// ---------------------------------------------------------------------------
+// Frontmatter helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * YAML frontmatter regex — matches `---\n...\n---` at start of file.
+ */
+const YAML_FM_RE = /^---\n([\s\S]*?)\n---\n?/;
+
+/**
+ * Extract slug from frontmatter YAML, if present.
+ * Uses js-yaml (same parser as parseMarkdownFrontmatter).
+ * Returns null if no frontmatter or no slug field.
+ */
+export function parseFrontmatterSlug(raw: string): string | null {
+  const match = raw.match(YAML_FM_RE);
+  if (!match) return null;
+  try {
+    const data = parseYaml(match[1]) as Record<string, unknown>;
+    if (data?.slug && typeof data.slug === 'string') return data.slug;
+  } catch {
+    /* ignore parse errors — fall through to null */
+  }
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -58,7 +85,7 @@ export interface ProcessResult {
   indexKeys: bigint[];
 }
 
-interface FileEntry {
+export interface FileEntry {
   slug: string;
   relativePath: string;
   type: 'post' | 'experience';
@@ -71,7 +98,7 @@ interface FileEntry {
  * @param rows The raw rows from the database.
  * @returns An array of safe slug/hash pairs.
  */
-function parseSlugHashRows(rows: unknown[]): { slug: string; hash: string }[] {
+export function parseSlugHashRows(rows: unknown[]): { slug: string; hash: string }[] {
   const parsed: { slug: string; hash: string }[] = [];
   for (const row of rows) {
     if (typeof row !== 'object' || row === null) continue;
@@ -85,7 +112,7 @@ function parseSlugHashRows(rows: unknown[]): { slug: string; hash: string }[] {
  * @param value The parsed JSON value.
  * @returns A number array.
  */
-function asNumberArray(value: unknown): number[] {
+export function asNumberArray(value: unknown): number[] {
   if (!Array.isArray(value)) return [];
   const out: number[] = [];
   for (const v of value) out.push(Number(v));
@@ -98,7 +125,7 @@ function asNumberArray(value: unknown): number[] {
  * @param index The index of the chunk within the content item.
  * @returns A unique chunk ID.
  */
-function generateChunkId(slug: string, index: number): string {
+export function generateChunkId(slug: string, index: number): string {
   return `${slug}_chunk_${index}`;
 }
 
@@ -106,7 +133,7 @@ function generateChunkId(slug: string, index: number): string {
  * Extract table of contents entries from raw markdown content.
  * Uses GitHub-slugger algorithm to match rehype-slug's ID generation.
  */
-function extractToc(content: string): { id: string; text: string; level: number }[] {
+export function extractToc(content: string): { id: string; text: string; level: number }[] {
   const slugger = new GithubSlugger();
   const toc: { id: string; text: string; level: number }[] = [];
 
@@ -131,7 +158,7 @@ function extractToc(content: string): { id: string; text: string; level: number 
  * Recursively walk a directory and yield all markdown file paths.
  * @param dir The directory to walk.
  */
-function* walkMdFiles(dir: string): Generator<string> {
+export function* walkMdFiles(dir: string): Generator<string> {
   if (!existsSync(dir)) return;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const fullPath = join(dir, entry.name);
@@ -142,30 +169,74 @@ function* walkMdFiles(dir: string): Generator<string> {
 
 /**
  * Read all content files and compute per-file SHA-256 hashes.
+ * Frontmatter `slug` field overrides filename-derived slug when present.
  * @returns An array of file entries with slug, type, and hash.
  */
-function readFileEntries(): FileEntry[] {
+export function readFileEntries(): FileEntry[] {
   const entries: FileEntry[] = [];
 
   for (const fp of walkMdFiles(POSTS_DIR)) {
     const raw = readFileSync(fp, 'utf-8');
     const relativePath = fp.replace(POSTS_DIR + '/', '');
-    const slug = basename(relativePath, '.md');
     const dirTag = relativePath.includes('/') ? relativePath.split('/')[0] : undefined;
     const hash = createHash('sha256').update(raw).digest('hex');
+    // Frontmatter slug overrides filename slug — critical for hash key consistency
+    const slug = parseFrontmatterSlug(raw) ?? basename(relativePath, '.md');
     entries.push({ slug, relativePath, type: 'post', hash, dirTag });
   }
 
   for (const fp of walkMdFiles(EXPERIENCE_DIR)) {
     const raw = readFileSync(fp, 'utf-8');
     const relativePath = fp.replace(EXPERIENCE_DIR + '/', '');
-    const slug = basename(relativePath, '.md');
     const dirTag = relativePath.includes('/') ? relativePath.split('/')[0] : undefined;
     const hash = createHash('sha256').update(raw).digest('hex');
+    const slug = parseFrontmatterSlug(raw) ?? basename(relativePath, '.md');
     entries.push({ slug, relativePath, type: 'experience', hash, dirTag });
   }
 
   return entries;
+}
+
+export interface ChangeResult {
+  changedEntries: FileEntry[];
+  removedSlugs: string[];
+}
+
+/**
+ * Compare file entries against stored hashes to determine what changed.
+ * Pure function — no side effects, no logging. Exported for testing.
+ * @param fileEntries Current file entries from readFileEntries().
+ * @param storedHashes Map of slug→hash from previous build (from DB).
+ * @param update If true, treat all files as changed.
+ * @returns Object with changedEntries and removedSlugs arrays.
+ */
+export function computeChanges(
+  fileEntries: FileEntry[],
+  storedHashes: Map<string, string>,
+  update: boolean,
+): ChangeResult {
+  const changedEntries: FileEntry[] = [];
+  const currentSlugs = new Set(fileEntries.map((e) => e.slug));
+
+  for (const entry of fileEntries) {
+    if (update) {
+      changedEntries.push(entry);
+    } else {
+      const stored = storedHashes.get(entry.slug);
+      if (stored !== entry.hash) {
+        changedEntries.push(entry);
+      }
+    }
+  }
+
+  const removedSlugs: string[] = [];
+  for (const [slug] of storedHashes) {
+    if (!currentSlugs.has(slug)) {
+      removedSlugs.push(slug);
+    }
+  }
+
+  return { changedEntries, removedSlugs };
 }
 
 /**
@@ -299,25 +370,12 @@ async function buildIndex(): Promise<void> {
   }
 
   // 3. Compare — only unchanged files can be skipped
-  const changedEntries: FileEntry[] = [];
-  const removedSlugs: string[] = [];
-  const currentSlugs = new Set(fileEntries.map((e) => e.slug));
+  const { changedEntries, removedSlugs } = computeChanges(fileEntries, storedHashes, update);
 
-  for (const entry of fileEntries) {
-    if (update) {
-      changedEntries.push(entry);
-    } else {
-      const stored = storedHashes.get(entry.slug);
-      if (stored !== entry.hash) {
-        log.debug`  hash mismatch: slug=${entry.slug} stored=${stored ?? '(not in map)'} current=${entry.hash}`;
-        changedEntries.push(entry);
-      }
-    }
-  }
-
-  for (const [slug] of storedHashes) {
-    if (!currentSlugs.has(slug)) {
-      removedSlugs.push(slug);
+  // Log hash mismatches for debugging
+  for (const entry of changedEntries) {
+    if (!update) {
+      log.debug`  hash mismatch: slug=${entry.slug} stored=${storedHashes.get(entry.slug) ?? '(not in map)'} current=${entry.hash}`;
     }
   }
 
@@ -385,6 +443,9 @@ async function buildIndex(): Promise<void> {
       const fp = join(dir, entry.relativePath);
       const raw = readFileSync(fp, 'utf-8');
       const { data, content } = await parseFrontmatter(raw);
+
+      // Allow frontmatter slug to override filename-derived slug
+      if (data.slug && typeof data.slug === 'string') entry.slug = data.slug;
 
       // Parse header_image from markdown link "[alt](url)" into structured object
       if (data.header_image && typeof data.header_image === 'string') {

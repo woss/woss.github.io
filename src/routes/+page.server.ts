@@ -8,11 +8,12 @@ import { config } from '$lib/config';
 export async function load() {
   const allPosts = getPosts();
 
-  const heroPage = allPosts.find((p) => p.slug === 'new-woss-io');
+  const heroPage = allPosts.find((p) => p.slug === 'building-woss-io');
   const hero = heroPage
     ? {
         title: heroPage.title || '',
         description: heroPage.description || '',
+        slug: heroPage.slug,
       }
     : null;
 

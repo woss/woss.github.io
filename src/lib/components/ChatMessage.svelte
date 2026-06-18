@@ -8,7 +8,7 @@
  import { page } from '$app/state';
  import ActionBar from './ActionBar.svelte';
  import ToolCallList from './ToolCallList.svelte';
- import { createMarkdownRenderer, preprocessMarkdown, sanitizeHtml, postprocessHtml } from '$lib/chat/markdown';
+
 
  dayjs.extend(relativeTime);
  dayjs.extend(utc);
@@ -47,16 +47,27 @@
 
 	let downReason = $state('');
 
-	let cardHtml = $derived.by(() => {
-		if (!message.text) return '';
-		const md = createMarkdownRenderer({
-			chatId,
-			messageId: message.id,
-			queryParams: page.data.queryParams,
+	let cardHtml = $state('');
+
+	$effect(() => {
+		if (!message.text) {
+			cardHtml = '';
+			return;
+		}
+		const cid = chatId;
+		const mid = message.id;
+		const qp = page.data.queryParams;
+		const txt = message.text;
+
+		let cancelled = false;
+		import('$lib/chat/markdown').then((mod) => {
+			if (cancelled) return;
+			const md = mod.createMarkdownRenderer({ chatId: cid, messageId: mid, queryParams: qp });
+			cardHtml = mod.sanitizeHtml(mod.postprocessHtml(md.render(mod.preprocessMarkdown(txt))));
 		});
-		const raw = md.render(preprocessMarkdown(message.text));
-		const processed = postprocessHtml(raw);
-		return sanitizeHtml(processed);
+		return () => {
+			cancelled = true;
+		};
 	});
 
  async function submitDownReason(
@@ -103,7 +114,7 @@
 
 <div
  id="msg-{message.id}"
- class="group py-2 {message.role === 'user' ? 'bg-surface-container-low/30' : ''}"
+	class="group py-2"
 >
  {#if message.deletedAt}
  <div class="w-full max-w-[720px] mx-auto px-6 max-md:px-1">
@@ -151,7 +162,7 @@
  />
  </div>
  <!-- User message bubble -->
- <div class="max-w-[85%] md:max-w-[75%] rounded-2xl rounded-br-md bg-primary/10 px-4 py-3">
+ <div class="max-w-[85%] md:max-w-[75%] rounded-2xl rounded-br-md bg-surface-container-low/30 px-4 py-3">
  <div class="text-sm/relaxed md:text-base font-body font-normal text-on-surface ">
  {message.text}
  </div>

@@ -99,6 +99,7 @@
       <img
         src={avatarUrl}
         alt="Daniel Maricic"
+        width="80" height="80"
         class="size-20 rounded-full object-cover ring-2 ring-primary/20 shrink-0"
       />
       <div>

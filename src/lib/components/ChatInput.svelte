@@ -22,6 +22,7 @@
     canSend = false,
     userId = '',
     currentChat = null as Chat | null,
+    attemptsLeft = 0,
     messagesCount = 0,
     maxMessages = config.public.maxMessages,
     activeToolCount = 0,
@@ -39,6 +40,7 @@
     canSend?: boolean;
     userId?: string;
     currentChat?: Chat | null;
+    attemptsLeft?: number;
     messagesCount?: number;
     maxMessages?: number;
     activeToolCount?: number;
@@ -57,9 +59,20 @@
   let isOverLimit = $derived(charCount > MAX_CHARS);
   let hasText = $derived(messageText.trim().length > 0);
 
-  const slash = useSlashMenu(() => messageText, (cmd) => onsend(cmd));
+  const slash = useSlashMenu(
+    () => messageText,
+    (cmd) => onsend(cmd),
+  );
 
-  function handleSubmit({ formData, cancel }: { formData: FormData; action: URL; cancel: () => void; submitter: HTMLElement | null }) {
+  function handleSubmit({
+    formData,
+    cancel,
+  }: {
+    formData: FormData;
+    action: URL;
+    cancel: () => void;
+    submitter: HTMLElement | null;
+  }) {
     cancel();
     onsend(messageText);
   }
@@ -110,7 +123,12 @@
   }
 
   $effect(() => {
-    if (variant === 'chat' && inputEl && 'innerText' in inputEl && (inputEl as HTMLDivElement).innerText !== messageText) {
+    if (
+      variant === 'chat' &&
+      inputEl &&
+      'innerText' in inputEl &&
+      (inputEl as HTMLDivElement).innerText !== messageText
+    ) {
       (inputEl as HTMLDivElement).innerText = messageText;
     }
   });
@@ -118,30 +136,19 @@
 
 {#if isLoading}
   <div class="py-1.5">
-    <div class="flex items-center gap-2 text-xs font-mono min-h-[16px]">
+    <div class="flex items-center gap-2 text-xs font-mono min-h-4">
       {#if variant === 'chat' && activeToolCount > 0}
-        <span class="text-yellow-400/90"
-          >Running {activeToolCount} tool{activeToolCount !== 1 ? 's' : ''}</span
-        >
+        <span class="text-yellow-400/90">Running {activeToolCount} tool{activeToolCount !== 1 ? 's' : ''}</span>
         {#if completedToolCount > 0}
           <span class="text-outline">· {completedToolCount} completed</span>
         {/if}
       {:else}
-        <span class="text-on-surface-variant"
-          >{STATUS_LABELS[currentStatus] || 'Thinking'}</span
-        >
+        <span class="text-on-surface-variant">{STATUS_LABELS[currentStatus] || 'Thinking'}</span>
         <span class="inline-flex gap-0.5">
-          <span
-            class="size-1 rounded-full bg-on-surface-variant animate-pulse-dot"
-            style="animation-delay:0ms"
+          <span class="size-1 rounded-full bg-on-surface-variant animate-pulse-dot" style="animation-delay:0ms"></span>
+          <span class="size-1 rounded-full bg-on-surface-variant animate-pulse-dot" style="animation-delay:200ms"
           ></span>
-          <span
-            class="size-1 rounded-full bg-on-surface-variant animate-pulse-dot"
-            style="animation-delay:200ms"
-          ></span>
-          <span
-            class="size-1 rounded-full bg-on-surface-variant animate-pulse-dot"
-            style="animation-delay:400ms"
+          <span class="size-1 rounded-full bg-on-surface-variant animate-pulse-dot" style="animation-delay:400ms"
           ></span>
         </span>
       {/if}
@@ -169,13 +176,33 @@
       </svg>
       <span class="text-sm text-on-surface-variant"
         >This chat has been locked because the question was off-topic.
-        <button
-          class="text-primary underline bg-transparent border-0 cursor-pointer"
-          onclick={() => oncreateChat()}>Start a new chat</button
+        <button class="text-primary underline bg-transparent border-0 cursor-pointer" onclick={() => oncreateChat()}
+          >Start a new chat</button
         ></span
       >
     </div>
   {:else}
+    {#if attemptsLeft > 0}
+      <div
+        class="flex items-center gap-1.5 px-3 py-1.5 mb-2 bg-[color-mix(in_srgb,var(--color-secondary)_6%,transparent)] border border-secondary/20 rounded-lg text-xs text-secondary"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          class="shrink-0"
+        >
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <span>{attemptsLeft} off-topic attempt{attemptsLeft > 1 ? 's' : ''} remaining before chat locks</span>
+      </div>
+    {/if}
     <form method="POST" action="?/ask" use:enhance={handleSubmit} bind:this={formEl}>
       <div
         class="relative rounded-xl border border-[rgba(255,255,255,0.08)] bg-surface-container-high transition-all duration-200"
@@ -185,7 +212,7 @@
           commands={slash.slashFiltered}
           selectedIndex={slash.slashSelectedIndex}
           onselect={slash.selectSlashCommand}
-          onmouseenter={(i: number) => slash.slashSelectedIndex = i}
+          onmouseenter={(i: number) => (slash.slashSelectedIndex = i)}
         />
         <!-- Input row -->
         <div class="flex items-center gap-2 px-3 pt-3 max-md:flex-col max-md:items-stretch max-md:pt-3 max-md:px-2">
@@ -219,10 +246,22 @@
           >
             {#if isLoading}
               <!-- Stop square -->
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+                ><rect x="6" y="6" width="12" height="12" rx="1" /></svg
+              >
             {:else}
               <!-- Arrow up -->
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
                 <line x1="12" y1="19" x2="12" y2="5" />
                 <polyline points="5 12 12 5 19 12" />
               </svg>
@@ -239,10 +278,9 @@
           <div class="flex-1 text-center px-2 max-md:hidden">
             <p class="text-xs text-on-surface-variant">AI can make mistakes. Verify important information.</p>
           </div>
-          <span
-            class="font-mono text-xs text-on-surface-variant"
-            class:text-secondary={isOverLimit}
-            >{charCount}/{MAX_CHARS}</span>
+          <span class="font-mono text-xs text-on-surface-variant" class:text-secondary={isOverLimit}
+            >{charCount}/{MAX_CHARS}</span
+          >
         </div>
       </div>
     </form>
@@ -256,15 +294,14 @@
       commands={slash.slashFiltered}
       selectedIndex={slash.slashSelectedIndex}
       onselect={slash.selectSlashCommand}
-      onmouseenter={(i: number) => slash.slashSelectedIndex = i}
+      onmouseenter={(i: number) => (slash.slashSelectedIndex = i)}
     />
     <!-- Input row -->
     <div class="flex items-center gap-2 px-3 pt-3 max-md:flex-col max-md:items-stretch max-md:pt-3 max-md:px-2">
       <div class="relative flex-1 min-w-0">
         {#if messageText.startsWith('/')}
-          <span
-            class="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-primary pointer-events-none z-10"
-          >/</span
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-primary pointer-events-none z-10"
+            >/</span
           >
         {/if}
         <textarea
@@ -298,10 +335,22 @@
       >
         {#if isLoading}
           <!-- Stop square -->
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+            ><rect x="6" y="6" width="12" height="12" rx="1" /></svg
+          >
         {:else}
           <!-- Arrow up -->
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
             <line x1="12" y1="19" x2="12" y2="5" />
             <polyline points="5 12 12 5 19 12" />
           </svg>
@@ -318,10 +367,9 @@
       <div class="flex-1 text-center px-2 max-md:hidden">
         <p class="text-xs text-on-surface-variant">AI can make mistakes. Verify important information.</p>
       </div>
-      <span
-        class="font-mono text-xs text-on-surface-variant"
-        class:text-secondary={isOverLimit}
-        >{charCount}/{MAX_CHARS}</span>
+      <span class="font-mono text-xs text-on-surface-variant" class:text-secondary={isOverLimit}
+        >{charCount}/{MAX_CHARS}</span
+      >
     </div>
   </div>
   <SuggestedQuestions disabled={isLoading} onquestionclick={onsuggested} />

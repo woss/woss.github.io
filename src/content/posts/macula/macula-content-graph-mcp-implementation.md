@@ -1,7 +1,8 @@
 ---
 published: true
 title: 'A Public MCP Server in Production: Stateless, Graph-Shaped, and Battle-Tested'
-description: 'Production architecture for a public MCP server — stateless graph-walk API with 4 tools, defense-in-depth security, the image rendition chain bug, and why abstract tool descriptions cause LLMs to hallucinate.'
+slug: 'macula-mcp-production-lessons'
+description: 'Production architecture for a public MCP server — stateless graph-walk API with 4 tools, defense-in-depth security, and the image rendition chain bug that taught us about LLM hallucinations.'
 date: 2026-03-01
 tags:
   - macula
@@ -11,6 +12,7 @@ tags:
   - security
   - TypeScript
   - SurrealDB
+part_of_series: macula-mcp-series
 header_image: '[Macula Content Graph Visualization](https://u.macula.link/URMl_ZDDQh2rbEyeo7xngQ-7)'
 ---
 
@@ -558,7 +560,7 @@ The key insight: **graph-shaped APIs are a natural fit for LLM agents**. A singl
 
 - [MCP Specification](https://modelcontextprotocol.io)
 - [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk)
-- [Full Source Code](../services/unified-link/src/routes/mcp)
+- [Full Source Code](https://github.com/woss/macula-mcp/tree/main/src/endpoints)
 
 ---
 

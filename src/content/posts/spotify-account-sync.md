@@ -1,8 +1,9 @@
 ---
 published: true
 title: 'Spotify Account sync to SurrealDB with n8n'
+slug: 'spotify-to-surrealdb-n8n'
 featured: true
-description: 'How i built a workflow to sync my Spotify account to SurrealDB using n8n, and how you can do it too.'
+description: 'How I built a workflow to sync my Spotify account to SurrealDB using n8n, and how you can do it too.'
 date: 2026-05-06
 tags:
   - Spotify
@@ -10,7 +11,7 @@ tags:
   - TypeScript
   - SurrealDB
   - n8n
-  - Automation
+  - automation
 header_image: '[Space whale](https://u.macula.link/KdGkDiG_S-SqfqDpIJE-Sw-7)'
 workflow_files:
   - label: 'Spotify Sync Workflow'

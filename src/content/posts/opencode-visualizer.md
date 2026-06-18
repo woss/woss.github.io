@@ -1,6 +1,7 @@
 ---
 published: true
 title: 'Building opencode-visualizer: A Terminal Dashboard for Your AI Coding Assistant'
+slug: 'opencode-visualizer'
 description: 'A terminal dashboard for OpenCode usage data — sessions, tokens, costs, and models, all rendered in pure ANSI. Built with Deno, SQLite, and zero dependencies.'
 date: 2026-06-04
 featured: true

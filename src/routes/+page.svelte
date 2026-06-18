@@ -6,7 +6,6 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { matchSlashCommand } from '$lib/chat/slash-commands';
-  import { Banner } from 'sv5ui';
   import { parse } from 'devalue';
   import { createChat as createChatApi, deleteChat as deleteChatApi } from '$lib/chat/chat-crud';
   import { USER_ID_KEY } from '$lib/chat/constants';
@@ -20,7 +19,7 @@
   import { showMobileSidebar } from '$lib/stores/mobile-sidebar';
   import ContactForm from '$lib/components/ContactForm.svelte';
   import { randomUUID } from '$lib/utils/random-uuid';
-import { toast } from 'svelte-sonner';
+  import { toast } from 'svelte-sonner';
 
   let userId = $state('');
   let messageText = $state('');
@@ -181,19 +180,19 @@ import { toast } from 'svelte-sonner';
 
     <div class="flex-1 flex flex-col min-w-0 max-md:px-4">
       <!-- Top: hero banner -->
-      {#if data?.hero}
+      <!-- {#if data?.hero}
         <div class="px-8 max-md:px-4 pt-6">
           <div class="w-full max-w-200 mx-auto">
             <Banner
               title={data.hero.title}
               icon="lucide:sparkles"
               color="primary"
-              to={resolve('/posts/new-woss-io')}
+              to={resolve('/posts/[slug]', { slug: data.hero.slug })}
               class="rounded-lg"
             />
           </div>
         </div>
-      {/if}
+      {/if} -->
 
       <!-- Middle: chat + suggested questions or contact form (centered) -->
       <div
@@ -213,7 +212,7 @@ import { toast } from 'svelte-sonner';
         {:else}
           <!-- Contact form when chats exhausted -->
           <main class="flex-1 flex flex-col items-center justify-center gap-8 max-md:gap-6 px-4">
-            <div class="w-full max-w-[420px] flex flex-col items-center gap-6">
+            <div class="w-full max-w-105 flex flex-col items-center gap-6">
               <!-- Card wrapper -->
               <div
                 class="w-full rounded-2xl bg-surface-container-high border border-[rgba(255,255,255,0.06)] p-8 max-md:p-6 flex flex-col items-center gap-6"
@@ -247,7 +246,7 @@ import { toast } from 'svelte-sonner';
       </div>
 
       <!-- Bottom: featured posts -->
-      {#if featuredReady && data?.featuredPosts?.length}
+      <!-- {#if featuredReady && data?.featuredPosts?.length}
         <div class="px-8 max-md:px-4 pb-12 pt-2">
           <div class="w-full max-w-200 mx-auto">
             <div class="flex flex-col gap-3">
@@ -262,7 +261,7 @@ import { toast } from 'svelte-sonner';
                   >
                     {#if post.headerImage}
                       <div class="w-full aspect-video rounded-lg overflow-hidden bg-surface-container">
-                        <img src={post.headerImage.url} alt={post.headerImage.alt} class="size-full object-cover" />
+                        <img src={post.headerImage.url} alt={post.headerImage.alt} width="640" height="360" class="size-full object-cover" />
                       </div>
                     {/if}
                     <div class="flex flex-col gap-1 min-w-0">
@@ -293,7 +292,7 @@ import { toast } from 'svelte-sonner';
             </div>
           </div>
         </div>
-      {/if}
+      {/if} -->
     </div>
   {:else}
     <div class="relative z-2"></div>

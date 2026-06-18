@@ -1,6 +1,7 @@
 ---
 published: true
 title: 'Your Content Is a Gallery, Not a Filing Cabinet: Graph Discovery for AI Agents'
+slug: 'content-graph-discovery-mcp'
 description: 'How AI agents navigate creative content by following relationships — a conceptual deep-dive into graph-based discovery using a gallery metaphor, comparing graph walks against traditional REST APIs.'
 date: 2026-06-17
 tags:
@@ -10,6 +11,7 @@ tags:
   - graph traversal
   - REST
   - API design
+part_of_series: macula-mcp-series
 header_image: '[Content Graph Visualization](https://u.macula.link/Kh9NMfIeSUakGgg3sOL12w-7)'
 ---
 

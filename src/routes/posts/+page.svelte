@@ -84,18 +84,20 @@
                   <img
                     src={appendQueryParams(base + '?preset=sys_xl', qp)}
                     alt={post.headerImage.alt}
+                    width="1200" height="600"
                     loading="lazy"
                     class="w-full aspect-2/1 object-cover"
                   />
                 </picture>
               {:else}
-                <img src={post.headerImage.url} alt={post.headerImage.alt} class="w-full aspect-2/1 object-cover" />
+                <img src={post.headerImage.url} alt={post.headerImage.alt} width="1200" height="600" class="w-full aspect-2/1 object-cover" />
               {/if}
             {:else}
               <img
                 loading="lazy"
                 src={`/api/og/${post.slug}.png`}
                 alt={post.title}
+                width="1200" height="600"
                 class="w-full aspect-2/1 object-cover"
               />
             {/if}

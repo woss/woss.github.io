@@ -8,11 +8,11 @@ export default defineConfig({
     host: '0.0.0.0',
   },
   ssr: {
-    noExternal: ['sv5ui'],
+    // noExternal: ['sv5ui'],
+    // external: ['node:sqlite'],
   },
   build: {
-    rollupOptions: {
-      external: ['node:sqlite'],
-    },
+    minify: 'oxc',
+    cssMinify: 'lightningcss',
   },
 });

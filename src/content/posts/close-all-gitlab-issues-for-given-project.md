@@ -1,5 +1,6 @@
 ---
 title: 'How to close all gitlab issues for a project in bulk'
+slug: 'bulk-close-gitlab-issues'
 date: 2021-12-15
 tags:
   - gitlab

@@ -125,6 +125,7 @@ export async function handleEarlyGates(
           publishPersistent(chatId, 'error', {
             message: `I can only answer questions about Daniel Maricic's professional portfolio and experience.`,
             messageId: errMsgId,
+            attemptsLeft: remaining,
           });
         }
         return { handled: true };

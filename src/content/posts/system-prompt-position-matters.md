@@ -1,6 +1,7 @@
 ---
 published: false
 title: 'System Prompt Position Matters: Why Your Most Important Instruction Should Be First'
+slug: 'system-prompt-position-matters'
 description: 'How moving a single anti-hallucination rule from line 84 to line 2 of the system prompt changed behavior without changing a word of content — and the research that explains why.'
 date: 2026-06-11
 tags:
@@ -182,4 +183,4 @@ The original "no invention" text remains verbatim on line 4 — but it's now **r
 
 ---
 
-_Part of the [Building woss.io](/posts/new-woss-io) series. The prompt evolution is tracked in commits [07016c5](https://github.com/woss/woss.io/commit/07016c5) (position fix) and [43bcd29](https://github.com/woss/woss.io/commit/43bcd29) (consolidation)._
+_Part of the [Building woss.io](/posts/building-woss-io) series. The prompt evolution is tracked in commits [07016c5](https://github.com/woss/woss.io/commit/07016c5) (position fix) and [43bcd29](https://github.com/woss/woss.io/commit/43bcd29) (consolidation)._

@@ -1,7 +1,36 @@
 import MarkdownIt from 'markdown-it';
-import markdownItHighlightjs from 'markdown-it-highlightjs';
+import hljs from 'highlight.js/lib/core';
+import typescript from 'highlight.js/lib/languages/typescript';
+import javascript from 'highlight.js/lib/languages/javascript';
+import json from 'highlight.js/lib/languages/json';
+import bash from 'highlight.js/lib/languages/bash';
+import python from 'highlight.js/lib/languages/python';
+import sql from 'highlight.js/lib/languages/sql';
+import xml from 'highlight.js/lib/languages/xml';
+import css from 'highlight.js/lib/languages/css';
+import diff from 'highlight.js/lib/languages/diff';
+import yaml from 'highlight.js/lib/languages/yaml';
+import rust from 'highlight.js/lib/languages/rust';
 import DOMPurify from 'isomorphic-dompurify';
 import { addMaculaRef } from './macula-utils';
+
+// Module-level: register highlight.js languages once when this chunk loads
+const langMap: Record<string, object> = {
+  typescript, ts: typescript,
+  javascript, js: javascript,
+  json,
+  bash, sh: bash, shell: bash,
+  python,
+  sql,
+  html: xml,
+  css,
+  diff,
+  yaml, yml: yaml,
+  rust,
+};
+for (const [name, lang] of Object.entries(langMap)) {
+  hljs.registerLanguage(name, lang as any);
+}
 
 /**
  * Creates a configured MarkdownIt instance with consistent styling and Macula integration.
@@ -131,7 +160,14 @@ export function createMarkdownRenderer(context: {
     return defaultImageRenderer(tokens, idx, options, env, self);
   };
 
-  md.use(markdownItHighlightjs);
+  md.options.highlight = (str: string, lang?: string) => {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return `<pre class="hljs"><code>${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre>`;
+      } catch {}
+    }
+    return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`;
+  };
   return md;
 }
 

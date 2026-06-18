@@ -20,7 +20,7 @@ export interface SSECallbacks {
       durationMs: number | null;
     }>;
   }) => void;
-  onError: (data: { messageId?: string; message: string; irrecoverable?: boolean }) => void;
+  onError: (data: { messageId?: string; message: string; irrecoverable?: boolean; attemptsLeft?: number }) => void;
   onContactIntent: () => void;
   onTimeout: () => void;
 }
@@ -170,6 +170,7 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
       messageId: data.messageId,
       message: data.message || 'An error occurred',
       irrecoverable: data.irrecoverable === true,
+      attemptsLeft: data.attemptsLeft,
     });
   });
 

@@ -273,6 +273,7 @@
                   <img
                     src={appendQueryParams(base + '?preset=sys_xl', qp)}
                     alt={data.post.headerImage.alt}
+                    width="1200" height="600"
                     class="w-full object-cover aspect-2/1"
                     loading="eager"
                   />
@@ -281,6 +282,7 @@
                 <img
                   src={data.post.headerImage.url}
                   alt={data.post.headerImage.alt}
+                  width="1200" height="600"
                   class="w-full object-cover aspect-2/1"
                   loading="eager"
                 />
@@ -304,6 +306,7 @@
               <img
                 src={`/api/og/${data.post.slug}.png`}
                 alt={data.post.title}
+                width="1200" height="600"
                 class="w-full object-cover aspect-2/1"
                 loading="lazy"
               />

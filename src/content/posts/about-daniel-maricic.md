@@ -1,8 +1,9 @@
 ---
 published: true
 title: 'About Daniel Maricic'
+slug: 'about-daniel-maricic'
 description: 'Software developer, open-source contributor, and founder with a passion for building tools that empower developers and drive innovation in the tech ecosystem.'
-date: 2000-01-01
+date: 1990-01-01
 tags:
   - bio
   - about

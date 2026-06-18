@@ -1,5 +1,6 @@
 ---
 title: 'How to serve SPA with fallback on IPFS'
+slug: 'spa-fallback-ipfs-caddy'
 date: 2024-06-01
 tags:
   - caddy

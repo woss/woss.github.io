@@ -1,8 +1,9 @@
 ---
 published: true
 title: 'v1: The MCP Server That Taught Us What Not to Do'
-description: 'Production architecture for a public, read-only MCP server serving AI agents without authentication — covering stateless design, Zod validation, defense-in-depth security, rate limiting, SQL injection prevention, and lessons learned from implementing Maculas Unified Link MCP.'
-date: 2026-03-01
+slug: 'macula-mcp-v1-lessons'
+description: 'Production architecture for a public MCP server — stateless design, Zod validation, defense-in-depth security, rate limiting, and SQL injection prevention in production.'
+date: 2026-04-25
 tags:
   - macula
   - MCP
@@ -10,6 +11,7 @@ tags:
   - security
   - API design
   - production
+part_of_series: macula-mcp-series
 header_image: '[Building a Public MCP Server](https://u.macula.link/G_6XL5TeQbS0g3SkbxyWDQ-7)'
 ---
 

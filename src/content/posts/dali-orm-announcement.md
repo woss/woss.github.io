@@ -1,13 +1,14 @@
 ---
 published: true
 title: 'Type-Safe SurrealDB: Meet the ORM That Ships'
+slug: 'daliorm-announcement'
 featured: true
-description: 'Introducing a new ORM for SurrealDB that delivers type-safe query building without abstraction overhead. Your schema becomes your TypeScript, and your queries chain like they should. Built on the official SurrealDB SDK, this ORM gives you compile-time validation, autocomplete, and a fluent API that maps directly to SurrealQL. Say goodbye to runtime errors and hello to a better way to work with SurrealDB.'
+description: 'Introducing DaliORM — a type-safe query builder for SurrealDB. Your schema becomes your TypeScript, your queries chain like they should, and compile-time validation catches errors before runtime.'
 date: 2026-06-12
 tags:
-  - surrealdb
+  - SurrealDB
   - orm
-  - typescript
+  - TypeScript
   - database
   - query builder
   - migrations
@@ -33,7 +34,7 @@ DaliORM gives you type-safe query building without abstraction overhead. Your sc
 
 SurrealDB is genuinely exciting. It's not just another document store—it's a multi-model database that handles documents and graphs seamlessly. You can model complex relationships without the ORM dance that other databases require. Live queries keep your UI in sync automatically. The embedded mode makes it perfect for testing and edge deployments. And the flexible schema means you're not fighting rigidity when your data evolves.
 
-TypeScript should work the same way. The type system catches bugs before they hit production. Autocomplete accelerates your workflow. Refactoring becomes safe—you rename a field and your IDE updates every reference. Initially i was using the Valibot schema validation library to define my schema in code, but it felt clunky and disconnected from the actual database schema. I wanted something that was designed for this purpose, that could serve as a single source of truth for both my database and my TypeScript types. Yes, "parse don't validate" is a great approach, it tracks the shape of your data as it flows through your application, but I wanted to take it a step further and have my schema definitions directly inform my query builders and migrations. I wanted to define my tables and columns in TypeScript, and have that drive everything else. Also, i wanted to learn something new and have fun building a tool that I wish existed when I started working with SurrealDB.
+TypeScript should work the same way. The type system catches bugs before they hit production. Autocomplete accelerates your workflow. Refactoring becomes safe—you rename a field and your IDE updates every reference. Initially I was using the Valibot schema validation library to define my schema in code, but it felt clunky and disconnected from the actual database schema. I wanted something that was designed for this purpose, that could serve as a single source of truth for both my database and my TypeScript types. Yes, "parse don't validate" is a great approach, it tracks the shape of your data as it flows through your application, but I wanted to take it a step further and have my schema definitions directly inform my query builders and migrations. I wanted to define my tables and columns in TypeScript, and have that drive everything else. Also, I wanted to learn something new and have fun building a tool that I wish existed when I started working with SurrealDB.
 
 Let's take the schema libraries out of the picture for a moment, shall we?
 

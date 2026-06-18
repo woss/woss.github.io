@@ -1,7 +1,8 @@
 ---
 published: false
 title: 'Taming the AI Tool Loop: What Happens When the Model Never Gets a Turn Without Tools'
-description: 'How woss.io evolved from a 41-character AI answer to a robust 4-layer defense system against infinite tool-calling doom loops — with cross-round fingerprinting, synthesis rounds, and lessons from opencode.'
+slug: 'taming-the-ai-tool-loop'
+description: 'How woss.io evolved from a 41-character AI answer to a 4-layer defense against tool-calling doom loops — with cross-round fingerprinting, synthesis rounds, and lessons from opencode.'
 date: 2026-06-13
 tags:
   - LLM
@@ -282,4 +283,4 @@ All relevant source files in the woss.io repository:
 
 ---
 
-_This post is part of a series on building woss.io — an AI-native personal portfolio. Earlier posts covered the [system prompt positioning fix](/posts/system-prompt-position-matters) and [Macula MCP tool design lessons](/posts/macula-mcp-design-lessons)._
+_This post is part of a series on building woss.io — an AI-native personal portfolio. Earlier posts covered the [system prompt positioning fix](/posts/system-prompt-position-matters) and [Macula MCP tool design lessons](/posts/designing-mcp-for-llms)._
