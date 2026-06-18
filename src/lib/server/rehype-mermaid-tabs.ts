@@ -1,27 +1,5 @@
 import type { Root, Element, Text } from 'hast';
-
-/**
- * Simple pre-order tree walk for HAST element nodes.
- * Similar to unist-util-visit but without the dependency.
- */
-function walkElement(
-  node: Element | Root,
-  callback: (node: Element, index: number, parent: Element) => void,
-  parent?: Element,
-  index?: number,
-): void {
-  if (node.type === 'element' && parent) {
-    callback(node as Element, index!, parent);
-  }
-  if ('children' in node && Array.isArray(node.children)) {
-    for (let i = 0; i < node.children.length; i++) {
-      const child = node.children[i];
-      if (child && typeof child === 'object' && 'type' in child && child.type === 'element') {
-        walkElement(child as Element, callback, node as Element, i);
-      }
-    }
-  }
-}
+import { walkElement } from './rehype-utils.ts';
 
 /**
  * Extract plain text from an element tree, stripping any HTML markup.

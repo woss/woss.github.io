@@ -1,36 +1,10 @@
 import type { Root, Element, Text } from 'hast';
+import { walkElement, isText, isElement } from './rehype-utils.ts';
 
 const ADMONITION_TYPES = ['INFO', 'WARNING', 'ERROR', 'SUCCESS'] as const;
 type AdmonitionType = (typeof ADMONITION_TYPES)[number];
 
 const ADMONITION_PATTERN = /^\[!(INFO|WARNING|ERROR|SUCCESS)\]\s*/i;
-
-function isText(node: unknown): node is Text {
-  return typeof node === 'object' && node !== null && (node as { type: string }).type === 'text';
-}
-
-function isElement(node: unknown): node is Element {
-  return typeof node === 'object' && node !== null && (node as { type: string }).type === 'element';
-}
-
-function walkElement(
-  node: Element | Root,
-  callback: (node: Element, index: number, parent: Element) => void,
-  parent?: Element,
-  index?: number,
-): void {
-  if (node.type === 'element' && parent) {
-    callback(node as Element, index!, parent);
-  }
-  if ('children' in node && Array.isArray(node.children)) {
-    for (let i = 0; i < node.children.length; i++) {
-      const child = node.children[i];
-      if (child && typeof child === 'object' && 'type' in child && child.type === 'element') {
-        walkElement(child as Element, callback, node as Element, i);
-      }
-    }
-  }
-}
 
 export function rehypeAdmonitions() {
   return (tree: Root) => {

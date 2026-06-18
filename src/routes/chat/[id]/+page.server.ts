@@ -21,21 +21,12 @@ import { generateTraceId, generateSpanId, withTrace } from '$lib/server/trace-co
 import { CAT, createLogger } from '$lib/server/logger';
 import { setReaction, deleteReaction, softDeleteMessage } from '$lib/server/db';
 import { lookupCountry } from '$lib/server/geo';
+import { sanitizeText } from '$lib/server/sanitize';
 
 const log = createLogger(CAT.chat);
 
 function getClientIP(event: import('@sveltejs/kit').RequestEvent): string {
   return event.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? event.getClientAddress();
-}
-
-function sanitizeText(raw: string): string {
-  return raw
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<[^>]*>/g, '')
-    .replace(/\bon\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/\bon\w+\s*=\s*'[^']*'/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .trim();
 }
 
 export const actions: Actions = {

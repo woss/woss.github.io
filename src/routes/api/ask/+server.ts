@@ -31,7 +31,7 @@ import {
   needsMaculaTools,
   tryRenameChat,
 } from '$lib/server/chat-helpers';
-import { sanitizeText } from '$lib/server/openai-provider';
+import { sanitizeText } from '$lib/server/sanitize';
 import { startGeneration } from '$lib/server/generate';
 import { generateTraceId, generateSpanId, withTrace } from '$lib/server/trace-context';
 import { dev } from '$app/environment';

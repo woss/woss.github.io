@@ -4,6 +4,7 @@ import { lookupCountry } from '$lib/server/geo';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { callWebhook } from '$lib/server/webhooks';
 import { CAT, createLogger } from '$lib/server/logger';
+import { sanitizeText } from '$lib/server/sanitize';
 
 const log = createLogger(CAT.api);
 
@@ -25,16 +26,6 @@ function checkLeadRateLimit(ip: string): { allowed: boolean; remaining: number; 
   windowed.push(now);
   leadHits.set(ip, windowed);
   return { allowed: true, remaining: LEAD_MAX - windowed.length, resetAt: now + LEAD_WINDOW_MS };
-}
-
-function sanitizeText(raw: string): string {
-  return raw
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<[^>]*>/g, '')
-    .replace(/\bon\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/\bon\w+\s*=\s*'[^']*'/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .trim();
 }
 
 function getClientIP(event: RequestEvent): string {

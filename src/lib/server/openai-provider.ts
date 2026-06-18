@@ -15,6 +15,7 @@ import type { LLMEvent, FinishReason, TokenUsage } from './llm/types';
 import type { ModelMessage, ToolSet } from 'ai';
 import type { McpToolCallResult } from './mcp/client';
 import { getSystemPrompt } from './prompts.ts';
+import { sanitizeText } from '$lib/server/sanitize';
 
 /* ------------------------------------------------------------------ */
 /*  LLMEvent Factory Functions (type-safe constructors)                */
@@ -137,20 +138,6 @@ log.debug`[openai-provider] BASE_URL: ${BASE_URL} | MODEL: ${MODEL}`;
 /* ------------------------------------------------------------------ */
 
 const model = provider(modelName);
-
-/* ------------------------------------------------------------------ */
-/*  Sanitization                                                       */
-/* ------------------------------------------------------------------ */
-
-function sanitizeText(raw: string): string {
-  return raw
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<[^>]*>/g, '')
-    .replace(/\bon\w+\s*=\s*"[^"]*"/gi, '')
-    .replace(/\bon\w+\s*=\s*'[^']*'/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .trim();
-}
 
 /* ------------------------------------------------------------------ */
 /*  RAG Prompt Builder                                                 */
@@ -616,5 +603,5 @@ async function isAvailable(): Promise<boolean> {
 /*  Exports                                                            */
 /* ------------------------------------------------------------------ */
 
-export { buildRagPrompt, chatStream, chatStreamWithTools, isAvailable, sanitizeText, mergeSameRole };
+export { buildRagPrompt, chatStream, chatStreamWithTools, isAvailable, mergeSameRole };
 export type { ChatMessage, ChatRole, RagChunk };

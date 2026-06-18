@@ -8,6 +8,7 @@
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { CAT, createLogger } from '$lib/server/logger';
 import type { McpServerConfig } from './config.ts';
+import { toRecord } from './utils.ts';
 import type { jsonSchemaValidator, JsonSchemaType, JsonSchemaValidator } from '@modelcontextprotocol/sdk/validation';
 
 const log = createLogger(CAT.mcp);
@@ -58,19 +59,6 @@ export type McpPromptMessage = {
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
 /* ------------------------------------------------------------------ */
-
-/**
- * Safely convert an unknown value to Record<string, unknown> | undefined.
- * Returns undefined for null, arrays, and non-objects.
- */
-function toRecord(value: unknown): Record<string, unknown> | undefined {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
-  const result: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(value)) {
-    result[key] = val;
-  }
-  return result;
-}
 
 /**
  * Extract type/text fields from MCP content items without type casts.
