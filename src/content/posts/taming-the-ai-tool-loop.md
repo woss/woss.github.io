@@ -25,7 +25,7 @@ Forty-one characters. Not an answer. A promise of an answer that never came.
 
 The logs told the story: the model called tools in round 1, got results, called tools in round 2, got more results, called tools in round 3 — then hit the recursion limit and returned whatever partial text it had produced. Three rounds of tool calls, zero rounds of synthesis. The model was never given a turn where it couldn't call tools.
 
-This is the story of how woss.io evolved from that 41-character bug into a robust 4-layer defense system against AI tool loops. And how studying [opencode](https://github.com/anomalyco/opencode) — an open-source AI coding assistant — helped me understand what I was doing wrong.
+This is the story of how woss.io evolved from that 41-character bug into something that actually finishes answering. And how studying [opencode](https://github.com/anomalyco/opencode) — an open-source AI coding assistant — helped me understand what I was doing wrong.
 
 ## The Architecture Problem
 
@@ -35,11 +35,11 @@ When an LLM calls external tools (searching GitHub, querying a media library), t
 2. Model decides to call another tool → execute → append result → back to model
 3. Model decides it has enough information → produce final answer
 
-Two fundamentally different architectures solve this:
+Two fundamentally different architectures solve this.
 
 ### opencode's Approach: The Persistent Outer Loop
 
-opencode uses a `SessionPrompt.loop()` that persists across LLM calls. Tools are **always available**. The loop is:
+opencode uses a `SessionPrompt.loop()` that persists across LLM calls. Tools are always available. The loop is:
 
 ```
 finishReason "tool-calls" → execute tools → append results → GOTO 1
@@ -54,7 +54,7 @@ Safety layers sit on top:
 
 ### woss.io's Approach: Recursive Inner Rounds
 
-woss.io uses the Vercel AI SDK's `streamText` with a recursive `runRound()` function. Tools are **removable per round**:
+woss.io uses the Vercel AI SDK's `streamText` with a recursive `runRound()` function. Tools are removable per round:
 
 ```
 streamText() → onFinish → check tool calls → recurse or resolve
@@ -88,9 +88,9 @@ The model interpreted this as a perpetual instruction. Pattern:
 
 The model wasn't broken. It was following instructions. The instruction told it to always verify, so it always verified.
 
-## The Fix: 4 Defense Layers
+## The Fix: A Progression of Defenses
 
-### Layer 1: Cross-Round Fingerprinting
+### Cross-Round Fingerprinting
 
 In `openai-provider.ts`, the `chatStreamWithTools()` function tracks every tool call across all recursive rounds using tool+args fingerprints:
 
@@ -104,7 +104,7 @@ for (const tc of roundToolCallRecords) {
 const toolLoopDetected = [...crossRoundFingerprintCounts.values()].some((c) => c > CROSS_ROUND_THRESHOLD); // threshold = 3
 ```
 
-The key insight: **tool name alone isn't enough**. A model legitimately calling `search_repositories("woss")` and `search_repositories("opencode")` is different from calling `search_repositories("woss")` three times. The fingerprint includes both the tool name _and_ the serialized arguments.
+Key insight: tool name alone isn't enough. A model legitimately calling `search_repositories("woss")` and `search_repositories("opencode")` is different from calling `search_repositories("woss")` three times. The fingerprint includes both the tool name and the serialized arguments.
 
 When detected:
 
@@ -115,7 +115,7 @@ if (isDoomLoop) {
 }
 ```
 
-### Layer 2: The Synthesis Round
+### The Synthesis Round
 
 This is the structural fix. When `runRound` reaches `MAX_ROUNDS` (default 3) and the model still wants to call tools:
 
@@ -129,9 +129,9 @@ if (roundToolCalls > 0 && roundTextLength > 0 && (reachedMaxRounds || isDoomLoop
 }
 ```
 
-Setting `currentToolSet` to `undefined` in the recursive call means the next `streamText` invocation has **no tools at all**. The model has zero options except to produce text. This is the synthesis round — the first time in the conversation the model is forced to write an answer instead of deferring to another tool call.
+Setting `currentToolSet` to `undefined` in the recursive call means the next `streamText` invocation has no tools at all. The model has zero options except to produce text. This is the synthesis round — the first time in the conversation the model is forced to write an answer instead of deferring to another tool call.
 
-### Layer 3: The Tiny-Text Check
+### The Tiny-Text Check
 
 Even with the synthesis round, sometimes the model would produce a stub like "Here they are:" (15 chars) and stop. The post-stream check catches this:
 
@@ -141,7 +141,7 @@ const isTinyText = anySuccessfulToolCalls && answerText.trim().length > 0 && ans
 
 If the model called tools but produced fewer than 100 characters of answer text, the entire response is discarded and retried with a hardened system prompt.
 
-### Layer 4: Retry Orchestration
+### Retry Orchestration
 
 The `streamWithRetry()` function in `generate.ts` orchestrates up to 10 attempts (up from the original 3):
 
@@ -162,7 +162,7 @@ The recovery prompt is blunt:
 
 > _MANDATORY INSTRUCTION: Your previous response was a failure — you called tools but produced NO answer text. You are being retried. For this attempt: DO NOT call any tools. IGNORE any available tools. Use only the information you already have and write a complete, well-formatted answer immediately. Even if you have nothing to say, write SOMETHING — a greeting, an apology, anything. Producing NO text is unacceptable. You MUST write at least one sentence._
 
-### Bonus: Rate-Limit Cascade Prevention
+### Rate-Limit Cascade Prevention
 
 A complementary fix in `provider.ts` prevents rate-limit retry cascades. The AI SDK internally retries 3 times on 429 responses, then throws. The outer loop would then retry 10 more times — 30 wasted API calls taking ~45 seconds.
 
@@ -184,14 +184,11 @@ if (response.status === 429) {
 
 The AI SDK doesn't retry on 400. The outer loop catches it and breaks immediately.
 
-### Bonus: The RAG Safety Net
+### The RAG Safety Net
 
-There's one more failure mode that doesn't look like a tool loop but
-shares the same root cause: the model gets stuck without tools, and RAG
-never fires.
+There's one more failure mode that doesn't look like a tool loop but shares the same root cause: the model gets stuck without tools, and RAG never fires.
 
-In the original architecture, the RAG retrieval step was gated by a
-`needsAnyTool` flag:
+In the original architecture, the RAG retrieval step was gated by a `needsAnyTool` flag:
 
 ```typescript
 // Before: RAG only runs when tools are needed
@@ -200,11 +197,7 @@ if (needsAnyTool) {
 }
 ```
 
-This made sense in isolation — why fetch RAG context if the model has
-tools to find the data itself? But the logic broke in practice: when a
-user asked something that didn't match any MCP tool signature, the
-classifier returned `needsAnyTool = false`, RAG never ran, and the
-model received zero context. No tools, no RAG, nothing.
+This made sense in isolation — why fetch RAG context if the model has tools to find the data itself? But the logic broke in practice: when a user asked something that didn't match any MCP tool signature, the classifier returned `needsAnyTool = false`, RAG never ran, and the model received zero context. No tools, no RAG, nothing.
 
 The fix (commit `bfbf993` on Jun 10) removed the gate entirely:
 
@@ -213,30 +206,17 @@ The fix (commit `bfbf993` on Jun 10) removed the gate entirely:
 ragResults = await retrieveContext(query);
 ```
 
-RAG now runs on **every** query. If tools are also needed, both fire.
-If no tools are needed, the model still gets RAG context. The cost is
-a database query and embedding comparison — milliseconds — and the
-benefit is that the model never faces a blank context window.
+RAG now runs on every query. If tools are also needed, both fire. If no tools are needed, the model still gets RAG context. The cost is a database query and embedding comparison — milliseconds — and the benefit is that the model never faces a blank context window.
 
-This fix complements the tool loop defenses in a specific way: it
-reduces the pressure on the tool system. When the model already has
-relevant context from RAG, it's less likely to keep calling tools
-to "verify" things it already knows. Fewer tool calls means fewer
-opportunities for loops.
+This fix complements the tool loop defenses in a specific way: it reduces the pressure on the tool system. When the model already has relevant context from RAG, it's less likely to keep calling tools to "verify" things it already knows. Fewer tool calls means fewer opportunities for loops.
 
-## opencode vs woss.io: Defense-in-Depth Comparison
+## opencode vs woss.io
 
-| Concern            | opencode                            | woss.io                             |
-| ------------------ | ----------------------------------- | ----------------------------------- |
-| Loop model         | Outer persists (SessionPrompt.loop) | Inner recursion (runRound)          |
-| Tools availability | ALWAYS available                    | Removable per round                 |
-| Doom detection     | Fingerprint + 3x repeat             | Fingerprint + 3x repeat + tiny-text |
-| Synthesis forcing  | tool-loop-guard terminates          | Tools=undefined forces output       |
-| Retry count        | Interrupt-based                     | Up to 10 attempts                   |
-| Prompt hardening   | N/A                                 | getDoomLoopRecoveryPrompt()         |
-| 429 handling       | Falls through to SDK retries        | 429→400 short-circuit               |
+Both projects solve the same problem differently. opencode's `SessionPrompt.loop()` keeps tools available forever — tools are always an option, so a recovery attempt can still use them. The downside: the model can loop indefinitely if nothing interrupts it. opencode's `tool-loop-guard.ts` and `processor.ts` catch those loops reactively with fingerprint+args tracking and a 3x repeat limit.
 
-Both solve the same problem differently. opencode's advantage: tools are always available, so a recovery attempt can still use tools. woss.io's advantage: the model is guaranteed a no-tools round, preventing infinite loops structurally rather than reactively.
+woss.io's recursive `runRound()` takes the opposite approach: tools are removable per round. The model gets a guaranteed no-tools round at MAX_ROUNDS, preventing infinite loops structurally. The downside: if the model genuinely needed one more tool call, it's out of luck. The trade-off favors completion over thoroughness — better a partial answer than no answer.
+
+The synthesis round (setting tools=undefined) is the key structural difference. opencode's `tool-loop-guard` terminates loops reactively. woss.io prevents them by design. Both fingerprint tool+args (not just tool name) for doom loop detection. Both handle rate limits differently — opencode falls through to SDK retries, woss.io short-circuits 429→400 at the fetch layer.
 
 ## The Key Insight
 
@@ -244,31 +224,21 @@ The single realization that made everything click:
 
 **The model was never broken — it was never given a turn without tools.**
 
-Every time the model wanted to call a tool, it could. Every round had tools enabled. The model optimized for what the prompt told it: "ALWAYS verify." The fix wasn't better prompting (though that helped). It wasn't better tool definitions (though that helped too). The fix was structural: **guarantee the model has at least one round where it cannot defer to a tool**.
+Every time the model wanted to call a tool, it could. Every round had tools enabled. The model optimized for what the prompt told it: "ALWAYS verify." The fix wasn't better prompting (though that helped). It wasn't better tool definitions (though that helped too). The fix was structural: guarantee the model has at least one round where it cannot defer to a tool.
 
-This is the difference between defense-in-depth and defense-in-structure. Layers 1, 3, and 4 are defense-in-depth — they catch failures. Layer 2 (the synthesis round) is defense-in-structure — it prevents the failure mode from existing.
+This is the real distinction. Cross-round fingerprinting catches failures. The tiny-text check catches failures. Retry orchestration catches failures. But the synthesis round prevents the failure mode from existing in the first place. You need both reactive and structural defenses, but structural ones don't tire.
 
-## Lessons Learned
+## What This Taught Me
 
-**1. Prompt instructions are code, and they have bugs.**
+Prompt instructions are code, and they have bugs. A single line — "ALWAYS call search_repositories" — caused the entire doom loop. Soften perpetual instructions. Add explicit stop conditions. Test them like you test code paths.
 
-A single line — "ALWAYS call search_repositories" — caused the entire doom loop. Soften perpetual instructions. Add explicit stop conditions. Test them like you test code paths.
+Tool+args fingerprints beat tool name fingerprints. Same tool with different args is legitimate multi-step reasoning. Same tool with same args is a loop. The args are what distinguish the two.
 
-**2. Tool+args fingerprints > tool name fingerprints.**
+Structural protections beat reactive protections. The synthesis round prevents the loop before it starts. The tiny-text check and retry loop catch failures after they happen. You need both, but structural is more reliable.
 
-Same tool with different args is legitimate multi-step reasoning. Same tool with same args is a loop. The args are what distinguish the two.
+Studying open-source battle-tested patterns pays off. opencode's tool-loop-guard and processor code showed me what a production system looks like. I didn't copy it — I understood the problem space differently after reading it. The persistent outer loop vs recursive inner round tradeoff became clear only after seeing both implementations.
 
-**3. Structural protections beat reactive protections.**
-
-The synthesis round prevents the loop before it starts. The tiny-text check and retry loop catch failures after they happen. You need both, but structural is more reliable.
-
-**4. Study open-source battle-tested patterns.**
-
-opencode's tool-loop-guard and processor code showed me what a production system looks like. I didn't copy it — I understood the problem space differently after reading it. The persistent outer loop vs recursive inner round tradeoff became clear only after seeing both implementations.
-
-**5. Rate-limit cascades are silent cost killers.**
-
-30 API calls per failure, 45 seconds of wait time — and the response still fails. Short-circuiting at the wire level (429→400) and at the orchestration level (break on rate-limit error) is essential for any LLM application.
+Rate-limit cascades are silent cost killers. 30 API calls per failure, 45 seconds of wait time — and the response still fails. Short-circuiting at the wire level (429→400) and at the orchestration level (break on rate-limit error) is essential for any LLM application.
 
 ## The Code
 

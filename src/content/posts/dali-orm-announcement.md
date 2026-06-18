@@ -17,34 +17,21 @@ audience: general
 header_image: '[Future in the city](https://u.macula.link/HR7CSIPkTFOBV8xVNmVUxg-7?preset=sys_lg)'
 ---
 
-> [!WARNING]
-> Dali ORM is in early alpha. Expect breaking changes and bugs as I iterate towards 1.0. DO NOT use in production. Feedback and contributions are welcome!
+DaliORM is in early alpha. Expect breaking changes and bugs as I iterate toward 1.0. Don't use it in production, but feedback and contributions are welcome.
 
-> [!INFO]
-> **TL;DR** — DaliORM is a type-safe query builder and migration system for SurrealDB.
-> Pure TypeScript type inference, no code generation. Immutable builders map 1:1 to
-> SurrealQL. Define your schema once — types, autocomplete, and migrations all derive
-> from it. Migration-first with a Drizzle-inspired workflow.
-
-You've used SurrealDB. You know SurrealQL. You write raw queries, hand-roll validation, and debug runtime errors at 2 AM. There's a better way.
-
-DaliORM gives you type-safe query building without abstraction overhead. Your schema becomes your TypeScript. Your queries chain like they should.
+You've used SurrealDB and you know SurrealQL — raw queries, hand-rolled validation, runtime errors at 2 AM. DaliORM gives you type-safe query building without abstraction overhead. Your schema becomes your TypeScript, your queries chain like they should, and compile-time validation catches errors before runtime. Pure type inference with no code generation and immutable builders that map 1:1 to SurrealQL. Define your schema once, and types, autocomplete, and migrations all derive from it. Migration-first, Drizzle-inspired.
 
 ## Why I Built This
 
-SurrealDB is genuinely exciting. It's not just another document store—it's a multi-model database that handles documents and graphs seamlessly. You can model complex relationships without the ORM dance that other databases require. Live queries keep your UI in sync automatically. The embedded mode makes it perfect for testing and edge deployments. And the flexible schema means you're not fighting rigidity when your data evolves.
+SurrealDB is genuinely exciting. It's not just another document store. It's a multi-model database that handles documents and graphs in one system. You can model complex relationships without the ORM dance that other databases require. Live queries keep your UI in sync automatically. The embedded mode makes it perfect for testing and edge deployments. And the flexible schema means you're not fighting rigidity when your data evolves.
 
-TypeScript should work the same way. The type system catches bugs before they hit production. Autocomplete accelerates your workflow. Refactoring becomes safe—you rename a field and your IDE updates every reference. Initially I was using the Valibot schema validation library to define my schema in code, but it felt clunky and disconnected from the actual database schema. I wanted something that was designed for this purpose, that could serve as a single source of truth for both my database and my TypeScript types. Yes, "parse don't validate" is a great approach, it tracks the shape of your data as it flows through your application, but I wanted to take it a step further and have my schema definitions directly inform my query builders and migrations. I wanted to define my tables and columns in TypeScript, and have that drive everything else. Also, I wanted to learn something new and have fun building a tool that I wish existed when I started working with SurrealDB.
+TypeScript should work the same way. The type system catches bugs before they hit production. Autocomplete accelerates your workflow. Refactoring becomes safe. You rename a field and your IDE updates every reference. Initially I was using the Valibot schema validation library to define my schema in code, but it felt clunky and disconnected from the actual database schema. I wanted something that was designed for this purpose, that could serve as a single source of truth for both my database and my TypeScript types. Yes, "parse don't validate" is a great approach, it tracks the shape of your data as it flows through your application, but I wanted to take it a step further and have my schema definitions directly inform my query builders and migrations. I wanted to define my tables and columns in TypeScript, and have that drive everything else. Also, I wanted to learn something new and have fun building a tool that I wish existed when I started working with SurrealDB.
 
 Let's take the schema libraries out of the picture for a moment, shall we?
 
-Here's the problem: when you write raw SurrealQL, you lose all of that. Your IDE sees strings. TypeScript sees `any`. A typo in a column name doesn't error—it crashes at runtime. Refactoring means grep-based manual labor across your codebase.
+When you write raw SurrealQL, your IDE sees strings and TypeScript sees `any`. A typo in a column name doesn't error at compile time. It crashes at runtime. Refactoring means grep-based manual labor across your codebase.
 
 I built this ORM to bridge that gap. Not by hiding SurrealQL behind abstraction, but by making TypeScript understand it.
-
-## The Problem
-
-Raw SurrealQL is powerful. Your IDE doesn't know about it.
 
 ```ts
 const email = 'user@example.com';
@@ -53,28 +40,11 @@ const result = await db.query(`SELECT * FROM user WHERE email = $email`, { email
 // Typos? Runtime crashes. Refactoring? Manual grep.
 ```
 
-You define schema in your head. You define schema in migrations. They drift. You validate data in five places.
+Defining your schema only mentally and in migration files means they inevitably drift. You end up validating the same data in five different places.
 
-This ORM solves that.
+There are other TypeScript ORMs for SurrealDB — [Surqlize](https://github.com/surrealdb/surqlize) (official) uses code generation with `t.*` builders, [SurrealORM](https://github.com/SurrealORM/orm) is decorator-based and early alpha, [Cerial](https://github.com/cerial-orm/cerial) is Prisma-like with schema files and code generation, and TypeSurrealDB takes a class decorator approach. This ORM takes a different path: no code generation, just pure TypeScript inference with no build step. Immutable query builders safe for concurrency. Queries map 1:1 to SurrealQL with no hidden abstraction. Schema drives migrations instead of the other way around. And the core is tiny with no heavy dependencies.
 
-## How It Compares
-
-Other TypeScript ORMs exist for SurrealDB:
-
-- **[Surqlize](https://github.com/surrealdb/surqlize)** (official) - Uses `t.*` builders, code generation approach
-- **[SurrealORM](https://github.com/SurrealORM/orm)** (@surrealorm/orm) - Decorator-based, early alpha
-- **[Cerial](https://github.com/cerial-orm/cerial)** - Prisma-like with `.cerial` schema files, code generation
-- **TypeSurrealDB** - Class decorators approach
-
-This ORM differs:
-
-- **No code generation** - Pure TypeScript type inference, no build step
-- **Immutable query builders** - Each method returns new instance, safe for concurrency
-- **1:1 SurrealQL mapping** - Queries map directly, no hidden abstraction
-- **Migration-first** - Schema drives migrations, not the other way around
-- **Minimal runtime** - Core is tiny, no heavy dependencies
-
-**Built on the official SurrealDB SDK** - I wrap `surrealdb` (the official Node.js client), not reimplementing the connection layer. This means WebSocket, HTTP, and embedded modes all work out of the box, and we benefit from every SDK update.
+I built it on the official `surrealdb` Node.js client instead of reimplementing the connection layer. WebSocket, HTTP, and embedded modes all work out of the box, and every SDK update benefits it automatically.
 
 ## Defining Schema
 
@@ -321,7 +291,7 @@ If any operation throws, the transaction rolls back cleanly. No manual cleanup r
 
 ## Type Safety in Action
 
-Here's where this gets fun. TypeScript infers types from your schema, so you get autocomplete and validation everywhere—not just in your editor, but at compile time.
+TypeScript infers types from your schema, so you get autocomplete and validation in your editor and at compile time.
 
 ```typescript
 import { insert, select } from '@woss/dali-orm/query';
@@ -442,7 +412,7 @@ const result = await runner.up();
 // result.skipped = ['001_initial']
 ```
 
-Migrations live in `./migrations/` as timestamped files. The runner tracks which ones have been applied in the database itself, so running migrations twice is safe—it skips what's already done.
+Migrations live in `./migrations/` as timestamped files. The runner tracks which ones have been applied in the database itself, so running migrations twice is safe. It skips what's already done.
 
 You can also use the CLI:
 
@@ -498,26 +468,9 @@ SELECT *, ->wrote->user AS author FROM article;
 SELECT * FROM wrote WHERE out = 'article:abc123';
 ```
 
-## Why This ORM Works
+The ORM doesn't hide SurrealQL from you. It builds strings, executes them, and returns results. There's no hidden abstraction layer you can't debug. If something goes wrong, you can see exactly what the ORM generated.
 
-Zero abstraction.
-
-Your queries map 1:1 to SurrealQL. The ORM builds strings, executes them, returns results. No hidden queries. No ORM magic you can't debug.
-
-**Debug mode**: Set the `DEBUG` environment variable to see what's happening:
-
-- `DEBUG=dali-orm:*` - see all debug output
-- `DEBUG=dali-orm:kit:generate` - code generation only
-- `DEBUG=dali-orm:kit:driver:node` - connection details
-- `DEBUG=dali-orm:kit:runner` - migration steps
-
-Debug output shows generated SQL, connection details, migration progress, and more.
-
-Fluent API that respects immutability. Chain methods, each returns new instance. Safe for concurrent code.
-
-Type safety from your schema. Compile-time errors, not runtime crashes.
-
-Migrations tied to schema definitions. No drift.
+Set `DEBUG=dali-orm:*` to watch queries being built. For more targeted output, use `DEBUG=dali-orm:kit:generate` for code generation, `DEBUG=dali-orm:kit:driver:node` for connection details, or `DEBUG=dali-orm:kit:runner` for migration steps. The debug output shows generated SQL, connection progress, and migration status.
 
 ## Installation
 
@@ -563,6 +516,4 @@ const results = await select(driver, users).execute();
 // results is { id: string, name: string, email: string }[]
 ```
 
-Query builders compile to SurrealQL. Immutability by default. TypeScript inference throughout.
-
-Go try it. Run the demo.
+Query builders compile to SurrealQL with immutability by default and TypeScript inference throughout. Go try it — run the demo.

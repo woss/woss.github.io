@@ -18,6 +18,7 @@ FROM ghcr.io/pnpm/pnpm:11 AS runner
 RUN pnpm runtime set node --global 25
 WORKDIR /app
 COPY --from=builder /app/build ./build
+COPY --from=builder /app/vite.config.ts ./vite.config.ts
 # build-index.ts needs source + node_modules at runtime
 COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/src ./src

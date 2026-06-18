@@ -262,8 +262,8 @@ beyond a single binary. Direct SQLite access means zero telemetry, zero network.
 One-shot ANSI output that renders instantly and exits. No TUI framework, no
 event loop, no interactive mode. Run it, see your data, done.
 
-_If you want a zero-dependency, privacy-first, terminal-native dashboard — ocv
-is the only choice that fits in one binary._
+If you want a zero-dependency, privacy-first, terminal-native dashboard — ocv
+is the only choice that fits in one binary.
 
 ---
 

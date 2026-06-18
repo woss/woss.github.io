@@ -57,7 +57,11 @@ function buildEvent(searchParams?: Record<string, string>, ip?: string): Request
     isDataRequest: false,
     isSubRequest: false,
     route: { id: 'api/search' },
-  } as RequestEvent;
+    fetch: vi.fn(),
+    platform: undefined,
+    tracing: { enabled: false, root: {} as any, current: {} as any },
+    isRemoteRequest: false,
+  } as unknown as RequestEvent;
 }
 
 interface MockChunk {

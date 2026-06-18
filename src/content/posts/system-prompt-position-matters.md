@@ -28,82 +28,39 @@ Commit `07016c5` on the `v1` branch did one thing: it moved the constraint to th
 
 > _CRITICAL — ANTI-HALLUCINATION RULE: Never fabricate, invent, or guess any data — including PR numbers, issue numbers, commit SHAs, dates, statistics, repository metadata, or any specific facts. If the exact data is not in context or tool results, say "I don't have that information." Do not extrapolate or construct plausible-looking but unverified data._
 
-That's it. Zero words removed. Zero added to any other instruction. Just **repositioned**.
+That's it. Zero words removed. Zero added to any other instruction. Just repositioned.
 
-## Why It Works
+## How I Found This
 
-Research across multiple papers confirms that LLMs exhibit **primacy bias** — instructions at the start of a prompt carry more weight than those buried in the middle.
+I was staring at the prompt, trying to figure out why the model kept inventing commit SHAs. The "no invention" rule was there, plain text. The model was ignoring it. I started counting lines — line 84. That far into the prompt, buried between style rules and formatting examples. It wasn't that the model didn't understand the rule. It just didn't prioritize it.
 
-### Primacy Effect of ChatGPT
+So I checked the research. Multiple papers confirm that LLMs exhibit primacy bias — instructions at the start of a prompt carry more weight than those buried in the middle.
 
-**Wang et al., EMNLP 2023**
+**Wang et al., EMNLP 2023** — the original paper establishing primacy bias in instruction-tuned LLMs. They showed that ChatGPT's classification decisions are sensitive to label order in prompts: earlier positions get selected more. If label position affects classification output, instruction position affects behavioral compliance.
 
-The original paper establishing primacy bias in instruction-tuned LLMs: _"ChatGPT's decision is sensitive to the order of labels in the prompt... clearly higher chance to select the labels at earlier positions as the answer."_ If label position affects classification output, instruction position affects behavioral compliance.
+**Cobbina & Zhou, EMNLP 2025** — a systematic study across 10 LLMs from 4 model families (Qwen, Llama3, Mistral, Cohere). They found placing demos at the start of the prompt yields the most stable outputs with gains up to +6 points. Placing demos at the end flips over 30% of predictions. The earliest positions have the highest influence — strongest for small models, but persistent across all sizes.
 
-### DPP Bias: Where to Show Demos in Your Prompt
+**ACL 2025 Findings** on serial position effects — confirmed primacy and recency biases across all tested LLMs. Content in the middle of a prompt is worst recalled. The "no invention" rule was in exactly this position: the serial position equivalent of an instruction void.
 
-**Cobbina & Zhou, EMNLP 2025**
+**Mao et al.** — a study on prompt position optimization showing that the positions used in many published works are often sub-optimal. No single position works universally, but early positions consistently outperform middle positions.
 
-A systematic study across 10 LLMs from 4 model families (Qwen, Llama3, Mistral, Cohere): _"Placing demos at the start of prompt yields the most stable and accurate outputs with gains of up to +6 points. Placing demos at the end of the user message flips over 30% of predictions without improving correctness."_ The earliest positions have the highest influence — and the effect is strongest for smaller models, but persists across all sizes.
+**ACM FAccT 2025** on system prompts as a mechanism of bias — showed that within-system position determines instruction weight. Same content, different position, different behavior. This isn't about user vs system prompt placement; it's about where things sit within the system prompt itself.
 
-### Serial Position Effects of Large Language Models
+## What Changed
 
-**ACL 2025 Findings**
+The original prompt structure put the identity statement at lines 1-2 (primacy zone, strong), then lines 3-83 were context sources and style rules (middle void, weak), then line 84 had the "no invention" rule (weakest position), then lines 85-94 had contact and refusal rules (recency zone, moderate).
 
-Confirmed primacy and recency biases across all tested LLMs. Content in the **middle** of a prompt is worst recalled. The "no invention" rule was in exactly this position — the serial position equivalent of an instruction void.
+The restructured prompt: identity at lines 1-2, then the anti-hallucination rule at line 3 — right in the primacy zone, immediately after the model understands its role, before any other instruction can dilute its weight. Everything else — context, style, GitHub, contact, refusal — comes after.
 
-### Do Prompt Positions Really Matter?
-
-**Lu et al., NAACL 2024**
-
-_"The positions used in many published works are often sub-optimal choices."_ While no single position universally excels, early positions consistently outperform middle positions. The paper recommends prompt position optimization as a lightweight, zero-cost performance lever.
-
-### Position is Power: System Prompts as a Mechanism of Bias
-
-**ACM FAccT 2025**
-
-Demonstrated that _"system-level placements had two key effects: providing model user-information through the system prompt led models to express more negative sentiment when describing demographic groups; and system prompts tended to cause greater deviations from baseline rankings in resource allocation tasks compared to user prompts."_ The key takeaway: **within-system position** determines instruction weight. Same content, different position, different behavior.
-
-## Before vs After
-
-The original prompt structure (config.ts, pre-commit 07016c5):
-
-| Position    | Content                                         | Serial Effect           |
-| ----------- | ----------------------------------------------- | ----------------------- |
-| Lines 1-2   | Identity/role statement                         | **Primacy** ✅          |
-| Lines 3-84  | Context sources, style rules, GitHub formatting | Middle void ❌          |
-| **Line 84** | **"No invention" rule**                         | **Weakest position** ❌ |
-| Lines 85-94 | Contact rules, refusal rule                     | Recency                 |
-
-The restructured prompt (commit 07016c5):
-
-| Position   | Content                                  | Serial Effect             |
-| ---------- | ---------------------------------------- | ------------------------- |
-| Lines 1-2  | Identity/role statement                  | **Primacy** ✅            |
-| **Line 3** | **ANTI-HALLUCINATION RULE**              | **Strongest position** ✅ |
-| Lines 4-94 | Context, style, GitHub, contact, refusal | Post-constraint           |
-
-The anti-hallucination rule now sits in the **primacy zone** — immediately after the model understands its role, before any other instruction can dilute its weight.
+The anti-hallucination rule now sits in the strongest possible position.
 
 ### The Consolidation
 
-The single-rule fix was followed by a full prompt consolidation
-(commit `43bcd29` on Jun 12). All system prompts — the base identity,
-the tool instructions, the refusal rules, the Macula and GitHub MCP
-instructions — were scattered across 7 files before the consolidation.
-After: one file, one review surface.
+The single-rule fix was followed by a full prompt consolidation (commit `43bcd29` on Jun 12). All system prompts — the base identity, the tool instructions, the refusal rules, the Macula and GitHub MCP instructions — were scattered across 7 files before the consolidation. After: one file, one review surface.
 
-The consolidation didn't change the primacy insight. The anti-hallucination
-rule stayed at position 2. But it did surface something else: new rules
-added to individual files (like "NO INFERRING FROM DIR NAMES" for Macula
-tools) were also in weak positions. They got promoted during the merge.
+The consolidation didn't change the primacy insight. The anti-hallucination rule stayed at position 2. But it surfaced something else: new rules added to individual files (like "NO INFERRING FROM DIR NAMES" for Macula tools) were also in weak positions. They got promoted during the merge.
 
-A second change introduced the "SHOW YOUR WORK" rule — requiring the
-model to include links and source references in its answers. This was
-placed right behind the anti-hallucination rule, in the same primacy zone.
-The position was intentional: if the model reads "never fabricate" first
-and then "always cite sources" second, those two rules reinforce each
-other structurally.
+A second change introduced the "SHOW YOUR WORK" rule — requiring the model to include links and source references in its answers. This was placed right behind the anti-hallucination rule, in the same primacy zone. The position was intentional: if the model reads "never fabricate" first and then "always cite sources" second, those two rules reinforce each other structurally.
 
 The persona also evolved. The original prompt opened with:
 
@@ -113,30 +70,11 @@ The restructured prompt opens with:
 
 > I am Haistlin — Daniel Maricic's digital presence...
 
-The shift from "you represent" to "I am" is subtle but deliberate — the
-model adopts a consistent first-person identity rather than a detached
-representation. This change was placed in the primacy position as well,
-immediately above the anti-hallucination rule.
+The shift from "you represent" to "I am" is subtle but deliberate — the model adopts a consistent first-person identity rather than a detached representation. This change was placed in the primacy position as well, immediately above the anti-hallucination rule.
 
-**Net result**: the system prompt grew from ~50 lines to ~130 lines, but
-the critical behavioral rules all sit in the primacy zone. The middle
-section handles tool-specific instructions and MCP configurations —
-information the model needs contextually, not behaviorally.
+Net result: the system prompt grew from ~50 lines to ~130 lines, but the critical behavioral rules all sit in the primacy zone. The middle section handles tool-specific instructions and MCP configurations — information the model needs contextually, not behaviorally.
 
-## The Primacy Heatmap
-
-```mermaid
-flowchart TD
-    subgraph Prompt["Prompt Window"]
-        A["📌 Primacy Zone<br/>Role + Critical Rules<br/>Highest Weight"] --> B["⬜ Middle Zone<br/>Style + Formatting<br/>Lowest Weight"]
-        B --> C["🔖 Recency Zone<br/>Refusal Rules<br/>Moderate Weight"]
-    end
-    D["Instruction Weight"] --> A
-    D --> B
-    D --> C
-```
-
-Instructions placed in the primacy zone get disproportionate attention. The middle zone is where instructions go to be ignored. The recency zone works for boundary rules (refusal) because the model sees them right before generating — but it's unreliable for generative constraints like "don't fabricate data."
+The weight distribution follows a predictable pattern: instructions in the primacy zone get disproportionate attention. The middle zone is where instructions go to be ignored. The recency zone works for boundary rules (refusal) because the model sees them right before generating — but it's unreliable for generative constraints like "don't fabricate data."
 
 ## What This Looks Like in Production
 
@@ -169,17 +107,17 @@ to Daniel Maricic, his professional work, his open-source projects
 (DaliORM, Macula, woss.io), or his hobbies...
 ```
 
-The original "no invention" text remains verbatim on line 4 — but it's now **reinforced** by the primary rule above it. The model reads the constraint first, then sees it echoed in the details. It's not redundant — it's layered reinforcement.
+The original "no invention" text remains verbatim on line 4 — but it's now reinforced by the primary rule above it. The model reads the constraint first, then sees it echoed in the details. It's not redundant — it's layered reinforcement.
 
-## Takeaways
+## What This Means
 
-1. **Before optimizing your prompt content, check your prompt architecture.** Moving existing instructions into better positions costs nothing and can outperform adding new instructions.
+Before you optimize your prompt content, check your prompt architecture. Moving existing instructions into better positions costs nothing and can outperform adding new instructions.
 
-2. **Primacy bias applies to in-prompt instruction weight, not just classification.** The same research that shows label order affects output predicts instruction order affects compliance.
+Primacy bias applies to in-prompt instruction weight, not just classification. The same research that shows label order affects output predicts instruction order affects compliance.
 
-3. **The middle of a system prompt is where instructions go to be ignored.** Put your most critical behavioral constraints in the first 3-5 lines. Everything else — style, formatting, examples — comes after.
+The middle of a system prompt is where instructions go to be ignored. Put your most critical behavioral constraints in the first 3-5 lines. Everything else — style, formatting, examples — comes after.
 
-4. **This fix cost exactly zero tokens.** No words added. No words removed. No tool definitions changed. The behavioral constraint already existed — it was just in the wrong place.
+This fix cost exactly zero tokens. No words added. No words removed. No tool definitions changed. The behavioral constraint already existed — it was just in the wrong place.
 
 ---
 

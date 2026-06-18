@@ -168,6 +168,7 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ua TEXT UNIQUE,
       ip TEXT,
+      device_type TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);

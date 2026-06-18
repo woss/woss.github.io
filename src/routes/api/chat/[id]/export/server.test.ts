@@ -25,17 +25,22 @@ import { GET } from './+server';
 
 const mockMessage = {
   id: 'msg-1',
-  role: 'user',
+  role: 'user' as const,
   content: 'Hello world',
-  sources: null,
+  sources: null as any,
   createdAt: '2025-01-15T10:00:00.000Z',
   tokensIn: 10,
   tokensOut: 50,
   durationMs: 1200,
-  error: null,
-  irrecoverable: null,
-  deletedAt: null,
+  error: undefined,
+  irrecoverable: undefined,
+  deletedAt: undefined,
   queryType: 'general',
+  userId: 'user-1',
+  chatId: 'chat-1',
+  reasoning: '',
+  modelId: 0,
+  maxTokens: 0,
 };
 
 const mockChat = {
@@ -43,6 +48,7 @@ const mockChat = {
   title: 'Test Chat',
   createdAt: '2025-01-15T10:00:00.000Z',
   messageCount: 1,
+  userId: 'user-1',
 };
 
 function buildEvent(params: Record<string, string>, searchParams?: Record<string, string>): RequestEvent {
@@ -63,13 +69,17 @@ function buildEvent(params: Record<string, string>, searchParams?: Record<string
     isDataRequest: false,
     isSubRequest: false,
     route: { id: 'api/chat/[id]/export' },
-  } as RequestEvent;
+    fetch: vi.fn(),
+    platform: undefined,
+    tracing: { enabled: false, root: {} as any, current: {} as any },
+    isRemoteRequest: false,
+  } as unknown as RequestEvent;
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getChat).mockReturnValue(mockChat);
-  vi.mocked(getMessages).mockReturnValue([mockMessage]);
+  vi.mocked(getMessages).mockReturnValue([mockMessage as any]);
   vi.mocked(getToolCallsForMessages).mockReturnValue({});
 });
 
@@ -154,7 +164,7 @@ describe('GET /api/chat/[id]/export', () => {
 
     it('includes tool calls in messages', async () => {
       vi.mocked(getToolCallsForMessages).mockReturnValue({
-        'msg-1': [{ id: 'tc-1', name: 'search', serverId: 'web', durationMs: 300 }],
+        'msg-1': [{ id: 'tc-1', name: 'search', serverId: 'web', durationMs: 300, startedAt: '2025-01-15T10:00:00.000Z', finishedAt: null }],
       });
 
       const res = await GET(buildEvent({ id: 'chat-1' }));
@@ -165,7 +175,7 @@ describe('GET /api/chat/[id]/export', () => {
 
     it('maps system role to assistant in export', async () => {
       const systemMsg = { ...mockMessage, role: 'system', id: 'msg-2' };
-      vi.mocked(getMessages).mockReturnValue([mockMessage, systemMsg]);
+      vi.mocked(getMessages).mockReturnValue([mockMessage, systemMsg as any]);
 
       const res = await GET(buildEvent({ id: 'chat-1' }));
       const body = JSON.parse(await res.text());
@@ -189,7 +199,7 @@ describe('GET /api/chat/[id]/export', () => {
 
     it('includes user and assistant messages in markdown', async () => {
       const assistantMsg = { ...mockMessage, role: 'assistant', id: 'msg-2', content: 'Hi there!' };
-      vi.mocked(getMessages).mockReturnValue([mockMessage, assistantMsg]);
+      vi.mocked(getMessages).mockReturnValue([mockMessage, assistantMsg as any]);
 
       const res = await GET(buildEvent({ id: 'chat-1' }, { format: 'md' }));
       const text = await res.text();
@@ -216,7 +226,7 @@ describe('GET /api/chat/[id]/export', () => {
 
     it('includes tool calls section in markdown', async () => {
       vi.mocked(getToolCallsForMessages).mockReturnValue({
-        'msg-1': [{ id: 'tc-1', name: 'search', serverId: 'web', durationMs: 300 }],
+        'msg-1': [{ id: 'tc-1', name: 'search', serverId: 'web', durationMs: 300, startedAt: '2025-01-15T10:00:00.000Z', finishedAt: null }],
       });
 
       const res = await GET(buildEvent({ id: 'chat-1' }, { format: 'md' }));

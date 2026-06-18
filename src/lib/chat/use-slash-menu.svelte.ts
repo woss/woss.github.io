@@ -3,13 +3,29 @@ import { SLASH_COMMANDS } from './slash-commands';
 export function useSlashMenu(getMessageText: () => string, onSelect: (cmd: string) => void) {
   let showSlashMenu = $state(false);
   let slashSelectedIndex = $state(0);
+  let showAll = $state(false);
+
   const slashFiltered = $derived(
-    getMessageText().startsWith('/')
-      ? SLASH_COMMANDS.filter((c) => c.triggers[0].includes(getMessageText().toLowerCase()))
+    showAll || getMessageText().startsWith('/')
+      ? showAll
+        ? SLASH_COMMANDS
+        : SLASH_COMMANDS.filter((c) => c.triggers[0].includes(getMessageText().toLowerCase()))
       : [],
   );
 
+  function toggle(): void {
+    if (showSlashMenu) {
+      showSlashMenu = false;
+      showAll = false;
+    } else {
+      showSlashMenu = true;
+      showAll = true;
+      slashSelectedIndex = 0;
+    }
+  }
+
   function handleInput(): void {
+    showAll = false;
     if (getMessageText().startsWith('/')) {
       showSlashMenu = true;
       slashSelectedIndex = 0;
@@ -43,6 +59,7 @@ export function useSlashMenu(getMessageText: () => string, onSelect: (cmd: strin
     if (e.key === 'Escape') {
       e.preventDefault();
       showSlashMenu = false;
+      showAll = false;
       return true;
     }
     return false;
@@ -50,6 +67,7 @@ export function useSlashMenu(getMessageText: () => string, onSelect: (cmd: strin
 
   function selectSlashCommand(cmd: string): void {
     showSlashMenu = false;
+    showAll = false;
     onSelect(cmd);
   }
 
@@ -66,6 +84,7 @@ export function useSlashMenu(getMessageText: () => string, onSelect: (cmd: strin
     get slashFiltered() {
       return slashFiltered;
     },
+    toggle,
     handleInput,
     handleKeydown,
     selectSlashCommand,

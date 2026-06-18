@@ -34,6 +34,7 @@
   --animate-fade-in: fade-in 500ms ease-out both;
   --animate-orbit: orbit 2s linear infinite;
   --animate-pulse-center: pulse-center 2s ease-in-out infinite;
+  --animate-tool-fade-out: tool-fade-out 1.2s ease-out both;
 }
 
 @keyframes blink {
@@ -303,8 +304,7 @@ html {
 }
 
 body {
-  min-height: 100vh;
-  position: relative;
+  min-height: 100dvh;
 }
 
 /* Base typography */
@@ -419,5 +419,44 @@ h6 {
   50% {
     opacity: 1;
     transform: scale(1.15);
+  }
+}
+
+@keyframes tool-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 80px;
+    margin-bottom: 4px;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+    max-height: 0;
+    margin-bottom: 0;
+  }
+}
+
+/* ── Ambient glow ── */
+
+@keyframes ambient-pulse {
+  0%, 100% {
+    opacity: 0.08;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.18;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes border-glow {
+  0%, 100% {
+    border-color: rgba(56, 189, 248, 0.35);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.2), inset 0 0 8px rgba(56, 189, 248, 0.05);
+  }
+  50% {
+    border-color: rgba(168, 85, 247, 0.45);
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.35), inset 0 0 12px rgba(168, 85, 247, 0.1);
   }
 }

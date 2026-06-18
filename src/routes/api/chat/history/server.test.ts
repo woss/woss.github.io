@@ -38,7 +38,11 @@ function buildEvent(params: Record<string, string>): RequestEvent {
     isDataRequest: false,
     isSubRequest: false,
     route: { id: 'api/chat/history' },
-  } as RequestEvent;
+    fetch: vi.fn(),
+    platform: undefined,
+    tracing: { enabled: false, root: {} as any, current: {} as any },
+    isRemoteRequest: false,
+  } as unknown as RequestEvent;
 }
 
 beforeEach(() => {

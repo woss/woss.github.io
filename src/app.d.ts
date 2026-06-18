@@ -10,4 +10,15 @@ declare global {
   }
 }
 
+// Fontsource CSS side-effect imports (no explicit TypeScript declarations)
+declare module '@fontsource-variable/ibm-plex-sans';
+declare module '@fontsource-variable/ibm-plex-sans/wght-italic.css';
+declare module '@fontsource/ibm-plex-mono/400.css';
+declare module '@fontsource/ibm-plex-mono/700.css';
+// Vite ?url imports for font WOFF2 files
+declare module '*?url' {
+  const url: string;
+  export default url;
+}
+
 export {};

@@ -1,10 +1,9 @@
 import { publishLive } from '$lib/server/chat-events';
 import { ensureModel, getDb } from '$lib/server/db';
-import { buildRagPrompt, chatStream, chatStreamWithTools } from '$lib/server/llm';
+import { chatStream, chatStreamWithTools } from '$lib/server/llm';
 import type { LLMEvent } from '$lib/server/llm/types';
-import { checkCache, storeCache } from '$lib/server/llm-cache';
 import type { McpToolDef } from '$lib/server/mcp/tools';
-import { getDoomLoopRecoveryPrompt, getToolClassifierUserPrompt } from '../prompts.ts';
+import { getDoomLoopRecoveryPrompt } from '../prompts.ts';
 import { config } from '$lib/server/config';
 import { CAT, createLogger } from '$lib/server/logger';
 import type { ChatMessage } from '$lib/server/openai-provider';
@@ -317,7 +316,7 @@ export async function streamWithRetry(
         }
         lastError = new Error(reason);
         // Disable tools sooner — drop on attempt 2 instead of 3
-        if (attempt >= 2) mcpToolDefs = null;
+        if (attempt === 2) mcpToolDefs = null;
         continue;
       }
 

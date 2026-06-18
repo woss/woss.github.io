@@ -48,6 +48,17 @@
 
   let activeId = $state<string | null>(null);
   let qp = $derived(page.data.queryParams);
+  let readingTime = $derived(Math.max(1, Math.ceil((data.post.body || '').split(/\s+/).filter(Boolean).length / 200)));
+  let scrollPercent = $state(0);
+  $effect(() => {
+    const onScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      scrollPercent = docHeight > 0 ? Math.min((scrollTop / docHeight) * 100, 100) : 0;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  });
 
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '';
@@ -247,6 +258,14 @@
   >Skip to content</a
 >
 
+<div
+  class="fixed top-0 left-0 h-[2px] bg-primary z-50"
+  style="width: {scrollPercent}%"
+  role="progressbar"
+  aria-label="Reading progress"
+  aria-valuenow={scrollPercent}
+></div>
+
 <section class="pb-24 overflow-x-hidden">
   <div class="container max-w-6xl mx-auto px-4">
     <a
@@ -275,7 +294,7 @@
                     src={appendQueryParams(base + '?preset=sys_xl', qp)}
                     alt={data.post.headerImage.alt}
                     width="1200" height="600"
-                    class="w-full object-cover aspect-2/1"
+                    class="w-full object-cover aspect-2/1 max-sm:aspect-3/1"
                     loading="eager"
                   />
                 </picture>
@@ -284,10 +303,11 @@
                   src={data.post.headerImage.url}
                   alt={data.post.headerImage.alt}
                   width="1200" height="600"
-                  class="w-full object-cover aspect-2/1"
+                  class="w-full object-cover aspect-2/1 max-sm:aspect-3/1"
                   loading="eager"
                 />
               {/if}
+              <CopyComponent text={formatPostMd()} toastMessage="Post copied as Markdown" label="Copy as Markdown" class="absolute top-3 right-3 z-10 bg-black/30 hover:bg-black/50 text-white rounded-md" />
               {#if data.imageMeta}
                 <ImageAttribution
                   title={data.imageMeta.title ?? data.post.headerImage.alt}
@@ -311,22 +331,23 @@
                 class="w-full object-cover aspect-2/1"
                 loading="lazy"
               />
+            <CopyComponent text={formatPostMd()} toastMessage="Post copied as Markdown" label="Copy as Markdown" class="absolute top-3 right-3 z-10 bg-black/30 hover:bg-black/50 text-white rounded-md" />
             </figure>
           {/if}
 
-          <header class="mb-12">
+          <header class="mb-6 md:mb-12">
             <h1
               class="font-heading text-2xl/tight md:text-3xl lg:text-4xl font-bold tracking-[-0.03em] m-0 mb-4 text-white"
             >
               {data.post.title}
             </h1>
-            <div class="flex items-center gap-4 flex-wrap mb-6">
+            <div class="flex items-center gap-2 md:gap-4 flex-wrap mb-3 md:mb-6">
               {#if data.post.date}
                 <time
                   datetime={dateAttrib(data.post.date)}
                   class="text-sm text-on-surface-variant font-mono tracking-[0.02em]"
                 >
-                  {formatDate(data.post.date)}
+                  {formatDate(data.post.date)} · {readingTime} min read
                 </time>
               {/if}
               {#if data.post.tags.length > 0}
@@ -336,9 +357,8 @@
                   {/each}
                 </ul>
               {/if}
-              <CopyComponent text={formatPostMd()} toastMessage="Post copied as Markdown" label="Copy as Markdown" />
             </div>
-            <Separator color="primary" size="xs" class="my-8" ui={{ border: 'bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))]' }} />
+            <Separator color="primary" size="xs" class="my-4 md:my-8" ui={{ border: 'bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))]' }} />
           </header>
 
           {#if data.series}

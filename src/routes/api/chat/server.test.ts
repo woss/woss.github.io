@@ -35,7 +35,11 @@ function buildEvent(userId: string | null): RequestEvent {
     isDataRequest: false,
     isSubRequest: false,
     route: { id: 'api/chat' },
-  } as RequestEvent;
+    fetch: vi.fn(),
+    platform: undefined,
+    tracing: { enabled: false, root: {} as any, current: {} as any },
+    isRemoteRequest: false,
+  } as unknown as RequestEvent;
 }
 
 beforeEach(() => {

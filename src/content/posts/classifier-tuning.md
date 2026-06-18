@@ -62,11 +62,11 @@ If the main chat used `deepseek-v4-flash` (a giant reasoning model), the classif
 
 The classifier's prompt was tiny — maybe 20 lines, a few hundred tokens. Firing a 600B-parameter model at it was like using a supercomputer to check if a number is even.
 
-## The Four Options
+## Exploring the Fix
 
-Once I noticed the problem, the solution space was surprisingly rich:
+Once I noticed the problem, I had a few directions to go.
 
-### 1. Separate Model (the simple fix)
+### Separate Model (the simple fix)
 
 Add an `OPENAI_TOOL_CLASSIFY_MODEL` environment variable. Route the classifier to a much smaller model — `ministral-3b`, `SmolLM2-360M`, or whatever tiny model the API serves.
 
@@ -76,13 +76,13 @@ model: config().openai.toolClassifyModel ?? config().openai.model,
 
 Estimated improvement: **7s → <500ms**. A 14x speedup. The trade-off is maintaining the env var and ensuring the tiny model stays available.
 
-### 2. Local Tiny Model (the radical fix)
+### Local Tiny Model (the radical fix)
 
 Run a local model through Ollama — `qwen2.5:0.5b` or similar. No network round-trip, no API latency, no external dependency.
 
 Estimated improvement: **7s → <100ms**. But adds an infrastructure dependency, and the model needs to run on the server. For a classification task this simple, even a 500M-parameter model is overkill — but at least it's local overkill.
 
-### 3. Smarter Keyword Rules (the no-model fix)
+### Smarter Keyword Rules (the no-model fix)
 
 The classifier only fires when keyword checks are inconclusive. The current rules already handle obvious cases (`"show repos"` → github, `"show photos"` → macula). But many ambiguous cases aren't ambiguous at all once you expand the pattern set.
 
@@ -99,19 +99,17 @@ A few patterns that could eliminate the LLM call entirely:
 
 The more patterns the keyword layer catches, the fewer LLM classifications needed. And keyword checks are milliseconds, not seconds.
 
-### 4. Trim Prompt Context (already done)
+### Trim Prompt Context (already done)
 
 The classifier already sliced history to the last 2 exchanges via `.slice(-2)` — this was never a problem. But it's worth checking: any time the caller loads 50 messages but the callee only needs 2, the unnecessary DB fetch is a minor micro-optimization target.
 
 ## What I Actually Did
 
-I went with option 1 (separate model). The classifier always used `.slice(-2)` so context was never bloated — option 4 was already done.
+I went with the separate model approach. The classifier always used `.slice(-2)` so context was never bloated — that was already handled.
 
 The separate model env var let me route the classifier to `mimo-v2.5-free` — a model that's 200x smaller but equally capable of outputting `"none"` when asked "does this need tools?"
 
-Spoiler: it failed. [See below](#mimos-quiet-failure).
-
-No results table to show — the first MiMo request returned an empty answer.
+Spoiler: it failed. No results to show — the first MiMo request returned an empty answer.
 
 ### MiMo's Quiet Failure
 
@@ -125,24 +123,17 @@ The MiMo experiment lasted exactly one request. The log for chat `4d0e8274` told
 
 The classifier got the right answer (`"none"`) despite the model failure, not because of it. The code's fail-safe pattern masked the bug entirely.
 
-**Lesson**: MiMo is a reasoning model. It thinks before it speaks. For a task that needs a one-word answer, that thinking is wasted latency. The `reasoning_effort: 'none'` flag doesn't suppress the `reasoning` field — the model still produces it, and still hits token limits on it.
+Lesson: MiMo is a reasoning model. It thinks before it speaks. For a task that needs a one-word answer, that thinking is wasted latency. The `reasoning_effort: 'none'` flag doesn't suppress the `reasoning` field — the model still produces it, and still hits token limits on it.
 
 I pulled MiMo from the classifier route. It fell back to the main model (DeepSeek V4 Flash) — the same model that originally took 7 seconds, but at least it produces a parseable `"none"` in the `content` field. The `OPENAI_TOOL_CLASSIFY_MODEL` env var stays as an option for future experiments, but defaults to unset.
 
-The real win wasn't a faster model — it was **having the option to swap models per-component**, even if the first swap candidate didn't work out.
+The real win wasn't a faster model — it was having the option to swap models per-component, even if the first swap candidate didn't work out.
 
 ### A Related Problem: The RAG Query Classifier
 
-The tool classifier isn't the only classifier in the system. There's a
-parallel classification step — `classifyQuery` in `query-classifier.ts` —
-that determines whether a query needs RAG context (`rag`), tool
-execution (`tool`), both (`hybrid`), or neither (`meta`).
+The tool classifier isn't the only classifier in the system. There's a parallel classification step — `classifyQuery` in `query-classifier.ts` — that determines whether a query needs RAG context (`rag`), tool execution (`tool`), both (`hybrid`), or neither (`meta`).
 
-The original RAG classifier had its own gate bug. RAG retrieval was
-guarded by a `needsAnyTool` flag — if the tool classifier said no tools,
-RAG was skipped entirely. This created a blind spot: queries that needed
-neither GitHub nor Macula tools (like "summarize the conversation" or
-"What projects have you worked on?") got no RAG context either.
+The original RAG classifier had its own gate bug. RAG retrieval was guarded by a `needsAnyTool` flag — if the tool classifier said no tools, RAG was skipped entirely. This created a blind spot: queries that needed neither GitHub nor Macula tools (like "summarize the conversation" or "What projects have you worked on?") got no RAG context either.
 
 The fix was trivial — remove the gate:
 
@@ -156,25 +147,19 @@ if (needsAnyTool) {
 ragResults = await retrieveContext(query);
 ```
 
-RAG now runs on every query, independent of tool classification. The
-classifiers still serve their original purpose — the tool classifier
-determines which MCP tools to load, the query classifier determines how
-to route the request — but neither can starve the model of context
-anymore.
+RAG now runs on every query, independent of tool classification. The classifiers still serve their original purpose — the tool classifier determines which MCP tools to load, the query classifier determines how to route the request — but neither can starve the model of context anymore.
 
-The lesson applies to both classifiers: **a classifier should gate what
-it classifies, not what its neighbors do.** The tool classifier decides
-which tools. It shouldn't also decide whether RAG runs.
+The lesson applies to both classifiers: a classifier should gate what it classifies, not what its neighbors do. The tool classifier decides which tools. It shouldn't also decide whether RAG runs.
 
 ## The Deeper Lesson
 
-This is a case study in a pattern I've seen across the entire woss.io stack: **defaulting to the biggest gun**.
+This is a case study in a pattern I've seen across the entire woss.io stack: defaulting to the biggest gun.
 
 When you set up a pipeline, you pick a model. The model works. So it gets reused everywhere — for generation, for classification, for routing, for guardrails. And why wouldn't it? It's already loaded, already configured, already working.
 
 But each reuse comes at a cost. A 600B-parameter model doesn't just answer slower — it also reasons more (because it can), it generates more tokens (because it was trained to), and it costs more (because everything is bigger). For a task that requires none of that power, you're paying the full tax for zero benefit.
 
-The right architecture isn't one model that does everything. It's a **spectrum**:
+The right architecture isn't one model that does everything. It's a spectrum:
 
 - 0.5B model → classification, keyword matching, simple routing
 - 3B model → relevance checking, polite responses, short-form generation

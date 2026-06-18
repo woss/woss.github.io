@@ -15,10 +15,14 @@ const JSON_HEADERS = {
   'Cache-Control': 'no-store',
 } as const;
 
+function getUserId(event: RequestEvent): string | null {
+  return event.request.headers.get('x-user-id') ?? event.url.searchParams.get('userId');
+}
+
 // GET /api/messages/[messageId]/reaction?userId=xxx — get existing reaction
 export async function GET(event: RequestEvent): Promise<Response> {
   const messageId = event.params.messageId;
-  const userId = event.url.searchParams.get('userId');
+  const userId = getUserId(event);
 
   if (!messageId) {
     return new Response(JSON.stringify({ error: 'Invalid messageId' }), {
@@ -116,7 +120,7 @@ export async function POST(event: RequestEvent): Promise<Response> {
 // DELETE /api/messages/[messageId]/reaction — remove a reaction
 export async function DELETE(event: RequestEvent): Promise<Response> {
   const messageId = event.params.messageId;
-  const userId = event.url.searchParams.get('userId');
+  const userId = getUserId(event);
 
   if (!messageId) {
     return new Response(JSON.stringify({ error: 'Invalid messageId' }), {

@@ -6,6 +6,8 @@ import { CAT, createLogger } from './logger.js';
 import { initDatabase, DATA_DIR, DB_PATH, DB_WAL_PATH, DB_SHM_PATH, VECTOR_INDEX_PATH } from './schema.js';
 import { randomUUID } from '../utils/random-uuid.js';
 import { getCurrentTraceContext } from './trace-context.js';
+import { isbot } from 'isbot';
+import { UAParser } from 'ua-parser-js';
 
 /** Typed wrapper around better-sqlite3 .all() — avoids scattering `as Record<string, unknown>[]` everywhere. */
 function queryRows<T>(stmt: Database.Statement, ...params: unknown[]): T[] {
@@ -297,13 +299,28 @@ function ensureChat(chatId: string, userId: string, title?: string): void {
 }
 
 /**
+ * Classify a user-agent string into a device type category.
+ * Bot detection via `isbot` library, device form-factor via ua-parser-js.
+ */
+export function classifyDeviceType(ua: string): 'bot' | 'mobile' | 'tablet' | 'desktop' {
+  if (!ua) return 'desktop';
+  if (isbot(ua)) return 'bot';
+  const device = new UAParser(ua).getDevice();
+  if (device.type === 'tablet') return 'tablet';
+  if (device.type === 'mobile') return 'mobile';
+  return 'desktop';
+}
+
+/**
  * Get or create a user agent record.
  * Returns the user_agent id.
  */
 export function getOrCreateUserAgent(ua: string, ip?: string): number {
   const db = getDb();
   const trimmed = ua.slice(0, 500);
-  db.prepare('INSERT OR IGNORE INTO user_agents (ua) VALUES (?)').run(trimmed);
+  const deviceType = classifyDeviceType(trimmed);
+  db.prepare('INSERT OR IGNORE INTO user_agents (ua, device_type) VALUES (?, ?)').run(trimmed, deviceType);
+  db.prepare('UPDATE user_agents SET device_type = ? WHERE ua = ? AND device_type IS NULL').run(deviceType, trimmed);
   if (ip) {
     db.prepare('UPDATE user_agents SET ip = ? WHERE ua = ? AND ip IS NULL').run(ip, trimmed);
   }

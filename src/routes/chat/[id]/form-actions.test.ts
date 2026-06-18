@@ -36,7 +36,7 @@ import { lookupCountry } from '$lib/server/geo';
 import { actions } from './+page.server';
 
 // Helper to build a minimal RequestEvent
-function buildEvent(chatId: string, fields: Record<string, string>): RequestEvent {
+function buildEvent(chatId: string, fields: Record<string, string>): RequestEvent<{ id: string }, '/chat/[id]'> {
   const fd = new FormData();
   for (const [key, value] of Object.entries(fields)) {
     fd.set(key, value);
@@ -56,13 +56,17 @@ function buildEvent(chatId: string, fields: Record<string, string>): RequestEven
     isDataRequest: false,
     isSubRequest: false,
     route: { id: 'chat/[id]' },
-  } as RequestEvent;
+    fetch: vi.fn(),
+    platform: undefined,
+    tracing: { enabled: false, root: {} as any, current: {} as any },
+    isRemoteRequest: false,
+  } as unknown as RequestEvent<{ id: string }, '/chat/[id]'>;
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  lookupCountry.mockReturnValue('US');
-  getChat.mockReturnValue({ id: 'chat-1', userId: 'user-1' });
+  vi.mocked(lookupCountry).mockReturnValue('US');
+  vi.mocked(getChat).mockReturnValue({ id: 'chat-1', title: 'Test Chat', createdAt: '2025-01-15T10:00:00.000Z', messageCount: 1, userId: 'user-1' });
 });
 
 describe('reaction action', () => {

@@ -1,6 +1,4 @@
 <script lang="ts">
-  let { data } = $props();
-
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
@@ -11,8 +9,6 @@
   import { USER_ID_KEY } from '$lib/chat/constants';
   import Seo from '$lib/components/Seo.svelte';
 
-  const MAX_CHARS = 500;
-
   import ChatSidebar from '$lib/components/ChatSidebar.svelte';
   import ChatInput from '$lib/components/ChatInput.svelte';
   import { config } from '$lib/config';
@@ -20,7 +16,11 @@
   import ContactForm from '$lib/components/ContactForm.svelte';
   import { randomUUID } from '$lib/utils/random-uuid';
   import { toast } from 'svelte-sonner';
+  import { Banner } from 'sv5ui';
 
+  let { data } = $props();
+
+  const MAX_CHARS = 500;
   let userId = $state('');
   let messageText = $state('');
   let isLoading = $state(false);
@@ -87,16 +87,6 @@
       });
   });
 
-  // Listen for nav menu requesting sidebar open
-  $effect(() => {
-    if (!browser) return;
-    function handler() {
-      showMobileSidebar.set(true);
-    }
-    window.addEventListener('open-chat-sidebar', handler);
-    return () => window.removeEventListener('open-chat-sidebar', handler);
-  });
-
   onMount(() => {
     featuredReady = true;
   });
@@ -151,6 +141,7 @@
       await goto(resolve(`/chat/${chatId}?q=${encodeURIComponent(trimmed)}`));
     } catch (e) {
       isLoading = false;
+      console.error('Error creating chat:', e);
       toast.error('Failed to create chat.');
     }
   }
@@ -164,7 +155,7 @@
 
 <Seo title="woss.io — Ask me anything" description="Personal site of @woss — AI-powered chat and blog" />
 
-<div class="relative overflow-hidden min-h-[calc(100vh-var(--nav-height)-3rem)] flex">
+<div class="relative overflow-hidden flex-1 flex">
   {#if ready}
     <ChatSidebar
       {chats}
@@ -176,11 +167,12 @@
       ondeleteChat={deleteChat}
       oncancelDelete={() => (showDeleteConfirm = null)}
       showDesktop={hasChats}
+      oncommand={(t) => sendMessage(t)}
     />
 
     <div class="flex-1 flex flex-col min-w-0 max-md:px-4">
       <!-- Top: hero banner -->
-      <!-- {#if data?.hero}
+      {#if data?.hero}
         <div class="px-8 max-md:px-4 pt-6">
           <div class="w-full max-w-200 mx-auto">
             <Banner
@@ -192,7 +184,7 @@
             />
           </div>
         </div>
-      {/if} -->
+      {/if}
 
       <!-- Middle: chat + suggested questions or contact form (centered) -->
       <div

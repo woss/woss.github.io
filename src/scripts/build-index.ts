@@ -11,6 +11,7 @@ import { load as parseYaml } from 'js-yaml';
 import { getDb, closeDb } from '../lib/server/db.js';
 import { embedTexts, releaseExtractor } from '../lib/server/embed.js';
 import { chunkContent } from './chunk-content.js';
+import { initDatabase } from '../lib/server/schema.js';
 import { initLogger, CAT, createLogger } from '../lib/server/logger.js';
 import { centroidDataChanged, embedAndComputeCentroids, saveCentroids } from './seed-data.js';
 
@@ -285,40 +286,18 @@ export async function processFile(file: ContentItem, chunkOffset: number): Promi
 // ---------------------------------------------------------------------------
 
 async function buildIndex(): Promise<void> {
-  // Ensure database exists — create from migrate.sql if missing
+  // Ensure database exists — create schema if missing
   if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
   const dbPath = 'data/woss.db';
   if (!existsSync(dbPath)) {
-    const schemaPath = 'src/scripts/migrate.sql';
-    if (existsSync(schemaPath)) {
-      log.info`Database not found. Creating schema from ${schemaPath}...`;
-      const schemaSql = readFileSync(schemaPath, 'utf-8');
-      const statements = schemaSql
-        .split(';')
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const tmp = new Database(dbPath);
-      tmp.exec('PRAGMA journal_mode = WAL');
-      tmp.exec('PRAGMA foreign_keys = ON');
-      for (const stmt of statements) {
-        if (stmt) {
-          try {
-            tmp.exec(`${stmt};`);
-          } catch (e) {
-            if (stmt.toUpperCase().includes('ALTER TABLE')) {
-              log.warn`Migration skipped (column likely exists): ${stmt.slice(0, 100)}`;
-            } else {
-              throw e;
-            }
-          }
-        }
-      }
-      tmp.close();
-      log.info`Database created successfully.`;
-    } else {
-      log.warn`Schema file not found at ${schemaPath}. DB will be initialized by application code.`;
-    }
+    log.info`Database not found. Initializing schema...`;
+    const tmp = new Database(dbPath);
+    tmp.exec('PRAGMA journal_mode = WAL');
+    tmp.exec('PRAGMA foreign_keys = ON');
+    initDatabase(tmp);
+    tmp.close();
+    log.info`Database created successfully.`;
   }
 
   if (await centroidDataChanged(log)) {

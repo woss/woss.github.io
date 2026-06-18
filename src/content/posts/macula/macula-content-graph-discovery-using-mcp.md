@@ -34,7 +34,7 @@ A content graph isn't a list of files or a database table. It's a web of relatio
 - **Artists** are users. They create the works and organize their rooms. Each artist has a profile and a collection of albums.
 - **Exploring** is traversal. You walk from one node (a room, a tag, an artist) to another along a relationship. Each step is guided by the connections that exist.
 
-This graph structure is natural for AI agents because it mirrors how humans explore: by association, not by address. You don't need to know that image "abc123" is at URL "/api/v2/files/abc123" — you ask "what's tagged with iceland" and walk from there.
+This graph structure is natural for AI agents because it mirrors how humans explore: by association, not by address. You don't need to know that image "abc123" is at URL "/api/v2/files/abc123" — you ask what's tagged with iceland and walk from there.
 
 ## From Many Tools to One Walk
 
@@ -42,8 +42,7 @@ Early AI-to-content interfaces gave agents many small, rigid tools: one for sear
 
 The content graph simplifies this dramatically.
 
-- **Before**: a separate tool for every question ("show me this room," "find me this tag," "who is this artist," "what's in this directory").
-- **Now**: one exploration tool that moves between any connected points in the graph. The agent describes where to start and which relationship to follow. The tool does the rest.
+Before: a separate tool for every question ("show me this room," "find me this tag," "who is this artist," "what's in this directory"). Now: one exploration tool that moves between any connected points in the graph. The agent describes where to start and which relationship to follow. The tool does the rest.
 
 Three leaf operations handle terminal data — when you've arrived at a destination and need the details:
 
@@ -51,7 +50,7 @@ Three leaf operations handle terminal data — when you've arrived at a destinat
 - **Technical metadata**: EXIF, XMP, IPTC data for in-depth technical analysis
 - **User profiles**: batch lookup of creator information
 
-The exploration tool supports 60 possible from→edge pairs — combinations of starting points and relationships to follow. Of those, 11 return data directly (the rest are invalid combinations that return empty results, guiding agents toward valid paths).
+The exploration tool supports 60 possible from-to-edge pairs — combinations of starting points and relationships to follow. Of those, 11 return data directly (the rest are invalid combinations that return empty results, guiding agents toward valid paths).
 
 This consolidation means agents spend less time choosing tools and more time exploring. The interface shrinks from many rigid endpoints to one flexible question: "Where do you want to start, and what do you want to follow?"
 
@@ -102,7 +101,7 @@ traverse({ from:{type:'user', nickname:'creator1'}, edge:'profile' })
         └── Follow same pattern...
 ```
 
-Artist → albums → works. The agent discovers album structure from the profile, walks into each album, and repeats across multiple creators to build a comparative view.
+Artist to albums to works. The agent discovers album structure from the profile, walks into each album, and repeats across multiple creators to build a comparative view.
 
 ### Walk 3: Building a Feature Page with Attribution
 
@@ -130,17 +129,15 @@ traverse({ from:{type:'user', nickname:'sarah'}, edge:'profile' })
 
 **What happens at each step:**
 
-- **Morning**: Sarah asks "Show me my recently published travel photos." Manus walks her profile → travel directory → inspects metadata.
-- **Midday**: A client needs architecture photography under CC-BY. Manus walks Sarah's uploads → filters by license → reads dimensions and specs.
-- **Afternoon**: A travel blog features Sarah's Iceland work. Manus walks the "iceland" keyword → tagged files → inspects candidates → checks presets for the right image sizes.
-
-**The Key Benefit:**
+- **Morning**: Sarah asks "Show me my recently published travel photos." Manus walks her profile, goes to travel directory, inspects metadata.
+- **Midday**: A client needs architecture photography under CC-BY. Manus walks Sarah's uploads, filters by license, reads dimensions and specs.
+- **Afternoon**: A travel blog features Sarah's Iceland work. Manus walks the "iceland" keyword, finds tagged files, inspects candidates, checks presets for the right image sizes.
 
 Sarah doesn't need to manually update her portfolio across multiple platforms. Macula is her single source of truth — images are hosted with full metadata, MCP access lets AI agents read her work with correct attribution, and automatic updates mean new work is instantly available.
 
 ## Why Graph Walks > REST Calls
 
-Content graphs fundamentally change how agents interact with data. Compare a graph walk to traditional REST:
+Content graphs fundamentally change how agents interact with data:
 
 |                  | Graph Walk                             | REST                     |
 | ---------------- | -------------------------------------- | ------------------------ |
@@ -148,9 +145,9 @@ Content graphs fundamentally change how agents interact with data. Compare a gra
 | **Discovery**    | Describe what you want                 | Know the URL patterns    |
 | **Round trips**  | 1-2 calls                              | 3+ sequential requests   |
 | **Versioning**   | Edge definitions evolve                | New endpoint versions    |
-| **Agent fit**    | Natural (entity→relation→entity) | Translation layer needed |
+| **Agent fit**    | Natural (entity to relation to entity) | Translation layer needed |
 
-With REST, an agent fetching all CC-BY images by a specific user needs: (1) look up user ID, (2) query user's files, (3) filter by license server-side or client-side. With a graph walk, the agent starts at the user, follows the license edge, and arrives at the result in one conceptual step.
+With REST, an agent fetching all CC-BY images by a specific user needs to: (1) look up user ID, (2) query user's files, (3) filter by license server-side or client-side. With a graph walk, the agent starts at the user, follows the license edge, and arrives at the result in one conceptual step.
 
 ## Content Graph in Practice
 
@@ -222,22 +219,18 @@ The MCP interface abstracts away our internal implementation. You don't need to 
 
 ### Public by Design
 
-All MCP-accessible content is public. There's no authentication required because the data is already meant to be accessible. This simplifies the architecture and removes the overhead of managing credentials for AI agents.
+All MCP-accessible content is public. No authentication required because the data is already meant to be accessible. This simplifies the architecture and removes the overhead of managing credentials for AI agents.
 
 ### Rate Limiting
 
-We implement intelligent rate limiting to ensure fair access:
+We use two-layer rate limiting to ensure fair access:
 
 - **Slow-down layer**: Progressive delays after 100 requests prevent abuse
 - **Hard limit**: 200 requests per minute maximum
 
 ### Input Validation
 
-Every request is validated and sanitized:
-
-- String inputs are validated against strict patterns
-- Length limits prevent oversized requests
-- Dangerous characters are stripped
+Every request is validated and sanitized — string inputs checked against strict patterns, length limits prevent oversized requests, dangerous characters stripped.
 
 ## Complete Reference
 
@@ -247,7 +240,7 @@ _These tool names map to the content graph operations described above._
 
 | Tool                | Description                                                                                                                                                                                                                                                                                             |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `traverse`          | Universal discovery — navigate relationships across 6 from types × 10 edges. Supports full-text search, keyword lookup, user profiles, file/directory info, and all previous specialized operations. Images included in all traversal results (`contains` and `tagged_files` follow rendition chains). |
+| `traverse`          | Universal discovery — navigate relationships across 6 from types by 10 edges. Supports full-text search, keyword lookup, user profiles, file/directory info, and all previous specialized operations. Images included in all traversal results (`contains` and `tagged_files` follow rendition chains). |
 | `get_file`          | Get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` param for selective retrieval.                                                                                                                                         |
 | `get_file_metadata` | Get full EXIF/XMP/IPTC metadata. Optional `a` parameter for specific metadata fields.                                                                                                                                                                                                                   |
 | `get_users`         | Batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                                    |
@@ -277,7 +270,7 @@ _These tool names map to the content graph operations described above._
 
 | Prompt              | Description                                                                                            |
 | ------------------- | ------------------------------------------------------------------------------------------------------ |
-| `browse_user`       | Explore a creator's profile, directories, and published files via user → directory → file navigation |
+| `browse_user`       | Explore a creator's profile, directories, and published files via user to directory to file navigation |
 | `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                   |
 | `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                      |
 | `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs              |
@@ -291,7 +284,7 @@ _These tool names map to the content graph operations described above._
 
 ---
 
-All tools are read-only. You can query and analyze, but not modify data. This keeps the system safe and predictable.
+All tools are read-only. You can query and analyze, but not modify data. Keeps the system safe and predictable.
 
 ### Works With
 
@@ -318,8 +311,6 @@ When photographers host on Macula, their work becomes part of a growing ecosyste
 3. **Explore available tools** — the server will describe what it can do
 4. **Try a prompt** — start with `browse_user` or `random_exploration`
 5. **Build your workflow** — chain tools together for complex tasks
-
-## Looking Forward
 
 As AI agents become more capable, the ability to discover and reason about creative content becomes increasingly valuable. MCP provides the standardized interface that makes this possible.
 

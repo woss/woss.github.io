@@ -149,7 +149,7 @@
  {#if hasTools}
  <span class="text-xs shrink-0">⚙</span>
  {/if}
- <span class="text-xs font-mono whitespace-nowrap">
+  <span class="text-xs font-mono whitespace-nowrap max-md:hidden">
  {#if hasSources && hasTools}
  {sourceCount} {sourceCount === 1 ? 'source' : 'sources'} · {toolCalls.length} {toolCalls.length === 1 ? 'tool' : 'tools'}
  {:else if hasSources}

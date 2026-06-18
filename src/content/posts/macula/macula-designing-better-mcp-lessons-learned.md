@@ -16,17 +16,15 @@ part_of_series: macula-mcp-series
 header_image: '[Macula Content Graph Visualization](https://u.macula.link/Pi4guk9pQGebQU0lWPIGxQ-7)'
 ---
 
-## The Premise
-
 We set out to build an MCP server for a content platform — files, users, directories, keywords, licenses connected through relationships. Standard stuff. Data model. REST endpoints. We'd done it before.
 
 What we didn't expect was how much we'd have to unlearn.
 
 Every iteration revealed something about how LLMs actually consume tool definitions. Not how we _thought_ they consumed them, not how the spec says they consume them — how they _actually_ behave when given a server with tools, prompts, and resources.
 
-This is the design retrospective. The iterations. The surprises. The lessons.
+This is the design retrospective. The iterations, the surprises, the lessons.
 
-## The Starting Point: 14 Tools
+### Version One: 14 Tools
 
 Version one of our MCP server had 14 tools. Each one mapped to a REST endpoint we already had: `search_files`, `get_user_profile`, `list_keywords`, `get_file_by_license`, `get_random_files`, `get_recent_uploads` — you get the picture.
 
@@ -40,7 +38,7 @@ This isn't an LLM failing — it's a _design_ failing. Fourteen tools means four
 
 The fix wasn't better descriptions. It was fewer tools.
 
-## The Insight: Graph Model
+### The Insight: Graph Model
 
 Our data is a graph. Files connect to users through uploads. Files connect to keywords through tags. Files connect to licenses. Directories contain files. Every entity connects to others through typed relationships.
 
@@ -65,27 +63,27 @@ The result was immediate. The LLM stopped guessing. When in doubt, it called `tr
 
 But this revealed our first real problem.
 
-## Iteration 1: Field Names Are For LLMs, Not Humans
+### Iteration 1: Field Names Are For LLMs, Not Humans
 
-Our File node had a field called `url`. To a developer, this was obvious — it's the URL of the file. But to the LLM, `url` was ambiguous. Is it the download URL? The page URL? The API endpoint? The CDN path? The JSON representation?
+Our File node had a field called `url`. To a developer, this was obvious — it's the URL of the file. But to the LLM, `url` was ambiguous. Is it the download URL? The page URL? The API endpoint? The CDN path?
 
 We watched the LLM use `url` in image embeds, expecting it to be a direct download link. Sometimes it was. Sometimes it redirected. The LLM had no way to know.
 
 We renamed:
 
-- `url` → `rawDataUrl` (the direct download)
+- `url` to `rawDataUrl` (the direct download)
 - Added `htmlPageUrl` (the human-readable page)
 - Added `buyPageUrl` (the purchase/license page)
 
 Suddenly, the LLM stopped guessing. When it needed to display an image, it used `rawDataUrl`. When it needed to link to a page, it used `htmlPageUrl`. The field names _were_ the documentation.
 
-**Lesson**: A field called `url` is useless to an LLM. A field called `rawDataUrl` is self-documenting. Name fields for the model, not for your internal conventions.
+A field called `url` is useless to an LLM. A field called `rawDataUrl` is self-documenting. Name fields for the model, not for your internal conventions.
 
-## Iteration 2: Not Everything Belongs Everywhere
+### Iteration 2: Not Everything Belongs Everywhere
 
 Our File node included a `_links` object — a nested structure with raw, base, json, jsonLd, metadata, copyright, webStatement, license, and buy URLs. This was useful for consuming clients that needed all URL variants.
 
-The LLM kept using `_links.raw` in traverse output to construct image URLs. And it worked — the raw URL was there. But it was a discovery problem: the LLM had to understand nested structures, navigate into `_links`, and extract the right field. Every nested access was a chance for the LLM to hallucinate the path.
+The LLM kept using `_links.raw` in traverse output to construct image URLs. It worked — the raw URL was there. But it was a discovery problem: the LLM had to understand nested structures, navigate into `_links`, and extract the right field. Every nested access was a chance for the LLM to hallucinate the path.
 
 We removed `_links` from traverse output entirely.
 
@@ -93,22 +91,22 @@ Traverse is for _discovery_. You find files, then use `get_file` to get the full
 
 The `_links` object stayed in `get_file` output where it belongs — a consumption endpoint that returns the complete picture.
 
-**Lesson**: Separate discovery from consumption. Discovery returns flat, obvious fields. Consumption returns rich structures. Don't mix them.
+Separate discovery from consumption. Discovery returns flat, obvious fields. Consumption returns rich structures. Don't mix them.
 
-## Iteration 3: Prompts Are Training Wheels
+### Iteration 3: Prompts Are Training Wheels
 
 Even with four tools and clean field names, the LLM sometimes missed the point. It would call `traverse` with `edge: 'search'` when it should have browsed a directory. It would call `get_file` when it should have used `traverse` with `edge: 'info'`.
 
 We added prompts — pre-written messages that guide the LLM through common workflows:
 
 - **display_media** — how to embed images with presets
-- **browse_user** — how to navigate from user → directories → files
+- **browse_user** — how to navigate from user to directories to files
 - **explore_directory** — how to deep-dive into a directory
 - **inspect_metadata** — how to analyze file metadata
 
 Each prompt teaches the LLM a pattern. Not instructions — patterns. The LLM reads the prompt, internalizes the workflow, and applies it contextually.
 
-**Lesson**: Prompts are training data for the LLM. Write them like tutorials, not command lists. Show the pattern, not the procedure.
+Prompts are training data for the LLM. Write them like tutorials, not command lists. Show the pattern, not the procedure.
 
 ## What We Ended Up With
 
@@ -119,7 +117,7 @@ Each prompt teaches the LLM a pattern. Not instructions — patterns. The LLM re
 | Tool              | Purpose                                                         |
 | ----------------- | --------------------------------------------------------------- |
 | traverse          | Graph navigation — discover files, users, directories, keywords |
-| get_file          | Full file metadata including \_links, AI info, copyright        |
+| get_file          | Full file metadata including _links, AI info, copyright         |
 | get_file_metadata | Raw EXIF/XMP/IPTC technical data                                |
 | get_users         | Batch user profile lookup                                       |
 

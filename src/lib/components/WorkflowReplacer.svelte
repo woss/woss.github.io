@@ -1,7 +1,8 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner';
   import { copyToClipboard } from '$lib/utils/clipboard';
-  import { Accordion, Input, Button } from 'sv5ui';
+  import { Accordion, Input } from 'sv5ui';
+  import CopyComponent from '$lib/components/CopyComponent.svelte';
 
   type PlaceholderDef = {
     key: string;
@@ -21,7 +22,7 @@
     workflowFiles: WorkflowFileDef[];
   } = $props();
 
-  function copy(index: number) {
+  function copy(index: number): boolean {
     const wf = workflowFiles[index];
     let result = wf.json;
     const inputs = document.querySelectorAll<HTMLInputElement>(
@@ -43,9 +44,7 @@
       toast.warning(`Unfilled: ${unfilled.join(', ')} — copying anyway`);
     }
 
-    if (copyToClipboard(result)) {
-      toast.success('Workflow JSON copied to clipboard');
-    }
+    return copyToClipboard(result);
   }
 
   function escapeRegex(str: string): string {
@@ -109,14 +108,13 @@
 
       <!-- Copy button -->
       <div class="px-4 pb-4">
-        <Button
-          variant="solid" color="primary" size="sm"
-          onclick={() => copy(i)}
-          class="active:scale-[0.97] font-mono text-xs font-semibold uppercase tracking-[0.06em]"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copy to Clipboard
-        </Button>
+        <CopyComponent
+          text={wf.json}
+          toastMessage="Workflow JSON copied to clipboard"
+          label="copy workflow"
+          square={false}
+          oncopy={() => copy(i)}
+        />
       </div>
     </div>
   {/each}

@@ -1,6 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { CAT, createLogger } from '$lib/server/logger';
+
+const log = createLogger(CAT.llm);
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -73,7 +77,9 @@ export function classifyQuery(embedding: number[]): QueryClass {
     { cls: 'rag' as QueryClass, sim: ragSim },
     { cls: 'meta' as QueryClass, sim: metaSim },
   ];
+
   scores.sort((a, b) => b.sim - a.sim);
+  log.debug`Query classification scores: ${JSON.stringify(scores)}`;
   const [best, second] = scores;
 
   if (best.sim - second.sim > THRESHOLD) return best.cls;

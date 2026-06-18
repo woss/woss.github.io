@@ -16,6 +16,10 @@ const log = createLogger(CAT.search);
 // Embed all seed queries and compute centroids
 log.info(`Embedding ${SEED_QUERIES.length} queries...`);
 const { vectors, toolCentroid, ragCentroid } = await embedAndComputeCentroids(log);
+if (vectors.length === 0) {
+  log.error('No seed queries to embed — SEED_QUERIES is empty');
+  process.exit(1);
+}
 log.info(`Done — ${vectors[0].length} dimensions each`);
 
 // ---------------------------------------------------------------------------
@@ -149,7 +153,7 @@ function pca3d(data: Matrix): PcaResult {
 }
 
 // Save centroid data to JSON
-await saveCentroids({ queries: SEED_QUERIES, vectors, toolCentroid, ragCentroid }, log);
+await saveCentroids({ queries: SEED_QUERIES, vectors, toolCentroid, ragCentroid, metaCentroid: [] }, log);
 log.info(`Centroids saved to ./data/centroid.json`);
 
 // ---------------------------------------------------------------------------
@@ -205,7 +209,7 @@ function y2svg(y: number): number {
   return H - PAD - ((y - minY) / (maxY - minY)) * (H - 2 * PAD);
 }
 
-const COLORS = { tool: '#3b82f6', rag: '#22c55e', hybrid: '#f59e0b' };
+const COLORS = { tool: '#3b82f6', rag: '#22c55e', hybrid: '#f59e0b', meta: '#a855f7' };
 
 /**
  * Build an SVG circle element with optional text label.
@@ -359,9 +363,9 @@ function buildPlotlyHtml3d(
   queryData: { text: string; class: string; x: number; y: number; z: number }[],
   centroids: { label: string; x: number; y: number; z: number }[],
 ): string {
-  const classes = ['tool', 'rag', 'hybrid'];
-  const classNames = ['Tool SEED_QUERIES', 'RAG SEED_QUERIES', 'Ambiguous'];
-  const colors = ['#3b82f6', '#22c55e', '#f59e0b'];
+  const classes = ['tool', 'rag', 'hybrid', 'meta'];
+  const classNames = ['Tool SEED_QUERIES', 'RAG SEED_QUERIES', 'Ambiguous', 'Meta'];
+  const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7'];
 
   let tracesJs = '';
   for (let ci = 0; ci < classes.length; ci++) {

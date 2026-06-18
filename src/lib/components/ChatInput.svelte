@@ -2,7 +2,6 @@
   import type { Chat } from '$lib/chat/types';
   import { useSlashMenu } from '$lib/chat/use-slash-menu.svelte';
   import SlashMenu from './SlashMenu.svelte';
-  import SuggestedQuestions from './SuggestedQuestions.svelte';
   import { config } from '$lib/config';
   import { enhance } from '$app/forms';
   import { Button, Textarea, Banner } from 'sv5ui';
@@ -154,6 +153,22 @@
   </div>
 {/if}
 
+{#snippet toolbar()}
+  <div class="flex items-center justify-between px-3 pb-3 max-md:justify-end">
+    <div>
+      <span class="font-mono text-xs text-on-surface-variant max-md:hidden"
+        >{messagesCount}/{maxMessages} messages</span
+      >
+    </div>
+    <div class="flex-1 text-center px-2 max-md:hidden">
+      <p class="text-xs text-on-surface-variant">AI can make mistakes. Verify important information.</p>
+    </div>
+    <span class="font-mono text-xs text-on-surface-variant" class:text-secondary={isOverLimit}
+      >{charCount}/{MAX_CHARS}</span
+    >
+  </div>
+{/snippet}
+
 {#if variant === 'chat'}
   {#if currentChat?.locked}
     <Banner color="secondary" title="This chat has been locked because the question was off-topic.">
@@ -177,7 +192,13 @@
           onmouseenter={(i: number) => (slash.slashSelectedIndex = i)}
         />
         <!-- Input row -->
-        <div class="flex items-center gap-2 px-3 pt-3 max-md:flex-col max-md:items-stretch max-md:pt-3 max-md:px-2">
+        <div class="flex items-center gap-2 px-3 pt-3 max-md:pt-3 max-md:px-2">
+          <button
+            type="button"
+            onclick={slash.toggle}
+            aria-label="Commands"
+            class="flex items-center justify-center size-8 shrink-0 rounded-md text-sm font-mono font-semibold text-on-surface-variant hover:text-on-surface hover:bg-[rgba(255,255,255,0.06)] transition-all duration-100"
+          >/</button>
           <div class="relative flex-1 min-w-0">
             <div
               contenteditable="true"
@@ -185,7 +206,7 @@
               aria-multiline="true"
               tabindex="0"
               class="flex-1 font-body text-base/normal text-on-surface bg-transparent py-3 outline-none min-h-[44px] max-h-[120px] overflow-y-auto [&:empty:before]:content-[attr(data-placeholder)] [&:empty:before]:text-on-surface-variant [&:empty:before]:pointer-events-none"
-              data-placeholder="Ask Haistlin about Daniel."
+              data-placeholder="Ask Haistlin about my work."
               bind:this={inputEl}
               oninput={handleContentEditableInput}
               onkeydown={handleKeydown}
@@ -198,20 +219,7 @@
             <Button icon="lucide:arrow-up" variant="solid" color="primary" square size="md" disabled={!hasText || isOverLimit} onclick={handleSend} aria-label="Send message" />
           {/if}
         </div>
-        <!-- Bottom toolbar -->
-        <div class="flex items-center justify-between px-3 pb-3 max-md:justify-end">
-          <div>
-            <span class="font-mono text-xs text-on-surface-variant max-md:hidden"
-              >{messagesCount}/{maxMessages} messages</span
-            >
-          </div>
-          <div class="flex-1 text-center px-2 max-md:hidden">
-            <p class="text-xs text-on-surface-variant">AI can make mistakes. Verify important information.</p>
-          </div>
-          <span class="font-mono text-xs text-on-surface-variant" class:text-secondary={isOverLimit}
-            >{charCount}/{MAX_CHARS}</span
-          >
-        </div>
+        {@render toolbar()}
       </div>
     </form>
   {/if}
@@ -227,7 +235,13 @@
       onmouseenter={(i: number) => (slash.slashSelectedIndex = i)}
     />
     <!-- Input row -->
-    <div class="flex items-center gap-2 px-3 pt-3 max-md:flex-col max-md:items-stretch max-md:pt-3 max-md:px-2">
+    <div class="flex items-center gap-2 px-3 pt-3 max-md:pt-3 max-md:px-2">
+      <button
+        type="button"
+        onclick={slash.toggle}
+        aria-label="Commands"
+        class="flex items-center justify-center size-8 shrink-0 rounded-md text-sm font-mono font-semibold text-on-surface-variant hover:text-on-surface hover:bg-[rgba(255,255,255,0.06)] transition-all duration-100"
+      >/</button>
       <div class="relative flex-1 min-w-0">
         {#if messageText.startsWith('/')}
           <span class="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-primary pointer-events-none z-10"
@@ -239,7 +253,7 @@
           autoresize
           bind:value={messageText}
           bind:ref={inputEl as unknown as HTMLTextAreaElement | null}
-          placeholder="Ask Haistlin about Daniel."
+          placeholder="Ask Haistlin about my work."
           maxlength={MAX_CHARS}
           disabled={isLoading}
           oninput={handleTextareaInput}
@@ -253,20 +267,6 @@
         <Button icon="lucide:arrow-up" variant="solid" color="primary" square size="md" disabled={!hasText || isOverLimit} onclick={handleSend} aria-label="Send message" />
       {/if}
     </div>
-    <!-- Bottom toolbar -->
-    <div class="flex items-center justify-between px-3 pb-3 max-md:justify-end">
-      <div>
-        <span class="font-mono text-xs text-on-surface-variant max-md:hidden"
-          >{messagesCount}/{maxMessages} messages</span
-        >
-      </div>
-      <div class="flex-1 text-center px-2 max-md:hidden">
-        <p class="text-xs text-on-surface-variant">AI can make mistakes. Verify important information.</p>
-      </div>
-      <span class="font-mono text-xs text-on-surface-variant" class:text-secondary={isOverLimit}
-        >{charCount}/{MAX_CHARS}</span
-      >
-    </div>
+    {@render toolbar()}
   </div>
-  <SuggestedQuestions disabled={isLoading} onquestionclick={onsuggested} />
 {/if}

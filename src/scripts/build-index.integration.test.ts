@@ -1,26 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
-import { readFileSync, existsSync, unlinkSync, mkdirSync } from 'node:fs';
+import { existsSync, unlinkSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { initDatabase } from '../lib/server/schema.js';
 import { parseSlugHashRows, computeChanges, generateChunkId } from './build-index.js';
 import type { FileEntry } from './build-index.js';
 
 const TEST_DB_PATH = join(process.cwd(), 'data/test-woss.db');
 
 function cleanSchema(db: Database.Database): void {
-  const schemaPath = join(process.cwd(), 'src/scripts/migrate.sql');
-  const schema = readFileSync(schemaPath, 'utf-8');
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA foreign_keys = ON');
-  for (const stmt of schema.split(';').map((s) => s.trim()).filter(Boolean)) {
-    try {
-      db.exec(`${stmt};`);
-    } catch (e) {
-      // Skip ALTER TABLE failures on fresh DB (columns already exist from CREATE TABLE)
-      if (stmt.toUpperCase().includes('ALTER TABLE')) continue;
-      throw e;
-    }
-  }
+  initDatabase(db);
 }
 
 describe('build-index integration (real SQLite)', () => {

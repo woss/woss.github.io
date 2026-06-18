@@ -54,33 +54,9 @@ Every choice was deliberate.
 
 This wasn't a straight build. It was three distinct phases, each revealing new constraints that forced the architecture to evolve.
 
-```mermaid
-flowchart TD
-    A["Phase 1: Following Tutorials"] --> B["Simple LLM Chat with DeepSeek"]
-    B --> C["Phase 2: Model Switch Bottlenecks"]
-    C --> D["Tried Qwen, Gemma, Mistral"]
-    D --> E["Format Drift: XML vs JSON Tool Calls"]
-    E --> F["Recursive runRound with Invariant Tools"]
-    F --> G["Phase 3: Minimizing the LLM"]
-    G --> H["Centroid Query Classification"]
-    H --> I["RAG-Only Path for Factual Questions"]
-    I --> J["LLM Cache for Repeated Queries"]
-    J --> K["Current Hybrid Architecture"]
-```
-
 ### Phase 1: Following the Tutorials
 
 Every project starts with docs. I followed the Vercel AI SDK tutorials, got a streaming chat working with DeepSeek in an afternoon. The model called tools, returned answers, everything worked beautifully — inside the tutorial sandbox.
-
-```mermaid
-flowchart TD
-    subgraph Tutorial["Tutorial Flow"]
-        A1[User Question] --> B1[streamText with Tools]
-        B1 --> C1[Model Calls Tool]
-        C1 --> D1[Tool Result to Next Round]
-        D1 --> E1[Model Synthesizes Answer]
-    end
-```
 
 The docs show a clean flow: question → tool call → answer. No edge cases, no format drift, no infinite loops. It was almost too easy. I remember thinking: this is dangerously easy. That's usually when the architecture starts lying to you.
 
@@ -100,19 +76,6 @@ A few more iterations followed. Renamed `url` to `rawDataUrl` so the LLM knew it
 
 But now the AI had two tool-kits: GitHub (repos, code, issues) and Macula (photos, media, metadata). And zero instructions on which one to grab.
 
-```mermaid
-flowchart TD
-    subgraph SingleMCP["Single MCP"]
-        A1[Question] --> B1[GitHub Tools]
-    end
-    subgraph MultiMCP["Multi MCP"]
-        A2[Question] --> B2{Which Server?}
-        B2 -->|"Code/Repos"| C2[GitHub Tools]
-        B2 -->|"Photos/Media"| D2[Macula Tools]
-        B2 -->|"Both"| E2[Both Servers]
-    end
-```
-
 That question birthed the tool routing architecture. Keyword scanning grew a second path — `needsGithubTools()` for "repo" and "PR", `needsMaculaTools()` for "photo" and "portfolio". The system prompt receives conditional sections. A lightweight LLM call became the tiebreaker for fuzzy "show me your work" messages. One LLM, two tool-kits, zero confusion.
 
 I tested locally, putting myself in a recruiter's shoes — I've been on both sides of the hiring table — asking "give me honest evaluation of daniel for senior SRE role" and "how does he fit an AI evangelist role focused on driving AI adoption?" and watching the AI pull my entire professional profile — repos, PRs, contributions, photography, career history — into answers that compared me against each role. This would've been a massive time saver when I was hiring.
@@ -124,50 +87,19 @@ Then I tried switching models. DeepSeek → Qwen → Gemma → Mistral. Each mod
 - DeepSeek: OpenAI-compatible JSON function-calling. Clean, standard.
 - Qwen: Hybrid — OpenAI JSON via API, XML-like `<|tool_call_start|>` tags via Qwen-Agent.
 - Gemma: No native tool-call format — relies on generic chat template. Inconsistent with nested schemas.
-- Mistral: Native JSON with strict grammar enforcement. `[TOOL_CALLS][FUNC_NAME][ARGS]{json}` wire format."
+- Mistral: Native JSON with strict grammar enforcement. `[TOOL_CALLS][FUNC_NAME][ARGS]{json}` wire format.
 
 The result was a stream of `<tool_calls>` XML leaking into the answer text. The synthesis round — designed to produce the final answer without calling more tools — made it worse by removing tool definitions mid-response. Models that expected tools hallucinated their calling format. Every model had its own dialect for tool calling and none of them warned you until the output was already on the page.
 
-```mermaid
-flowchart TD
-    subgraph Broken["Broken Flow"]
-        A2[Question] --> B2[Round 1: streamText with Tools]
-        B2 --> C2[Model Calls Tools OK]
-        C2 --> D2[Results Injected]
-        D2 --> E2[Round 2: Synthesis sans Tools]
-        E2 --> F2[Model Outputs XML Tool Calls as Text]
-        F2 --> G2[Answer Contains Leaked Syntax]
-    end
-```
+Here's how it broke: round 1 ran with tools, model called them fine. Round 2 was a synthesis round with a different system prompt and no tool definitions. The model, having just used tools, now found them missing — so it tried to call them anyway, outputting `<tool_calls>` XML as raw text. That leaked into the answer on the page.
 
 The fix was architectural — not a patch. Remove the synthesis round entirely. Every round now runs with identical tools, system prompt, and model instance. The model always has native function calling available. No format drift because the context never changes between rounds.
-
-```mermaid
-flowchart TD
-    subgraph Fixed["Fixed Flow"]
-        A3[Question] --> B3[Round 1: streamText with Tools]
-        B3 --> C3{Tool Calls?}
-        C3 -->|Yes| D3[Inject Results → Round 2]
-        D3 --> B3
-        C3 -->|No| E3[Return Answer]
-    end
-```
 
 This became the "Multi-Round Invariant Architecture" — every round identical, recursion capped at MAX_ROUNDS (default 3), text continuity enforced by a `\n\n` separator between rounds. Tools (both GitHub and Macula) are always available, so the model never needs to guess the format — whether it's searching repos or browsing portfolio images.
 
 ### Phase 3: Minimizing the LLM
 
 With multi-round tool calling working, a new problem surfaced: **cost and latency**. Every question hit the LLM — even the simple ones. "Where did Daniel work in 2023?" doesn't need a 70B parameter model. It needs a vector search.
-
-```mermaid
-flowchart TD
-    subgraph CostProblem["The Problem"]
-        A4[Every Question] --> B4[Embed Query]
-        B4 --> C4[LLM Call Always]
-        C4 --> D4[Latency 5 to 10 seconds]
-        C4 --> E4[High Token Cost]
-    end
-```
 
 The solution is a three-layer decision system:
 
@@ -177,22 +109,7 @@ The solution is a three-layer decision system:
 
 **3. LLM cache.** Stores responses for identical and near-identical questions. Same embedding plus cosine similarity against previous queries. Cache hit returns in under 50ms with zero LLM inference. Configurable similarity threshold — tune between exact-match-only and close-enough.
 
-```mermaid
-flowchart TD
-    subgraph Current["Current Flow"]
-        A5[Question] --> B5[Embed Query]
-        B5 --> C5{Cache Hit?}
-        C5 -->|Yes under 50ms| D5[Return Cached Answer]
-        C5 -->|No| E5{Centroid Classification}
-        E5 -->|RAG| F5[Vector Search → Context → LLM]
-        E5 -->|Tool| G5[Skip RAG → Load MCP Tools → Multi-Round LLM]
-        E5 -->|Hybrid| H5[Vector Search + Tools → Multi-Round LLM]
-        F5 --> I5[LLM Answer]
-        G5 --> I5
-        H5 --> I5
-        I5 --> J5[Cache Answer]
-    end
-```
+The flow works like this: a question comes in, gets embedded, checks the cache. Cache hit returns immediately. Cache miss hits the centroid classifier — if it's a RAG question, vector search feeds context directly to the LLM with no tool calls. Tool questions skip RAG and load MCP tools for multi-round execution. Hybrid questions do both. The result gets cached for next time.
 
 The result: roughly 60% of questions never hit the LLM at full depth. Cache handles repeats, centroid classification prevents unnecessary RAG searches, and the RAG-only path cuts latency by half for factual queries. The full multi-round tool flow — whether calling GitHub for repos or Macula for portfolio images — only runs when actually needed.
 
@@ -410,7 +327,7 @@ The visual design follows a few principles:
 
 **Animations that serve purpose**. `message-in` for new chat messages, `page-enter` for route transitions, `pulse-dot` for the typing indicator. Subtle, non-disruptive, intentional. No loading spinners — the streaming response IS the loading state.
 
-## Lessons Learned
+## What Building This Taught Me
 
 **Local embeddings are viable**. I started this project assuming I'd need an external embedding API (OpenAI, Cohere, etc.). Transformers.js proved me wrong. The BGE model runs comfortably in a $10/month VPS. Inference takes ~50ms per query. No API costs, no rate limits, no data leaving the server.
 
@@ -426,7 +343,7 @@ The visual design follows a few principles:
 
 **Your personal site should prove what you build**. The site is a showcase, but it's also a testbed. MCP integration, local embeddings, streaming LLM responses — these are technologies I work with daily, and the site proves they work in production. A static portfolio page tells people what you've done. An AI-powered one shows them.
 
-- **System prompt position matters as much as content.** The "no invention" rule was on line 84 — sandwiched between identity and style instructions, reading like a suggestion, not a constraint. Research confirms LLMs exhibit primacy bias — instructions at the top carry more weight, middle content gets deprioritized (Wang et al., EMNLP 2023; Cobbina & Zhou, EMNLP 2025). Moving the anti-hallucination rule to the second paragraph — right after role definition — put the most critical instruction in the primacy zone without changing a single word of content. [System Prompt Position Matters](/posts/system-prompt-position-matters) documents the full analysis and restructured prompt.
+**System prompt position matters as much as content.** The "no invention" rule was on line 84 — sandwiched between identity and style instructions, reading like a suggestion, not a constraint. Research confirms LLMs exhibit primacy bias — instructions at the top carry more weight, middle content gets deprioritized (Wang et al., EMNLP 2023; Cobbina & Zhou, EMNLP 2025). Moving the anti-hallucination rule to the second paragraph — right after role definition — put the most critical instruction in the primacy zone without changing a single word of content. [System Prompt Position Matters](/posts/system-prompt-position-matters) documents the full analysis and restructured prompt.
 
 ## What's Next
 

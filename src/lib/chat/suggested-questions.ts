@@ -22,26 +22,27 @@ export interface SeedQuery {
 
 export const SEED_QUERIES: SeedQuery[] = [
   // Tool queries
-  { text: "Show me Daniel's pull requests", class: 'tool', suggested: 5 },
   { text: "Search GitHub for Daniel's repositories", class: 'tool' },
   { text: "Find Daniel's open issues on GitHub", class: 'tool' },
   { text: 'What commits has Daniel made', class: 'tool' },
   { text: 'How many stars does woss-io have', class: 'tool' },
   { text: 'Show me the open issues on woss.io', class: 'tool' },
   { text: 'Who contributed to woss-io recently', class: 'tool' },
-  { text: "Search GitHub for Daniel's open source contributions", class: 'tool', suggested: 7 },
 
   // RAG queries
   { text: 'Tell me about Daniel', class: 'rag', suggested: 1 },
   { text: "Describe Daniel's work experience", class: 'rag' },
   { text: 'What projects has Daniel founded?', class: 'rag', suggested: 4 },
   { text: 'What skills and technologies does Daniel use', class: 'rag' },
-  { text: "Tell me about Daniel's experience with copyrights and IP?", class: 'rag', suggested: 9 },
+  { text: 'Tell me about woss.io', class: 'rag' },
+  { text: "Tell me about Daniel's experience with copyrights and IP?", class: 'rag', suggested: 5 },
   { text: 'What DevOps and cloud experience does Daniel have?', class: 'rag', suggested: 6 },
 
   // Personal development queries
   { text: 'How has Daniel grown as a software developer', class: 'rag' },
   { text: 'What did Daniel learn building Anagolay Network', class: 'rag' },
+  { text: 'What did Daniel learn building Macula', class: 'rag' },
+  { text: 'What did Daniel learn building Woss.io', class: 'rag' },
   { text: "Tell me about Daniel's entrepreneurial journey", class: 'rag' },
   { text: 'What leadership lessons did Daniel learn at Kelp Digital', class: 'rag' },
   { text: "How did Daniel's platform engineering skills grow at Ipsos", class: 'rag' },
@@ -52,7 +53,6 @@ export const SEED_QUERIES: SeedQuery[] = [
   // Hybrid queries
   { text: "Show me Daniel's portfolio", class: 'hybrid', suggested: 2 },
   { text: "Show me Daniel's AI projects and implementations", class: 'hybrid', suggested: 3 },
-  { text: "Tell me about Daniel's experience with blockchain", class: 'hybrid', suggested: 8 },
   { text: "Daniel's experience and his recent PRs", class: 'hybrid' },
   { text: 'What open source projects has Daniel contributed to', class: 'hybrid' },
   { text: 'Tell me about Daniel and his GitHub activity', class: 'hybrid' },

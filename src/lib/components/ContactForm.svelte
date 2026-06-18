@@ -11,20 +11,12 @@
  ondismiss = () => {},
  /* eslint-disable-next-line no-useless-assignment -- written to propagate via $bindable() to parent */
  contactDismissed = $bindable(false),
- noHeader = false,
- } = $props();
+  noHeader = false,
+  overlay = false,
+  } = $props();
 
  let contactSubmitted = $state(false);
  let contactError = $state('');
-
- $effect(() => {
- if (contactSubmitted && browser) {
- const timer = setTimeout(() => {
- dismissContactForm();
- }, 4000);
- return () => clearTimeout(timer);
- }
- });
 
  let isSubmittingContact = $state(false);
  let contactName = $state('');
@@ -35,7 +27,10 @@
 
  async function submitContact(e: Event): Promise<void> {
  e.preventDefault();
- if (!contactName.trim() || !contactEmail.trim()) return;
+  if (!contactName.trim() || !contactEmail.trim()) {
+    contactError = 'Name and email are required.';
+    return;
+  }
  isSubmittingContact = true;
  contactError = '';
  try {
@@ -54,10 +49,11 @@
  if (!res.ok) throw new Error('Failed to submit');
  contactSubmitted = true;
  toast.success('Message sent!');
- } catch {
- contactError =
- 'Something went wrong. Try again or email daniel@woss.io directly.';
- } finally {
+  } catch (err) {
+    console.error('Contact form submission failed:', err);
+  contactError =
+  'Something went wrong. Try again or email daniel@woss.io directly.';
+  } finally {
  isSubmittingContact = false;
  }
  }
@@ -86,9 +82,9 @@
 </script>
 
 {#if showContactForm && !contactSubmitted}
- <div
- class="border-t border-[rgba(255,255,255,0.08)] bg-linear-to-b from-[rgba(0,218,140,0.015)] to-transparent"
- >
+  <div
+  class="{overlay ? '' : 'border-t border-[rgba(255,255,255,0.08)] bg-linear-to-b from-[rgba(0,218,140,0.015)] to-transparent'}"
+  >
  <div class="p-8 max-md:px-4 max-w-[520px] mx-auto">
  {#if !noHeader}
  <div class="flex items-center gap-3 mb-5">
@@ -178,78 +174,50 @@
  <div class="flex items-center gap-3 pt-0.5">
       <Button
         type="submit"
+        variant="solid" color="primary"
         loading={isSubmittingContact}
         disabled={isSubmittingContact}
-        class="flex items-center gap-2 px-6 py-2.5 font-body text-sm font-medium text-surface bg-primary border-0 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-[0_0_24px_rgba(0,218,140,0.2)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        ><line x1="22" y1="2" x2="11" y2="13" /><polygon
-          points="22 2 15 22 11 13 2 9 22 2" /></svg
-        >
-        Send
-      </Button>
- <button
- type="button"
- onclick={dismissContactForm}
- class="flex items-center gap-1.5 px-3.5 py-2.5 font-body text-xs text-outline bg-transparent border border-[rgba(255,255,255,0.06)] rounded-lg cursor-pointer transition-all duration-200 hover:text-on-surface-variant hover:border-[rgba(255,255,255,0.12)] hover:bg-white/2 active:scale-95"
- >
- <svg
- width="12"
- height="12"
- viewBox="0 0 24 24"
- fill="none"
- stroke="currentColor"
- stroke-width="2"
- stroke-linecap="round"
- ><line x1="18" y1="6" x2="6" y2="18" /><line
- x1="6"
- y1="6"
- x2="18"
- y2="18"
- /></svg
- >
- Not now
- </button>
+        label="Send"
+        leadingIcon="lucide:send"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onclick={dismissContactForm}
+        label="Not now"
+        leadingIcon="lucide:x"
+      />
  </div>
  </form>
  </div>
  </div>
 {:else if contactSubmitted}
- <div
- class="border-t border-[rgba(255,255,255,0.08)] bg-linear-to-b from-[rgba(0,218,140,0.015)] to-transparent"
- >
- <div class="p-8 max-md:px-4 max-w-[520px] mx-auto">
- <div class="flex items-center gap-3">
- <div
- class="flex items-center justify-center size-10 rounded-full bg-primary/10 border border-primary/20 shrink-0"
- >
- <svg
- width="18"
- height="18"
- viewBox="0 0 24 24"
- fill="none"
- stroke="currentColor"
- stroke-width="2"
- stroke-linecap="round"
- stroke-linejoin="round"
- class="text-primary"><polyline points="20 6 9 17 4 12" /></svg
- >
- </div>
- <div>
- <p class="font-heading text-sm text-primary">Message sent!</p>
- <p class="font-body text-xs text-on-surface-variant mt-0.5">
- Thanks for reaching out. Daniel will get back to you soon.
- </p>
- </div>
- </div>
- </div>
- </div>
+  {#if overlay}
+    <div class="p-8 text-center">
+      <div class="flex flex-col items-center gap-3">
+        <div class="flex items-center justify-center size-12 rounded-full bg-primary/10 border border-primary/20">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><polyline points="20 6 9 17 4 12" /></svg>
+        </div>
+        <div>
+          <p class="font-heading text-base text-primary">Message sent!</p>
+          <p class="font-body text-sm text-on-surface-variant mt-1">Thanks. Daniel will get back to you soon.</p>
+        </div>
+      </div>
+    </div>
+  {:else}
+    <div class="border-t border-[rgba(255,255,255,0.08)] bg-linear-to-b from-[rgba(0,218,140,0.015)] to-transparent">
+      <div class="p-8 max-md:px-4 max-w-[520px] mx-auto">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center size-10 rounded-full bg-primary/10 border border-primary/20 shrink-0">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><polyline points="20 6 9 17 4 12" /></svg>
+          </div>
+          <div>
+            <p class="font-heading text-sm text-primary">Message sent!</p>
+            <p class="font-body text-xs text-on-surface-variant mt-0.5">Thanks for reaching out. Daniel will get back to you soon.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
 {/if}

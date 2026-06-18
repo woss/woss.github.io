@@ -55,7 +55,11 @@ function buildEvent(overrides: {
     isDataRequest: false,
     isSubRequest: false,
     route: { id: 'api/leads/contact-intent' },
-  } as RequestEvent;
+    fetch: vi.fn(),
+    platform: undefined,
+    tracing: { enabled: false, root: {} as any, current: {} as any },
+    isRemoteRequest: false,
+  } as unknown as RequestEvent;
 }
 
 beforeEach(() => {
@@ -106,7 +110,7 @@ describe('POST /api/leads/contact-intent', () => {
         request,
         getClientAddress: () => '127.0.0.1',
         url: new URL('http://localhost'),
-      } as RequestEvent;
+      } as unknown as RequestEvent;
       const res = await POST(event);
       expect(res.status).toBe(400);
       const json = await res.json();

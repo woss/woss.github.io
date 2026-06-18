@@ -33,7 +33,11 @@ function buildEvent(chatId: string | null): RequestEvent {
     isDataRequest: false,
     isSubRequest: false,
     route: { id: 'api/chat/[id]/messages' },
-  } as RequestEvent;
+    fetch: vi.fn(),
+    platform: undefined,
+    tracing: { enabled: false, root: {} as any, current: {} as any },
+    isRemoteRequest: false,
+  } as unknown as RequestEvent;
 }
 
 beforeEach(() => {
@@ -57,7 +61,7 @@ describe('GET /api/chat/[id]/messages', () => {
     ];
     const mockToolCalls = {
       'msg-2': [
-        { id: 'tc-1', name: 'search', server_id: 'server-1', started_at: '2024-01-01', finished_at: '2024-01-01' },
+        { id: 'tc-1', name: 'search', serverId: 'server-1', startedAt: '2024-01-01', finishedAt: '2024-01-01', durationMs: null },
       ],
     };
 

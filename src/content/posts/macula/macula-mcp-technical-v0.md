@@ -15,35 +15,21 @@ part_of_series: macula-mcp-series
 header_image: '[Building a Public MCP Server](https://u.macula.link/G_6XL5TeQbS0g3SkbxyWDQ-7)'
 ---
 
-## Introduction
+The Model Context Protocol is becoming the standard way to connect AI agents to external data sources. When we decided to expose our Unified Link service through MCP, we faced an unusual constraint: we needed a public, read-only MCP server that could serve AI agents without authentication while still being production-grade secure.
 
-The Model Context Protocol (MCP) is rapidly becoming the standard for connecting AI agents to external data sources. When we decided to expose our Unified Link service through MCP, we faced a unique challenge: creating a **public, read-only MCP server** that could serve AI agents without authentication while maintaining production-grade security.
+We had a public API (`unified-link`) that served metadata about files, users, and keywords. We wanted AI agents to access this data through MCP, but the requirements were specific. No authentication (the data is already public). Read-only only. Production-grade rate limiting, input validation, and SQL injection protection. It needed to scale horizontally. And we wanted minimal dependencies.
 
-This is the story of how we built it.
-
-## The Problem
-
-We had a public API (`unified-link`) that served metadata about files, users, and keywords. We wanted AI agents to access this data through MCP, but our requirements were specific:
-
-- **Public access** — No authentication required (data is already public)
-- **Read-only** — Only safe, non-destructive operations
-- **Production-ready** — Rate limiting, input validation, SQL injection protection
-- **Scalable** — Should work with multiple server instances
-- **Simple** — Minimal dependencies, maintainable code
+Here's how we built it.
 
 ## Key Design Decisions
 
-### 1. Direct SDK, Not Wrappers
+### Direct SDK, Not Wrappers
 
-We chose to use `@modelcontextprotocol/sdk` directly instead of wrapper libraries. This gave us:
+We used `@modelcontextprotocol/sdk` directly instead of wrapper libraries. This gave us full control over transport behavior, no unnecessary abstractions, and direct access to MCP specification features.
 
-- Full control over transport behavior
-- No unnecessary abstractions
-- Direct access to MCP specification features
+### Stateless Mode
 
-### 2. Stateless Mode
-
-The most impactful decision was using **stateless mode** for session management.
+The most impactful decision was using stateless mode for session management.
 
 ```typescript
 const transport = new StreamableHTTPServerTransport({
@@ -51,17 +37,11 @@ const transport = new StreamableHTTPServerTransport({
 });
 ```
 
-**Benefits:**
+Benefits: no session memory leaks, works with any number of server instances (no sticky sessions), no Redis needed for session storage, restart tolerant, simpler code.
 
-- No session memory leaks
-- Works with any number of server instances (no sticky sessions)
-- No Redis needed for session storage
-- Restart tolerant
-- Simpler code
+The trade-off is that agents reinitialize after disconnect. For a read-only public service, this is perfectly acceptable.
 
-**Trade-off:** Agents reinitialize after disconnect. For a read-only public service, this is perfectly acceptable.
-
-### 3. Zod for Validation
+### Zod for Validation
 
 We used Zod (already in our codebase) for input validation:
 
@@ -75,9 +55,9 @@ export const GetFileInputSchema = z.object({
 });
 ```
 
-### 4. Defense in Depth
+### Defense in Depth
 
-We implemented multiple layers of security:
+Multiple layers of security:
 
 | Layer                  | Protection                            |
 | ---------------------- | ------------------------------------- |
@@ -155,7 +135,7 @@ We exposed 14 read-only tools organized by domain:
 ### Search (3)
 
 | Tool                    | Input                    | Description         |
-| ----------------------- | ------------------------ | ------------------- |
+| ----------------------- | -----------------------  | ------------------- |
 | `search_keywords`       | `search?, page?, limit?` | Search keywords     |
 | `list_files_by_keyword` | `keyword`                | Files for a keyword |
 | `list_files_by_license` | `license, limit?, page?` | Files by license    |
@@ -246,12 +226,7 @@ await instance.register(fastifyRateLimit, {
 
 ## Development vs Production
 
-When `isDev` is true:
-
-- Rate limiting disabled
-- Slow-down disabled
-
-This allows easy local testing while keeping production secure.
+When `isDev` is true, rate limiting and slow-down are disabled. Makes local testing easy while keeping production secure.
 
 ## Results
 
@@ -269,22 +244,21 @@ This allows easy local testing while keeping production secure.
 
 ### What Worked
 
-1. **Stateless mode** — Perfect for public read-only services
-2. **Direct SDK usage** — No abstraction overhead
-3. **Defense in depth** — Multiple security layers
-4. **Zod schemas** — Single source of truth for validation and types
+**Stateless mode** — perfect for public read-only services. **Direct SDK usage** — no abstraction overhead. **Defense in depth** — multiple security layers. **Zod schemas** — single source of truth for validation and types.
 
 ### What We'd Do Differently
 
-1. **Stateless from day one** — We initially used stateful sessions, then switched
-2. **Centralized error handling** — Would have saved time on error responses
-3. **Tool categories** — Grouping tools would help agent discovery
+**Stateless from day one.** We initially used stateful sessions, then switched. Would have saved the migration effort.
 
-## Conclusion
+**Centralized error handling.** We built error responses ad-hoc and paid for it later. A single error handler from the start would have saved time.
 
-Building a public MCP server doesn't require complex authentication or session management. By embracing stateless design, using defense in depth, and leveraging existing tools (Zod, Prisma, Redis), we built a production-ready MCP server that's simple to maintain and scale.
+**Tool categories.** Grouping tools would help agent discovery. Not critical with 4 tools, but worth planning for.
 
-The key insight: **public, read-only MCP servers are fundamentally simpler than authenticated ones**. Don't add complexity you don't need.
+---
+
+Building a public MCP server doesn't require complex authentication or session management. Stateless design, defense in depth, and existing tools (Zod, Prisma, Redis) got us a production-ready MCP server that's simple to maintain and scale.
+
+The key insight: public, read-only MCP servers are fundamentally simpler than authenticated ones. Don't add complexity you don't need.
 
 ---
 

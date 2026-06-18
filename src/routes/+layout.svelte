@@ -26,7 +26,7 @@
 
   let mobileMenuOpen = $state(false);
   const navLinks = [
-    { href: '/', label: 'Ask' },
+    { href: '/', label: 'Home' },
     { href: '/experience', label: 'Experience' },
     { href: '/posts', label: 'Posts' },
     { href: '/about', label: 'About' },
@@ -59,97 +59,109 @@
   <link rel="preload" href={ibmPlexMono700} as="font" crossorigin="anonymous" type="font/woff2" />
 </svelte:head>
 
-{#if !isChatPage}
-  <nav
-    aria-label="Main navigation"
-    class="fixed top-0 inset-x-0 h-(--nav-height) z-200 {isChatPage
-      ? 'bg-transparent backdrop-blur-none border-b-0'
-      : 'bg-surface/80 backdrop-blur-md border-b border-[rgba(255,255,255,0.08)] max-md:bg-transparent max-md:backdrop-blur-none max-md:border-b-0'}"
-    style="transition: transform 300ms ease-out;"
-  >
-    <div class="flex items-center justify-between h-full mx-auto px-8 max-md:px-4">
-      <a
-        href={resolve('/')}
-        class="font-heading text-xl font-bold text-primary no-underline tracking-[-0.02em] hover:text-white transition-colors duration-150"
-      >
-        <img src={avatarUrl} alt="woss.io logo" width="32" height="32" class="size-8" />
-      </a>
-
-      <div class="hidden md:flex items-center gap-8">
-        {#each navLinks as link (link.href)}
-          <a
-            href={resolve(link.href)}
-            class="text-on-surface-variant no-underline font-body text-sm font-medium tracking-[0.04em] uppercase py-1 hover:text-white transition-colors duration-150 border-b-2 border-transparent"
-            class:text-primary={isActive(link.href)}
-            class:border-primary={isActive(link.href)}
-          >
-            {link.label}
-          </a>
-        {/each}
-      </div>
-
-      <Button
-        variant="outline" square size="md"
-        aria-label="Toggle menu"
-        aria-expanded={mobileMenuOpen}
-        onclick={() => (mobileMenuOpen = true)}
-        class="md:hidden"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
+<div class="flex flex-col" style="height: 100dvh">
+  {#if !isChatPage}
+    <nav
+      aria-label="Main navigation"
+      class="flex-shrink-0 h-(--nav-height) bg-surface/80 backdrop-blur-md border-b border-[rgba(255,255,255,0.08)] max-md:bg-transparent max-md:backdrop-blur-none max-md:border-b-0"
+    >
+      <div class="flex items-center justify-between h-full mx-auto px-8 max-md:px-4">
+        <a
+          href={resolve('/')}
+          class="font-heading text-xl font-bold text-primary no-underline tracking-[-0.02em] hover:text-white transition-colors duration-150"
         >
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </Button>
-    </div>
-  </nav>
+          <img src={avatarUrl} alt="woss.io logo" width="32" height="32" class="size-8" />
+        </a>
 
-  <!-- Mobile menu drawer -->
-  <Drawer
-    bind:open={mobileMenuOpen}
-    direction="top"
-    overlay
-    modal
-    dismissible
-    handle={false}
-    noBodyStyles
-  >
-    {#snippet body()}
-      <div class="flex flex-col items-center justify-center gap-12 min-h-[50vh] pt-16 pb-24">
-        {#each navLinks as link (link.href)}
-          <a
-            href={resolve(link.href)}
-            class="no-underline font-heading text-3xl font-bold tracking-[-0.02em] text-on-surface-variant hover:text-white transition-colors duration-150"
-            class:text-primary={isActive(link.href)}
-          >
-            {link.label}
-          </a>
-        {/each}
+        <div class="hidden md:flex items-center gap-8">
+          {#each navLinks as link (link.href)}
+            <a
+              href={resolve(link.href)}
+              class="text-on-surface-variant no-underline font-body text-sm font-medium tracking-[0.04em] uppercase py-1 hover:text-white transition-colors duration-150 border-b-2 border-transparent"
+              class:text-primary={isActive(link.href)}
+              class:border-primary={isActive(link.href)}
+            >
+              {link.label}
+            </a>
+          {/each}
+        </div>
+
         <Button
-          variant="ghost"
-          onclick={() => {
-            closeMobileMenu();
-            goto(resolve('/chat'));
-          }}
-          class="font-heading text-3xl font-bold tracking-[-0.02em] text-on-surface-variant hover:text-white [&>button]:text-inherit [&>button]:text-3xl"
+          variant="outline" square size="md"
+          aria-label="Toggle menu"
+          aria-expanded={mobileMenuOpen}
+          onclick={() => (mobileMenuOpen = true)}
+          class="md:hidden"
         >
-          Chats
+          <svg
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
         </Button>
       </div>
-    {/snippet}
-  </Drawer>
-{/if}
+    </nav>
 
-<Toaster />
+    <!-- Mobile menu drawer -->
+    <Drawer
+      bind:open={mobileMenuOpen}
+      direction="top"
+      class="h-dvh max-h-dvh"
+      overlay
+      modal
+      dismissible
+      handle={false}
+      noBodyStyles
+    >
+      {#snippet body()}
+        <div class="relative flex flex-col items-center justify-center gap-12 min-h-dvh">
+          <div class="absolute top-4 right-4">
+            <Button
+              variant="ghost" square size="md"
+              icon="lucide:x"
+              aria-label="Close menu"
+              onclick={closeMobileMenu}
+            />
+          </div>
+          {#each navLinks as link (link.href)}
+            <a
+              href={resolve(link.href)}
+              class="no-underline font-heading text-3xl font-bold tracking-[-0.02em] text-on-surface-variant hover:text-white transition-colors duration-150"
+              class:text-primary={isActive(link.href)}
+            >
+              {link.label}
+            </a>
+          {/each}
+          <Button
+            variant="ghost"
+            onclick={() => {
+              closeMobileMenu();
+              goto(resolve('/chat'));
+            }}
+            class="font-heading text-3xl font-bold tracking-[-0.02em] text-on-surface-variant hover:text-white [&>button]:text-inherit [&>button]:text-3xl"
+          >
+            Chats
+          </Button>
+        </div>
+      {/snippet}
+    </Drawer>
+  {/if}
 
-<main class="mx-auto min-h-screen" style="padding-top: {isChatPage ? '0px' : 'var(--nav-height)'}">
-  {@render children()}
-</main>
+  <Toaster />
+
+  <main 
+    class="mx-auto w-full flex-1 min-h-0 flex flex-col"
+    class:overflow-y-auto={!isChatPage}
+    class:overflow-hidden={isChatPage}
+  >
+    {@render children()}
+  </main>
+</div>
