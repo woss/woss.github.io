@@ -5,7 +5,8 @@
  import Seo from '$lib/components/Seo.svelte';
  import { SvelteDate } from 'svelte/reactivity';
  import { toast } from 'svelte-sonner';
- import { copyToClipboard } from '$lib/utils/clipboard';
+  import { copyToClipboard } from '$lib/utils/clipboard';
+  import { DropdownMenu, Button } from 'sv5ui';
 
  let { data } = $props();
  let entries: ExperienceEntry[] = $derived(data.entries);
@@ -40,10 +41,7 @@
  };
  }
 
- let showDropdown = $state(false);
-
- async function copyAllMarkdown() {
- showDropdown = false;
+  async function copyAllMarkdown() {
  try {
  const res = await fetch('/api/content/experience');
  const data = await res.json();
@@ -60,8 +58,7 @@
  }
  }
 
- async function copyLlmstxt() {
- showDropdown = false;
+  async function copyLlmstxt() {
  try {
  const res = await fetch('/api/content/experience');
  const data = await res.json();
@@ -111,8 +108,7 @@
  }
  }
 
- async function copyLlmstxtUrl() {
- showDropdown = false;
+  async function copyLlmstxtUrl() {
  try {
  if (copyToClipboard('https://woss.io/llms.txt')) {
  toast.success('URL copied');
@@ -124,20 +120,7 @@
  }
  }
 
- function toggleDropdown(e: MouseEvent) {
- e.stopPropagation();
- showDropdown = !showDropdown;
- if (showDropdown) {
- const close = () => {
- showDropdown = false;
- document.removeEventListener('click', close);
- };
- // Close on next tick so this click doesn't immediately close
- setTimeout(() => document.addEventListener('click', close), 0);
- }
- }
-
- function formatDate(dateStr: string): string {
+  function formatDate(dateStr: string): string {
  const d = new Date(dateStr + '-01');
  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
  }
@@ -178,25 +161,21 @@
  <div class="max-w-[720px] mx-auto px-6">
  <header class="flex items-center justify-between gap-4 mb-16 max-md:mb-12">
  <h1 class="font-heading text-4xl font-bold text-on-surface tracking-[-0.03em] max-md:text-3xl">Career</h1>
- <div class="relative">
- <button
- class="flex items-center justify-center size-7 bg-transparent border border-[rgba(255,255,255,0.08)] rounded-md text-on-surface-variant cursor-pointer transition-colors duration-150 shrink-0 p-0 hover:text-primary hover:border-primary"
- onclick={toggleDropdown}
- aria-label="Copy content"
- title="Copy content"
- >
- <svg class="block" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
- <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
- </svg>
- </button>
- {#if showDropdown}
- <div class="absolute top-[calc(100%+4px)] right-0 bg-surface-container border border-[rgba(255,255,255,0.08)] rounded-md overflow-hidden z-10 min-w-[200px]" role="menu">
- <button role="menuitem" class="block w-full px-4 py-2 bg-transparent border-0 text-on-surface-variant font-mono text-sm text-left cursor-pointer transition-colors duration-150 hover:text-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)]" onclick={copyAllMarkdown}>Copy all as Markdown</button>
- <button role="menuitem" class="block w-full px-4 py-2 bg-transparent border-0 text-on-surface-variant font-mono text-sm text-left cursor-pointer transition-colors duration-150 hover:text-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)]" onclick={copyLlmstxtUrl}>Copy llms.txt URL</button>
- <button role="menuitem" class="block w-full px-4 py-2 bg-transparent border-0 text-on-surface-variant font-mono text-sm text-left cursor-pointer transition-colors duration-150 hover:text-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)]" onclick={copyLlmstxt}>Copy as llms.txt</button>
- </div>
- {/if}
- </div>
+  <DropdownMenu
+  items={[
+  { label: 'Copy all as Markdown', onSelect: copyAllMarkdown },
+  { label: 'Copy llms.txt URL', onSelect: copyLlmstxtUrl },
+  { label: 'Copy as llms.txt', onSelect: copyLlmstxt },
+  ]}
+  >
+  {#snippet children({ props })}
+  <Button {...props} variant="outline" square size="sm" aria-label="Copy content" title="Copy content">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+  </Button>
+  {/snippet}
+  </DropdownMenu>
  </header>
 
  {#if entries.length === 0}

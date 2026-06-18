@@ -5,6 +5,7 @@
   import SuggestedQuestions from './SuggestedQuestions.svelte';
   import { config } from '$lib/config';
   import { enhance } from '$app/forms';
+  import { Button, Textarea, Banner } from 'sv5ui';
 
   const MAX_CHARS = 500;
 
@@ -28,7 +29,7 @@
     activeToolCount = 0,
     completedToolCount = 0,
     currentStatus = '',
-    inputEl = $bindable<HTMLElement | undefined>(undefined),
+    inputEl = $bindable<HTMLElement | null>(null),
     onsend = () => {},
     oncreateChat = () => {},
     onstop = () => {},
@@ -46,7 +47,7 @@
     activeToolCount?: number;
     completedToolCount?: number;
     currentStatus?: string;
-    inputEl?: HTMLElement | undefined;
+    inputEl?: HTMLElement | null;
     onsend?: (text: string) => void;
     oncreateChat?: () => void;
     onstop?: () => void;
@@ -77,10 +78,7 @@
     onsend(messageText);
   }
 
-  function handleTextareaInput(e: Event): void {
-    const el = e.currentTarget as HTMLTextAreaElement;
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  function handleTextareaInput(): void {
     slash.handleInput();
   }
 
@@ -158,50 +156,14 @@
 
 {#if variant === 'chat'}
   {#if currentChat?.locked}
-    <div
-      class="flex items-center gap-2 px-4 py-3 bg-[color-mix(in_srgb,var(--color-secondary)_8%,transparent)] border border-secondary/30 rounded-lg"
-    >
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        class="text-secondary shrink-0"
-      >
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-      </svg>
-      <span class="text-sm text-on-surface-variant"
-        >This chat has been locked because the question was off-topic.
-        <button class="text-primary underline bg-transparent border-0 cursor-pointer" onclick={() => oncreateChat()}
-          >Start a new chat</button
-        ></span
-      >
-    </div>
+    <Banner color="secondary" title="This chat has been locked because the question was off-topic.">
+      {#snippet children()}
+        <Button variant="link" size="sm" onclick={() => oncreateChat()}>Start a new chat</Button>
+      {/snippet}
+    </Banner>
   {:else}
     {#if attemptsLeft > 0}
-      <div
-        class="flex items-center gap-1.5 px-3 py-1.5 mb-2 bg-[color-mix(in_srgb,var(--color-secondary)_6%,transparent)] border border-secondary/20 rounded-lg text-xs text-secondary"
-      >
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          class="shrink-0"
-        >
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-          <line x1="12" y1="9" x2="12" y2="13" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-        <span>{attemptsLeft} off-topic attempt{attemptsLeft > 1 ? 's' : ''} remaining before chat locks</span>
-      </div>
+      <Banner color="warning" title="{attemptsLeft} off-topic attempt{attemptsLeft > 1 ? 's' : ''} remaining before chat locks" />
     {/if}
     <form method="POST" action="?/ask" use:enhance={handleSubmit} bind:this={formEl}>
       <div
@@ -230,43 +192,11 @@
             ></div>
           </div>
           <!-- Submit / Stop button -->
-          <button
-            type="button"
-            class="flex items-center justify-center size-8 border-0 rounded-lg transition-all duration-150 shrink-0"
-            class:bg-primary={!isLoading && hasText}
-            class:bg-surface-container={isOverLimit || (!hasText && !isLoading)}
-            class:text-surface={!isLoading && hasText}
-            class:text-on-surface-variant={isOverLimit || (!hasText && !isLoading)}
-            class:bg-secondary={isLoading}
-            class:cursor-pointer={hasText || isLoading}
-            class:cursor-not-allowed={!hasText && !isLoading}
-            disabled={(!hasText || isOverLimit) && !isLoading}
-            onclick={isLoading ? handleStop : handleSend}
-            aria-label={isLoading ? 'Stop' : 'Send message'}
-          >
-            {#if isLoading}
-              <!-- Stop square -->
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
-                ><rect x="6" y="6" width="12" height="12" rx="1" /></svg
-              >
-            {:else}
-              <!-- Arrow up -->
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="12" y1="19" x2="12" y2="5" />
-                <polyline points="5 12 12 5 19 12" />
-              </svg>
-            {/if}
-          </button>
+          {#if isLoading}
+            <Button icon="lucide:square" variant="soft" color="secondary" square size="md" onclick={handleStop} aria-label="Stop" />
+          {:else}
+            <Button icon="lucide:arrow-up" variant="solid" color="primary" square size="md" disabled={!hasText || isOverLimit} onclick={handleSend} aria-label="Send message" />
+          {/if}
         </div>
         <!-- Bottom toolbar -->
         <div class="flex items-center justify-between px-3 pb-3 max-md:justify-end">
@@ -304,58 +234,24 @@
             >/</span
           >
         {/if}
-        <textarea
-          class="w-full font-body text-base/normal text-on-surface bg-transparent py-3 min-h-11 max-h-30 max-md:max-h-20 resize-none outline-none transition-colors duration-150 placeholder:text-on-surface-variant disabled:opacity-50 disabled:cursor-not-allowed"
-          class:pl-8={messageText.startsWith('/')}
-          class:pl-4={!messageText.startsWith('/')}
+        <Textarea
+          variant="outline"
+          autoresize
           bind:value={messageText}
-          bind:this={inputEl}
+          bind:ref={inputEl as unknown as HTMLTextAreaElement | null}
           placeholder="Ask Haistlin about Daniel."
-          rows="1"
           maxlength={MAX_CHARS}
           disabled={isLoading}
           oninput={handleTextareaInput}
           onkeydown={handleKeydown}
-        ></textarea>
+        ></Textarea>
       </div>
       <!-- Submit / Stop button -->
-      <button
-        type="button"
-        class="flex items-center justify-center size-8 border-0 rounded-lg transition-all duration-150 shrink-0"
-        class:bg-primary={!isLoading && hasText}
-        class:bg-surface-container={isOverLimit || (!hasText && !isLoading)}
-        class:text-surface={!isLoading && hasText}
-        class:text-on-surface-variant={isOverLimit || (!hasText && !isLoading)}
-        class:bg-secondary={isLoading}
-        class:cursor-pointer={hasText || isLoading}
-        class:cursor-not-allowed={!hasText && !isLoading}
-        disabled={(!hasText || isOverLimit) && !isLoading}
-        onclick={isLoading ? handleStop : handleSend}
-        aria-label={isLoading ? 'Stop' : 'Send message'}
-      >
-        {#if isLoading}
-          <!-- Stop square -->
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
-            ><rect x="6" y="6" width="12" height="12" rx="1" /></svg
-          >
-        {:else}
-          <!-- Arrow up -->
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <line x1="12" y1="19" x2="12" y2="5" />
-            <polyline points="5 12 12 5 19 12" />
-          </svg>
-        {/if}
-      </button>
+      {#if isLoading}
+        <Button icon="lucide:square" variant="soft" color="secondary" square size="md" onclick={handleStop} aria-label="Stop" />
+      {:else}
+        <Button icon="lucide:arrow-up" variant="solid" color="primary" square size="md" disabled={!hasText || isOverLimit} onclick={handleSend} aria-label="Send message" />
+      {/if}
     </div>
     <!-- Bottom toolbar -->
     <div class="flex items-center justify-between px-3 pb-3 max-md:justify-end">

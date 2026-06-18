@@ -24,7 +24,7 @@
   let userId = $state('');
   let messageText = $state('');
   let isLoading = $state(false);
-  let inputEl: HTMLElement | undefined = $state();
+  let inputEl: HTMLElement | null = $state(null);
 
   interface Chat {
     id: string;

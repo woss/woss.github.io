@@ -13,9 +13,10 @@
  import { playPluckSound } from '$lib/utils/sounds';
  import { randomUUID } from '$lib/utils/random-uuid';
  import SuggestedQuestions from '$lib/components/SuggestedQuestions.svelte';
- import { CONTACT_DISMISSED_KEY } from '$lib/chat/constants';
+  import { CONTACT_DISMISSED_KEY } from '$lib/chat/constants';
+  import { Button } from 'sv5ui';
 
- import type { ChatMessage, Chat, ToolCallInfo, Source } from '$lib/chat/types';
+  import type { ChatMessage, Chat, ToolCallInfo, Source } from '$lib/chat/types';
  import { matchSlashCommand } from '$lib/chat/slash-commands';
  import { sendChatMessage } from '$lib/chat/send';
  import { appendQueryParams } from '$lib/utils/utm';
@@ -73,7 +74,7 @@
  let messageText = $state('');
  let isLoading = $state(false);
  let lastSentText = $state('');
- let inputEl: HTMLDivElement | undefined = $state();
+  let inputEl: HTMLDivElement | null = $state(null);
  let messageListEl: HTMLDivElement | undefined = $state();
  let stickToBottom = $state(true);
  let bottomSentinelEl: HTMLDivElement | undefined = $state();
@@ -803,14 +804,15 @@ async function handleStop(): Promise<void> {
 </svelte:head>
 
 <div class="flex" style="height: 100dvh;">
- <!-- Mobile hamburger (hidden on desktop) -->
- <button
- onclick={() => (showMobile = true)}
- class="lg:hidden fixed top-3 left-3 z-50 flex items-center justify-center size-10 rounded-lg bg-surface-container-high border border-primary/20 text-on-surface-variant cursor-pointer transition-all duration-200 hover:bg-surface-container hover:text-on-surface active:scale-95"
- aria-label="Open chat list"
- >
- <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
- </button>
+  <!-- Mobile hamburger (hidden on desktop) -->
+  <Button
+  variant="outline" square size="md"
+  onclick={() => (showMobile = true)}
+  class="lg:hidden fixed top-3 left-3 z-50 active:scale-95"
+  aria-label="Open chat list"
+  >
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+  </Button>
  <ChatSidebar
  {chats}
   currentChatId={chatId}
@@ -864,13 +866,14 @@ async function handleStop(): Promise<void> {
  <!-- Scroll to bottom -->
  {#if !stickToBottom && hasMessages}
  <div class="flex justify-center py-1">
- <button
- onclick={() => (stickToBottom = true)}
- class="flex items-center justify-center size-7 rounded-full bg-surface-container-high border border-primary/30 text-primary cursor-pointer transition-all duration-200 hover:bg-surface-container hover:shadow-[0_0_20px_rgba(0,218,140,0.15)] active:scale-95"
- aria-label="Scroll to bottom"
- >
- <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></svg>
- </button>
+  <Button
+  variant="outline" square size="sm"
+  onclick={() => (stickToBottom = true)}
+  class="rounded-full active:scale-95"
+  aria-label="Scroll to bottom"
+  >
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" /></svg>
+  </Button>
  </div>
  {/if}
 
@@ -879,10 +882,9 @@ async function handleStop(): Promise<void> {
  {#if maxMessagesReached && !isLoading}
  <div class="text-center p-4 border-t border-[rgba(255,255,255,0.08)]">
  <p class="text-sm text-on-surface-variant">
- This chat has reached the maximum of {config.public.maxMessages} messages. <button
- class="text-primary underline bg-transparent border-0 cursor-pointer"
- onclick={createChat}>Start a new chat</button
- >
+  This chat has reached the maximum of {config.public.maxMessages} messages. <Button
+  variant="link" size="sm" class="inline underline"
+  onclick={createChat}>Start a new chat</Button>
  </p>
  </div>
  {:else if isOwner}

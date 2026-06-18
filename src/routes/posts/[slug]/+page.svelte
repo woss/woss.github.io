@@ -8,6 +8,7 @@
   import Seo from '$lib/components/Seo.svelte';
   import { appendQueryParams } from '$lib/utils/utm';
   import CopyComponent from '$lib/components/CopyComponent.svelte';
+  import { Separator, Badge, Accordion } from 'sv5ui';
   import WorkflowReplacer from '$lib/components/WorkflowReplacer.svelte';
 
   type Post = {
@@ -331,66 +332,57 @@
               {#if data.post.tags.length > 0}
                 <ul class="flex flex-wrap gap-2 list-none p-0 m-0" aria-label="Tags">
                   {#each data.post.tags as tag (tag)}
-                    <li
-                      class="inline-block px-3 py-1 text-xs font-mono text-secondary bg-[color-mix(in_srgb,var(--color-secondary)_10%,transparent)] rounded-full tracking-[0.03em] uppercase"
-                    >
-                      {tag}
-                    </li>
+                    <Badge as="li" variant="soft" color="secondary" size="sm" class="tracking-[0.03em] uppercase">{tag}</Badge>
                   {/each}
                 </ul>
               {/if}
               <CopyComponent text={formatPostMd()} toastMessage="Post copied as Markdown" label="Copy as Markdown" />
             </div>
-            <div
-              class="h-0.5 bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] rounded-[1px] my-8"
-              aria-hidden="true"
-            ></div>
+            <Separator color="primary" size="xs" class="my-8" ui={{ border: 'bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))]' }} />
           </header>
 
           {#if data.series}
-            {@const items = data.series!.items}
-            {@const idx = items.findIndex((i) => i.slug === data.series!.currentSlug)}
-            <details class="bg-surface-container border border-[rgba(255,255,255,0.08)] rounded-lg mb-8 group">
-              <summary class="flex items-center justify-between p-4 cursor-pointer list-none select-none">
-                <span
-                  class="flex items-center gap-2 text-xs font-mono font-semibold text-secondary uppercase tracking-[0.08em]"
-                >
-                  <svg
-                    class="size-3.5 transition-transform duration-200 group-open:rotate-90"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"><path d="M6 4l4 4-4 4" /></svg
-                  >
-                  Series: {data.series.title}
-                </span>
-                <span class="text-xs font-mono text-on-surface-variant">
-                  Part {idx + 1} of {items.length}
-                </span>
-              </summary>
-              <div class="px-4 pb-4 space-y-1">
-                {#each data.series.items as item, i}
-                  {@const isCurrent = item.slug === data.series.currentSlug}
-                  <a
-                    href={resolve('/posts/[slug]', { slug: item.slug })}
-                    class="flex items-center gap-3 px-3 py-2 font-mono text-sm no-underline rounded-md transition-colors duration-150 {isCurrent
-                      ? 'bg-[color-mix(in_srgb,var(--color-secondary)_10%,transparent)] text-secondary font-semibold'
-                      : 'text-on-surface-variant hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,transparent)] hover:text-primary'}"
-                  >
-                    <span class="text-xs shrink-0 {isCurrent ? 'text-secondary' : 'text-on-surface-variant'}"
-                      >{i + 1}</span
+            {@const series = data.series}
+            {@const items = series.items}
+            {@const idx = items.findIndex((i) => i.slug === series.currentSlug)}
+            <Accordion
+              items={[{ value: 'series' }]}
+              type="single"
+              ui={{
+                root: 'w-full bg-surface-container border border-[rgba(255,255,255,0.08)] rounded-lg mb-8',
+                trigger: 'flex items-center justify-between p-4 text-xs font-mono font-semibold text-secondary uppercase tracking-[0.08em]',
+                label: 'flex w-full items-center justify-between',
+                item: 'border-0',
+              }}
+            >
+              {#snippet label({ item })}
+                <span>Series: {series.title}</span>
+                <span class="text-xs font-mono text-on-surface-variant">Part {idx + 1} of {items.length}</span>
+              {/snippet}
+              {#snippet content({ item })}
+                <div class="px-4 pb-4 space-y-1">
+                  {#each series.items as item, i}
+                    {@const isCurrent = item.slug === series.currentSlug}
+                    <a
+                      href={resolve('/posts/[slug]', { slug: item.slug })}
+                      class="flex items-center gap-3 px-3 py-2 font-mono text-sm no-underline rounded-md transition-colors duration-150 {isCurrent
+                        ? 'bg-[color-mix(in_srgb,var(--color-secondary)_10%,transparent)] text-secondary font-semibold'
+                        : 'text-on-surface-variant hover:bg-[color-mix(in_srgb,var(--color-primary)_8%,transparent)] hover:text-primary'}"
                     >
-                    <span class="truncate">{item.title}</span>
-                    {#if isCurrent}
-                      <span class="ml-auto text-[10px] text-secondary/70 font-mono uppercase tracking-wider shrink-0"
-                        >Reading</span
+                      <span class="text-xs shrink-0 {isCurrent ? 'text-secondary' : 'text-on-surface-variant'}"
+                        >{i + 1}</span
                       >
-                    {/if}
-                  </a>
-                {/each}
-              </div>
-            </details>
+                      <span class="truncate">{item.title}</span>
+                      {#if isCurrent}
+                        <span class="ml-auto text-[10px] text-secondary/70 font-mono uppercase tracking-wider shrink-0"
+                          >Reading</span
+                        >
+                      {/if}
+                    </a>
+                  {/each}
+                </div>
+              {/snippet}
+            </Accordion>
           {/if}
 
           <div class="overflow-x-auto prose prose-invert max-w-none">
@@ -407,10 +399,7 @@
             </div>
           {/if}
 
-          <div
-            class="h-[2px] bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] rounded-[1px] my-8"
-            aria-hidden="true"
-          ></div>
+          <Separator color="primary" size="xs" class="my-8" ui={{ border: 'bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))]' }} />
 
           {#if data.post.date}
             <p class="text-sm text-on-surface-variant font-mono m-0 mb-4">

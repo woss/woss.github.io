@@ -1,7 +1,8 @@
 <script lang="ts">
  import { browser } from '$app/environment';
- import { toast } from 'svelte-sonner';
- import { CONTACT_DISMISSED_KEY } from '$lib/chat/constants';
+  import { Button, Input, Textarea } from 'sv5ui';
+  import { toast } from 'svelte-sonner';
+  import { CONTACT_DISMISSED_KEY } from '$lib/chat/constants';
 
  let {
  showContactForm = $bindable(false),
@@ -120,41 +121,37 @@
  {/if}
  <form onsubmit={submitContact} class="flex flex-col gap-3.5">
  <div class="flex gap-3 flex-wrap">
- <input
- type="text"
- placeholder="Name *"
- bind:value={contactName}
- required
- class="flex-1 min-w-[180px] px-4 py-3 font-body text-sm bg-surface-container-high border border-[rgba(255,255,255,0.08)] rounded-lg text-on-surface placeholder:text-outline outline-none transition-all duration-200 focus:border-primary/50 focus:shadow-[0_0_0_1px_rgba(0,218,140,0.15),0_0_20px_rgba(0,218,140,0.05)]"
- />
- <input
- type="email"
- placeholder="Email *"
- bind:value={contactEmail}
- required
- class="flex-1 min-w-[180px] px-4 py-3 font-body text-sm bg-surface-container-high border border-[rgba(255,255,255,0.08)] rounded-lg text-on-surface placeholder:text-outline outline-none transition-all duration-200 focus:border-primary/50 focus:shadow-[0_0_0_1px_rgba(0,218,140,0.15),0_0_20px_rgba(0,218,140,0.05)]"
- />
+  <Input
+  type="text" placeholder="Name *"
+  bind:value={contactName}
+  required
+  class="flex-1 min-w-[180px]"
+  />
+  <Input
+  type="email" placeholder="Email *"
+  bind:value={contactEmail}
+  required
+  class="flex-1 min-w-[180px]"
+  />
  </div>
  <div class="flex gap-3 flex-wrap">
- <input
- type="text"
- placeholder="Company"
- bind:value={contactCompany}
- class="flex-1 min-w-[140px] px-4 py-3 font-body text-sm bg-surface-container-high border border-[rgba(255,255,255,0.08)] rounded-lg text-on-surface placeholder:text-outline outline-none transition-all duration-200 focus:border-primary/50 focus:shadow-[0_0_0_1px_rgba(0,218,140,0.15),0_0_20px_rgba(0,218,140,0.05)]"
- />
- <input
- type="text"
- placeholder="Role"
- bind:value={contactRole}
- class="flex-1 min-w-[140px] px-4 py-3 font-body text-sm bg-surface-container-high border border-[rgba(255,255,255,0.08)] rounded-lg text-on-surface placeholder:text-outline outline-none transition-all duration-200 focus:border-primary/50 focus:shadow-[0_0_0_1px_rgba(0,218,140,0.15),0_0_20px_rgba(0,218,140,0.05)]"
- />
+  <Input
+  type="text" placeholder="Company"
+  bind:value={contactCompany}
+  class="flex-1 min-w-[140px]"
+  />
+  <Input
+  type="text" placeholder="Role"
+  bind:value={contactRole}
+  class="flex-1 min-w-[140px]"
+  />
  </div>
- <textarea
- placeholder="Message"
- bind:value={contactMessage}
- rows="3"
- class="w-full px-4 py-3 font-body text-sm bg-surface-container-high border border-[rgba(255,255,255,0.08)] rounded-lg text-on-surface placeholder:text-outline outline-none transition-all duration-200 focus:border-primary/50 focus:shadow-[0_0_0_1px_rgba(0,218,140,0.15),0_0_20px_rgba(0,218,140,0.05)] resize-none"
- ></textarea>
+  <Textarea
+  placeholder="Message"
+  bind:value={contactMessage}
+  rows={3}
+  class="w-full resize-none"
+  />
  {#if contactError}
  <div
  class="flex items-center gap-2 px-3 py-2.5 bg-secondary/10 border border-secondary/20 rounded-lg"
@@ -179,32 +176,26 @@
  </div>
  {/if}
  <div class="flex items-center gap-3 pt-0.5">
- <button
- type="submit"
- disabled={isSubmittingContact}
- class="flex items-center gap-2 px-6 py-2.5 font-body text-sm font-medium text-surface bg-primary border-0 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-[0_0_24px_rgba(0,218,140,0.2)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100"
- >
- {#if isSubmittingContact}
- <span
- class="size-4 rounded-full border-2 border-surface/30 border-t-surface animate-spin"
- ></span>
- Sending...
- {:else}
- <svg
- width="16"
- height="16"
- viewBox="0 0 24 24"
- fill="none"
- stroke="currentColor"
- stroke-width="2"
- stroke-linecap="round"
- stroke-linejoin="round"
- ><line x1="22" y1="2" x2="11" y2="13" /><polygon
- points="22 2 15 22 11 13 2 9 22 2" /></svg
- >
- Send
- {/if}
- </button>
+      <Button
+        type="submit"
+        loading={isSubmittingContact}
+        disabled={isSubmittingContact}
+        class="flex items-center gap-2 px-6 py-2.5 font-body text-sm font-medium text-surface bg-primary border-0 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-[0_0_24px_rgba(0,218,140,0.2)] hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        ><line x1="22" y1="2" x2="11" y2="13" /><polygon
+          points="22 2 15 22 11 13 2 9 22 2" /></svg
+        >
+        Send
+      </Button>
  <button
  type="button"
  onclick={dismissContactForm}

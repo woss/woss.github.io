@@ -3,7 +3,8 @@
  import { page } from '$app/state';
  import type { ExperienceEntry } from '$lib/../content/index';
  import Seo from '$lib/components/Seo.svelte';
- import CopyComponent from '$lib/components/CopyComponent.svelte';
+  import { Separator, Badge } from 'sv5ui';
+  import CopyComponent from '$lib/components/CopyComponent.svelte';
 
  type NavLink = { slug: string; company: string; role: string } | null;
 
@@ -59,12 +60,12 @@
  </p>
  </header>
 
- <div class="h-[2px] bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] rounded-[1px] my-6" aria-hidden="true"></div>
+  <Separator color="primary" size="xs" class="my-6" ui={{ border: 'bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))]' }} />
 
- {#if data.entry.skills.length > 0}
+  {#if data.entry.skills.length > 0}
  <div class="flex flex-wrap gap-2 my-4" role="list">
  {#each data.entry.skills as skill (skill)}
- <span class="inline-block px-3 py-1 font-mono text-xs text-secondary bg-[color-mix(in_srgb,var(--color-secondary)_10%,transparent)] rounded-full tracking-[0.03em]" role="listitem">{skill}</span>
+  <Badge variant="soft" color="secondary" size="sm" class="tracking-[0.03em]" role="listitem">{skill}</Badge>
  {/each}
  </div>
  {/if}
@@ -76,9 +77,9 @@
  </div>
  {/if}
 
- <div class="h-[2px] bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] rounded-[1px] my-6" aria-hidden="true"></div>
+  <Separator color="primary" size="xs" class="my-6" ui={{ border: 'bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))]' }} />
 
- <nav class="grid grid-cols-2 gap-4 my-6" aria-label="Experience navigation">
+  <nav class="grid grid-cols-2 gap-4 my-6" aria-label="Experience navigation">
  {#if data.nav.prev}
  <a href={resolve(`/experience/${data.nav.prev.slug}`)} class="flex flex-col gap-1 p-4 border border-[rgba(255,255,255,0.08)] rounded-md no-underline transition-all duration-200 hover:border-primary hover:shadow-[0_0_20px_rgba(0,218,140,0.15)]">
  <span class="font-mono text-xs text-secondary uppercase tracking-[0.08em]">Previous</span>

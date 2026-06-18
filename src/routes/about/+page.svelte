@@ -4,6 +4,7 @@
   import { toast } from 'svelte-sonner';
   import { copyToClipboard } from '$lib/utils/clipboard';
   import { appendQueryParams } from '$lib/utils/utm';
+  import { Separator, Avatar } from 'sv5ui';
   import { resolve } from '$app/paths';
 
   let avatarUrl = $derived(appendQueryParams('https://u.macula.link/@woss/avatar', page.data.queryParams));
@@ -88,19 +89,16 @@
 <section class="max-w-200 mx-auto px-6 py-12 pb-24">
   <header class="mb-12">
     <h1 class="font-heading text-4xl font-bold text-on-surface tracking-[-0.03em] uppercase m-0">About</h1>
-    <div
-      class="w-16 h-0.75 bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] mt-3 rounded-full"
-      aria-hidden="true"
-    ></div>
+    <Separator color="primary" size="xs" class="w-16 mt-3" ui={{ border: 'bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))]' }} />
   </header>
 
   <div class="bg-surface-container border border-[rgba(255,255,255,0.08)] rounded-lg p-8">
     <div class="flex items-center gap-6 mb-8 max-md:flex-col max-md:text-center">
-      <img
+      <Avatar
         src={avatarUrl}
         alt="Daniel Maricic"
-        width="80" height="80"
-        class="size-20 rounded-full object-cover ring-2 ring-primary/20 shrink-0"
+        size="xl"
+        class="ring-2 ring-primary/20"
       />
       <div>
         <p class="font-heading text-2xl text-on-surface m-0">Daniel Maricic</p>
@@ -138,10 +136,7 @@
       </p>
     </div>
 
-    <div
-      class="h-0.5 bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] rounded-[1px] my-6"
-      aria-hidden="true"
-    ></div>
+    <Separator color="primary" size="xs" class="my-6" ui={{ border: 'bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))]' }} />
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       {#each links as link, i (link.url)}

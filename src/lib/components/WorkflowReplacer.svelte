@@ -1,6 +1,7 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner';
   import { copyToClipboard } from '$lib/utils/clipboard';
+  import { Accordion, Input, Button } from 'sv5ui';
 
   type PlaceholderDef = {
     key: string;
@@ -19,15 +20,6 @@
   }: {
     workflowFiles: WorkflowFileDef[];
   } = $props();
-
-  let expanded = $state<Set<number>>(new Set());
-
-  function toggle(index: number) {
-    const next = new Set(expanded);
-    if (next.has(index)) next.delete(index);
-    else next.add(index);
-    expanded = next;
-  }
 
   function copy(index: number) {
     const wf = workflowFiles[index];
@@ -77,24 +69,17 @@
       </h3>
 
       <!-- JSON preview (collapsible) -->
-      <details class="group px-4 py-2">
-        <summary
-          class="flex items-center gap-2 cursor-pointer list-none text-xs font-mono text-on-surface-variant select-none"
-        >
-          <svg
-            class="size-3.5 transition-transform duration-200 group-open:rotate-90"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"><path d="M6 4l4 4-4 4" /></svg
-          >
-          Preview JSON
-        </summary>
-        <pre
-          class="mt-2 p-3 rounded-md bg-[rgba(0,0,0,0.3)] text-xs leading-relaxed overflow-x-auto max-h-64 overflow-y-auto font-mono text-slate-300"
+      <Accordion
+        items={[{ label: 'Preview JSON', value: 'json' }]}
+        type="single"
+        ui={{ trigger: 'text-xs font-mono text-on-surface-variant', root: 'w-full px-4 py-2', item: 'border-0' }}
+      >
+        {#snippet content({ item })}
+          <pre
+            class="mt-2 p-3 rounded-md bg-[rgba(0,0,0,0.3)] text-xs leading-relaxed overflow-x-auto max-h-64 overflow-y-auto font-mono text-slate-300"
 ><code>{formatJson(wf.json)}</code></pre>
-      </details>
+        {/snippet}
+      </Accordion>
 
       <!-- Placeholder inputs -->
       <div class="px-4 pb-3 space-y-3">
@@ -109,13 +94,14 @@
                 <span class="text-[10px] text-on-surface-variant/60">— {ph.hint}</span>
               {/if}
             </label>
-            <input
+            <Input
               id="replacer-{i}-{ph.key}"
               data-replacer-input={i}
               data-key={ph.key}
               type="text"
               value={ph.key}
-              class="w-full px-3 py-2 text-xs font-mono bg-[rgba(0,0,0,0.3)] border border-[rgba(255,255,255,0.1)] rounded-md text-white placeholder-on-surface-variant/40 focus:outline-none focus:border-primary transition-colors duration-150"
+              variant="outline" size="sm"
+              class="font-mono text-xs"
             />
           </div>
         {/each}
@@ -123,13 +109,14 @@
 
       <!-- Copy button -->
       <div class="px-4 pb-4">
-        <button
+        <Button
+          variant="solid" color="primary" size="sm"
           onclick={() => copy(i)}
-          class="inline-flex items-center gap-2 px-4 py-2 text-xs font-mono font-semibold uppercase tracking-[0.06em] bg-primary text-surface rounded-md transition-all duration-150 hover:brightness-110 active:scale-[0.97] cursor-pointer"
+          class="active:scale-[0.97] font-mono text-xs font-semibold uppercase tracking-[0.06em]"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           Copy to Clipboard
-        </button>
+        </Button>
       </div>
     </div>
   {/each}

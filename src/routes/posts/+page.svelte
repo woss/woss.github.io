@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { resolve } from '$app/paths';
+  import { Separator, Badge } from 'sv5ui';
   import Seo from '$lib/components/Seo.svelte';
   import { appendQueryParams } from '$lib/utils/utm';
 
@@ -54,10 +55,7 @@
 <section class="max-w-300 mx-auto px-6 pb-24 max-md:px-4">
   <header class="mb-12">
     <h1 class="font-heading text-4xl font-bold text-on-surface tracking-[-0.03em] uppercase m-0">Posts</h1>
-    <div
-      class="w-16 h-0.75 bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))] mt-3 rounded-full"
-      aria-hidden="true"
-    ></div>
+    <Separator color="primary" size="xs" class="w-16 mt-3" ui={{ border: 'bg-[linear-gradient(90deg,var(--color-primary),var(--color-secondary))]' }} />
   </header>
 
   {#if page.data.posts.length === 0}
@@ -110,10 +108,7 @@
             {#if post.tags.length > 0}
               <div class="flex flex-wrap gap-2 mb-1">
                 {#each post.tags as tag (tag)}
-                  <span
-                    class="font-mono text-xs font-medium text-secondary bg-[color-mix(in_srgb,var(--color-secondary)_10%,transparent)] px-2 py-0.5 rounded-sm tracking-[0.02em] uppercase"
-                    >{tag}</span
-                  >
+                  <Badge variant="soft" color="secondary" size="sm" class="tracking-[0.02em] uppercase">{tag}</Badge>
                 {/each}
               </div>
             {/if}

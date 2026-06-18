@@ -1,5 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
+  import { Button } from 'sv5ui';
   // eslint-disable-next-line svelte/valid-prop-names-in-kit-pages
   let { error } = $props();
   let status = $derived(error?.status ?? 404);
@@ -37,12 +38,12 @@
         Something went wrong. Try going back to the homepage.
       </p>
 
-      <a
+      <Button
+        variant="solid" color="primary" size="md" class="hover:scale-[1.02] active:scale-[0.98]"
         href={resolve('/')}
-        class="inline-flex items-center gap-2 px-6 py-3 font-body text-sm font-medium text-surface bg-primary border-0 rounded-lg cursor-pointer no-underline transition-all duration-200 hover:shadow-[0_0_24px_rgba(0,218,140,0.2)] hover:scale-[1.02] active:scale-[0.98]"
       >
         ← Back to Home
-      </a>
+      </Button>
     </article>
   </div>
 </section>

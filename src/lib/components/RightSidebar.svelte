@@ -1,6 +1,7 @@
 <script lang="ts">
- import { nameToColor, nameToInitial } from '$lib/utils/avatar';
- import type { ChatMessage, ToolCallInfo } from '$lib/chat/types';
+  import { Button } from 'sv5ui';
+  import { nameToColor, nameToInitial } from '$lib/utils/avatar';
+  import type { ChatMessage, ToolCallInfo } from '$lib/chat/types';
 
  let {
  sidebarVisible = false,
@@ -51,13 +52,13 @@
  <h3 class="font-heading text-xs font-semibold text-on-surface-variant uppercase tracking-wider m-0">
  {sidebarTab === 'sources' ? 'Sources' : 'Tools'}
  </h3>
- <button
- onclick={onclose}
- class="size-6 flex items-center justify-center rounded-md bg-transparent border-0 text-on-surface-variant hover:text-on-surface cursor-pointer transition-colors"
- aria-label="Close sidebar"
- >
- <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
- </button>
+  <Button
+  variant="ghost" square size="xs"
+  onclick={onclose}
+  aria-label="Close sidebar"
+  >
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </Button>
  </div>
 {/snippet}
 

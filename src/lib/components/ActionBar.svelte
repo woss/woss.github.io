@@ -1,6 +1,6 @@
 <script lang="ts">
  import { toast } from 'svelte-sonner';
- import { Tooltip, AvatarGroup } from 'sv5ui';
+ import { Tooltip, AvatarGroup, Button } from 'sv5ui';
  import { copyToClipboard } from '$lib/utils/clipboard';
  import { nameToColor, nameToInitial } from '$lib/utils/avatar';
  import type { ChatMessage } from '$lib/chat/types';
@@ -101,32 +101,32 @@
 
 <div class="flex items-center justify-between flex-1 text-xs text-outline h-8">
  <div class="flex items-center gap-1">
- <!-- Share -->
- <Tooltip text="Copy link" side="bottom">
- {#snippet children()}
- <button class={iconBtnCls} onclick={shareMessage} aria-label="Share link">
- <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
- <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
- <polyline points="16 6 12 2 8 6" />
- <line x1="12" y1="2" x2="12" y2="15" />
- </svg>
- </button>
- {/snippet}
- </Tooltip>
+  <!-- Share -->
+  <Tooltip text="Copy link" side="bottom">
+  {#snippet children()}
+    <Button variant="ghost" square size="sm" onclick={shareMessage} aria-label="Share link">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+        <polyline points="16 6 12 2 8 6" />
+        <line x1="12" y1="2" x2="12" y2="15" />
+      </svg>
+    </Button>
+  {/snippet}
+  </Tooltip>
 
- <!-- Copy -->
- <Tooltip text="Copy" side="bottom">
- {#snippet children()}
- <button class={iconBtnCls} onclick={copyMessage} aria-label="Copy message">
- <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
- <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
- <polyline points="14 2 14 8 20 8" />
- <line x1="16" y1="13" x2="8" y2="13" />
- <line x1="16" y1="17" x2="8" y2="17" />
- </svg>
- </button>
- {/snippet}
- </Tooltip>
+  <!-- Copy -->
+  <Tooltip text="Copy" side="bottom">
+  {#snippet children()}
+    <Button variant="ghost" square size="sm" onclick={copyMessage} aria-label="Copy message">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+      </svg>
+    </Button>
+  {/snippet}
+  </Tooltip>
 
  <!-- Sources & Tools chip -->
  {#if hasSources || hasTools}
@@ -164,67 +164,67 @@
 
  {#if message.role !== 'user'}
  <div class="flex items-center gap-1">
- <button
- class={iconBtnCls}
- class:text-[#00da8c]={message.reaction?.type === 'up'}
- onclick={() => handleReaction(message, 'up')}
- aria-label="Thumbs up"
- title="Helpful"
- >
- <svg
- width="14"
- height="14"
- viewBox="0 0 24 24"
- fill={message.reaction?.type === 'up' ? 'currentColor' : 'none'}
- stroke="currentColor"
- stroke-width="2"
- stroke-linecap="round"
- stroke-linejoin="round"
- >
- <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
- </svg>
- </button>
- <button
- class={iconBtnCls}
- class:text-[#00da8c]={message.reaction?.type === 'down'}
- onclick={() => handleReaction(message, 'down')}
- aria-label="Thumbs down"
- title="Not helpful"
- >
- <svg
- width="14"
- height="14"
- viewBox="0 0 24 24"
- fill={message.reaction?.type === 'down' ? 'currentColor' : 'none'}
- stroke="currentColor"
- stroke-width="2"
- stroke-linecap="round"
- stroke-linejoin="round"
- class="rotate-180"
- >
- <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
- </svg>
- </button>
- <button
- class={iconBtnCls}
- class:text-[#00da8c]={message.reaction?.type === 'heart'}
- onclick={() => handleReaction(message, 'heart')}
- aria-label="Heart"
- title="Love it"
- >
- <svg
- width="14"
- height="14"
- viewBox="0 0 24 24"
- fill={message.reaction?.type === 'heart' ? 'currentColor' : 'none'}
- stroke="currentColor"
- stroke-width="2"
- stroke-linecap="round"
- stroke-linejoin="round"
- >
- <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
- </svg>
- </button>
+  <Button
+  variant="ghost" square size="sm"
+  class={message.reaction?.type === 'up' ? 'text-[#00da8c]' : ''}
+  onclick={() => handleReaction(message, 'up')}
+  aria-label="Thumbs up"
+  title="Helpful"
+  >
+  <svg
+  width="14"
+  height="14"
+  viewBox="0 0 24 24"
+  fill={message.reaction?.type === 'up' ? 'currentColor' : 'none'}
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  >
+  <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+  </svg>
+  </Button>
+  <Button
+  variant="ghost" square size="sm"
+  class={message.reaction?.type === 'down' ? 'text-[#00da8c]' : ''}
+  onclick={() => handleReaction(message, 'down')}
+  aria-label="Thumbs down"
+  title="Not helpful"
+  >
+  <svg
+  width="14"
+  height="14"
+  viewBox="0 0 24 24"
+  fill={message.reaction?.type === 'down' ? 'currentColor' : 'none'}
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="rotate-180"
+  >
+  <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+  </svg>
+  </Button>
+  <Button
+  variant="ghost" square size="sm"
+  class={message.reaction?.type === 'heart' ? 'text-[#00da8c]' : ''}
+  onclick={() => handleReaction(message, 'heart')}
+  aria-label="Heart"
+  title="Love it"
+  >
+  <svg
+  width="14"
+  height="14"
+  viewBox="0 0 24 24"
+  fill={message.reaction?.type === 'heart' ? 'currentColor' : 'none'}
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  >
+  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+  </Button>
  </div>
  {/if}
 </div>

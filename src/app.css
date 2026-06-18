@@ -1,3 +1,4 @@
+@import 'tailwindcss';
 @import 'sv5ui/theme.css';
 @plugin '@tailwindcss/typography';
 
@@ -150,6 +151,77 @@
   --z-nav: 200;
   --z-overlay: 300;
   --z-modal: 400;
+}
+
+/* ─── ─── LIGHT THEME OVERRIDES ─── ─── */
+/* Warm light neutrals + teal-green accent #00da8c */
+:root {
+  /* Primary - teal-green */
+  --color-primary: oklch(0.55 0.15 162.5);
+  --color-on-primary: oklch(0.98 0.005 162.5);
+  --color-primary-container: oklch(0.9 0.08 162.5);
+  --color-on-primary-container: oklch(0.15 0.02 162.5);
+
+  /* Secondary - warm gray */
+  --color-secondary: oklch(0.5 0.04 45);
+  --color-on-secondary: oklch(0.98 0.002 45);
+  --color-secondary-container: oklch(0.88 0.02 45);
+  --color-on-secondary-container: oklch(0.15 0.01 45);
+
+  /* Tertiary - warm taupe */
+  --color-tertiary: oklch(0.5 0.06 75);
+  --color-on-tertiary: oklch(0.98 0.002 75);
+  --color-tertiary-container: oklch(0.9 0.03 75);
+  --color-on-tertiary-container: oklch(0.15 0.01 75);
+
+  /* Error */
+  --color-error: oklch(0.55 0.18 30);
+  --color-on-error: oklch(0.98 0.002 30);
+  --color-error-container: oklch(0.92 0.06 30);
+  --color-on-error-container: oklch(0.3 0.1 30);
+
+  /* Success - green aligned with teal */
+  --color-success: oklch(0.55 0.15 150);
+  --color-on-success: oklch(0.98 0.002 150);
+  --color-success-container: oklch(0.9 0.06 150);
+  --color-on-success-container: oklch(0.2 0.08 150);
+
+  /* Warning - amber */
+  --color-warning: oklch(0.65 0.14 80);
+  --color-on-warning: oklch(0.98 0.002 80);
+  --color-warning-container: oklch(0.92 0.06 80);
+  --color-on-warning-container: oklch(0.25 0.08 80);
+
+  /* Info - warm blue */
+  --color-info: oklch(0.55 0.1 240);
+  --color-on-info: oklch(0.98 0.002 240);
+  --color-info-container: oklch(0.9 0.04 240);
+  --color-on-info-container: oklch(0.2 0.06 240);
+
+  /* Surface - warm light off-white */
+  --color-surface: oklch(0.97 0.005 45);
+  --color-on-surface: oklch(0.12 0.008 45);
+  --color-on-surface-variant: oklch(0.5 0.01 45);
+
+  /* Surface Containers - progressively darker warm */
+  --color-surface-container-lowest: oklch(1 0 0);
+  --color-surface-container-low: oklch(0.96 0.005 45);
+  --color-surface-container: oklch(0.94 0.006 45);
+  --color-surface-container-high: oklch(0.92 0.007 45);
+  --color-surface-container-highest: oklch(0.9 0.008 45);
+
+  /* Surface Dim & Bright */
+  --color-surface-dim: oklch(0.88 0.008 45);
+  --color-surface-bright: oklch(0.98 0.004 45);
+
+  /* Outline */
+  --color-outline: oklch(0.7 0.015 45);
+  --color-outline-variant: oklch(0.85 0.01 45);
+
+  /* Inverse */
+  --color-inverse-surface: oklch(0.15 0.008 45);
+  --color-inverse-on-surface: oklch(0.92 0.005 45);
+  --color-inverse-primary: oklch(0.72 0.19 162.5);
 }
 
 /* ─── ─── DARK THEME OVERRIDES ─── ─── */

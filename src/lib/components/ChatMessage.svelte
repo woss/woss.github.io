@@ -6,8 +6,9 @@
  import { toast } from 'svelte-sonner';
  import type { ChatMessage } from '$lib/chat/types';
  import { page } from '$app/state';
- import ActionBar from './ActionBar.svelte';
- import ToolCallList from './ToolCallList.svelte';
+  import { Button, Input } from 'sv5ui';
+  import ActionBar from './ActionBar.svelte';
+  import ToolCallList from './ToolCallList.svelte';
 
 
  dayjs.extend(relativeTime);
@@ -136,15 +137,11 @@
  <p class="font-body text-sm font-medium text-gray-200 mb-1">Unable to process request</p>
  <p class="font-body text-sm text-on-surface-variant">{message.error}</p>
  </div>
- {#if !message.irrecoverable}
- <button
- class="font-body text-xs font-medium text-[#00da8c] bg-[rgba(0,218,140,0.1)] border border-[rgba(0,218,140,0.25)] rounded-full px-3 py-1 shrink-0 cursor-pointer transition-colors duration-150 hover:bg-[rgba(0,218,140,0.18)] hover:border-[#00da8c] disabled:opacity-40 disabled:cursor-not-allowed"
- onclick={() => onretry()}
- disabled={isLoading}
- >
- Try again
- </button>
- {/if}
+  {#if !message.irrecoverable}
+  <Button variant="outline" color="primary" size="sm" onclick={() => onretry()} disabled={isLoading} class="rounded-full">
+    Try again
+  </Button>
+  {/if}
  </div>
  </div>
  {:else if message.role === 'user'}
@@ -222,34 +219,36 @@
  {/if}
 
  <!-- Reason input (thumbs down) -->
- {#if message.reaction?.type === 'down'}
- <div class="mt-3">
- <div class="flex gap-2">
- <input
- type="text"
- class="flex-1 bg-surface-container-high border border-[rgba(255,255,255,0.08)] rounded-lg px-3 py-2 text-sm text-on-surface placeholder:text-outline outline-none focus:border-[#00da8c]/50 focus:ring-1 focus:ring-[#00da8c]/20 transition-all"
- placeholder="What was missing or incorrect?"
- bind:value={downReason}
- onkeydown={(e) => {
- if (e.key === 'Enter' && downReason.trim() !== '') {
- submitDownReason(message, downReason);
- }
- }}
- />
- <button
- class="px-3 py-2 rounded-lg bg-[#00da8c] text-black text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#00da8c]/90 transition-colors"
- disabled={downReason.trim() === ''}
- onclick={() => {
- if (downReason.trim() !== '') {
- submitDownReason(message, downReason);
- }
- }}
- >
- Send feedback & remove
- </button>
- </div>
- </div>
- {/if}
+  {#if message.reaction?.type === 'down'}
+  <div class="mt-3">
+  <div class="flex gap-2">
+  <Input
+  type="text"
+  variant="outline"
+  size="sm"
+  placeholder="What was missing or incorrect?"
+  bind:value={downReason}
+  onkeydown={(e: KeyboardEvent) => {
+  if (e.key === 'Enter' && downReason.trim() !== '') {
+  submitDownReason(message, downReason);
+  }
+  }}
+  />
+  <Button
+  variant="solid"
+  color="primary"
+  disabled={downReason.trim() === ''}
+  onclick={() => {
+  if (downReason.trim() !== '') {
+  submitDownReason(message, downReason);
+  }
+  }}
+  >
+  Send feedback & remove
+  </Button>
+  </div>
+  </div>
+  {/if}
 
 
  </div>
