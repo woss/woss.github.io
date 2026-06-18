@@ -45,7 +45,8 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
       max_tokens INTEGER DEFAULT 0,
       query_type TEXT,
       deleted_at TEXT,
-      user_agent_id INTEGER
+      user_agent_id INTEGER,
+      trace_id TEXT
     )
   `);
 
@@ -66,6 +67,7 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
       featured INTEGER DEFAULT 0,
       position INTEGER,
       part_of_series INTEGER REFERENCES page_posts(id),
+      workflow_files TEXT,
       updated_at TEXT
     )
   `);
@@ -126,7 +128,8 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
       deleted_at TEXT,
       locked INTEGER DEFAULT 0,
       off_topic_count INTEGER DEFAULT 0,
-      user_agent_id INTEGER
+      user_agent_id INTEGER,
+      trace_id TEXT
     )
   `);
   db.exec(`

@@ -560,7 +560,7 @@ function chatStreamWithTools(
 /*  Finish Reason Mapping                                              */
 /* ------------------------------------------------------------------ */
 
-function mapFinishReason(reason: string): FinishReason {
+export function mapFinishReason(reason: string): FinishReason {
   switch (reason) {
     case 'stop':
       return 'stop';

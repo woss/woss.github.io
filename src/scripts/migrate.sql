@@ -207,8 +207,12 @@ CREATE TABLE
 -- columns existed. CREATE TABLE IF NOT EXISTS won't add them.
 -- ============================================================
 
+-- Added in schema.ts v1: irrecoverable field for marking unrecoverable message errors
 ALTER TABLE messages ADD COLUMN irrecoverable INTEGER DEFAULT 0;
+-- Added in schema.ts reconciliation: trace_id for distributed tracing on messages
 ALTER TABLE messages ADD COLUMN trace_id TEXT;
+-- Added in schema.ts reconciliation: trace_id for distributed tracing on chats
 ALTER TABLE chats ADD COLUMN trace_id TEXT;
+-- Added in schema.ts reconciliation: workflow_files for storing workflow file references
 ALTER TABLE page_posts ADD COLUMN workflow_files TEXT;
 

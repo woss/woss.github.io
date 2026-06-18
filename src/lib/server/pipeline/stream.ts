@@ -37,7 +37,7 @@ const TINY_TEXT_THRESHOLD = 171;
  * Edge case not handled: tag split across token boundaries (e.g. `<tool_` + `calls>`)
  * is extremely rare with LLM tokenizers and would only leak partial text briefly.
  */
-class ToolCallXmlStripper {
+export class ToolCallXmlStripper {
   #inBlock = false;
   #openRe = /<[^>]*tool_calls[^>]*>/i;
   #closeRe = /<\/[^>]*tool_calls[^>]*>/i;
