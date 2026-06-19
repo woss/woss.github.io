@@ -301,14 +301,22 @@ export async function streamWithRetry(
       const isHallucination =
         hasMaculaTools && !anyStepHadToolCalls && hasFabricatedUrls && answerText.trim().length > 0;
 
-      if (answerText.trim().length === 0 || isDoomLoop || isTinyText || isToolLoop || isHallucination) {
+      // Interim text detection: 3+ transitional phrases, no structural content
+      const INTERIM_PATTERNS = /\b(let me|i'll|i will|i should|i need to)\b/ig;
+      const interimMatchCount = (answerText.match(INTERIM_PATTERNS) ?? []).length;
+      const hasContentStructure = /```|`[^`]+`|\|.*\|.*\||^#+\s/m.test(answerText);
+      const isInterimText = interimMatchCount >= 3 && !hasContentStructure && answerText.trim().length < 2000;
+
+      if (answerText.trim().length === 0 || isDoomLoop || isTinyText || isToolLoop || isHallucination || isInterimText) {
         const reason = isHallucination
           ? 'Hallucination (tools available, zero calls, Macula URLs in output)'
           : isToolLoop
             ? 'Tool loop detected (cross-round fingerprint repeat)'
             : isDoomLoop || answerText.trim().length === 0
               ? 'Doom loop (tools called, no text)'
-              : 'Stuck loop (tools called, tiny text)';
+              : isInterimText
+                ? 'Interim text (transitional phrases, no content)'
+                : 'Stuck loop (tools called, tiny text)';
         log.warn`${reason}, retrying (attempt ${attempt + 1})`;
         if (messages.length > 0 && messages[0].role === 'system') {
           // Reset to base system prompt + current retry's recovery prompt (avoid unbounded growth)

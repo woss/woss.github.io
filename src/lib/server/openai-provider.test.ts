@@ -251,6 +251,24 @@ describe('buildRagPrompt', () => {
     const messages = buildRagPrompt('Hello', []);
     expect(messages[0].content).not.toContain('Context:');
   });
+
+  it('truncates history to last MAX_HISTORY_MESSAGES (10) when overflow', () => {
+    const history: ChatMessage[] = [];
+    for (let i = 0; i < 15; i++) {
+      history.push({ role: 'user', content: `User message ${i}` });
+      history.push({ role: 'assistant', content: `Assistant message ${i}` });
+    }
+    // 15 pairs = 30 messages, only last 10 kept via slice(-10): indices 20-29
+    const messages = buildRagPrompt('Final question', [], history);
+    // system + 10 history + user = 12 messages
+    expect(messages).toHaveLength(12);
+    // First history message (index 20 of 30): User message 10
+    expect(messages[1].content).toBe('User message 10');
+    expect(messages[2].content).toBe('Assistant message 10');
+    // Last history message (index 29 of 30): Assistant message 14
+    expect(messages[10].content).toBe('Assistant message 14');
+    expect(messages[11]).toEqual({ role: 'user', content: 'Final question' });
+  });
 });
 
 // ===========================================================================

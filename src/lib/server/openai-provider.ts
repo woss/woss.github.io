@@ -130,6 +130,7 @@ const BASE_URL = config().openai.baseUrl;
 const MODEL = config().openai.model;
 const MAX_TOKENS = config().openai.maxTokens;
 const FIRST_ROUND_MAX_STEPS = config().openai.firstRoundMaxSteps;
+const MAX_HISTORY_MESSAGES = 10;
 
 log.debug`[openai-provider] BASE_URL: ${BASE_URL} | MODEL: ${MODEL}`;
 
@@ -173,10 +174,14 @@ function buildRagPrompt(question: string, chunks: RagChunk[], history?: ChatMess
   messages.push({ role: 'system', content: systemPrompt });
 
   if (history && history.length > 0) {
-    for (const msg of history) {
-      if (msg.role === 'user' || msg.role === 'assistant') {
-        messages.push({ role: msg.role, content: msg.content });
-      }
+    // Filter to user/assistant only, then truncate to last MAX_HISTORY_MESSAGES
+    // to prevent context buildup that degrades tool-using behavior
+    const filtered = history.filter((m) => m.role === 'user' || m.role === 'assistant');
+    const slice = filtered.length > MAX_HISTORY_MESSAGES
+      ? filtered.slice(-MAX_HISTORY_MESSAGES)
+      : filtered;
+    for (const msg of slice) {
+      messages.push({ role: msg.role, content: msg.content });
     }
   }
 
@@ -399,11 +404,19 @@ function chatStreamWithTools(
                       // "Empty answer" / "Doom loop" detection handles the retry.
                       const reachedMaxRounds = round >= MAX_ROUNDS;
                       const isDoomLoop = toolLoopDetected;
+                      const isInterimRound =
+                        roundTextLength > 0 &&
+                        roundToolCalls > 0 &&
+                        /(let me|i'll|i will|i should|i need to)/i.test(roundText) &&
+                        !/```|`[^`]+`|\|.*\|.*\||^#+\s/m.test(roundText);
                       if (isDoomLoop) {
                         log.warn`[llm-round] Cross-round tool loop detected (fingerprint repeat > ${CROSS_ROUND_THRESHOLD}) — forcing final round without tools`;
                         doomLoopDetectedInRound = true;
                       }
-                      if (roundToolCalls > 0 && roundTextLength > 0 && !reachedMaxRounds && !isDoomLoop) {
+                      if (isInterimRound) {
+                        log.warn`[llm-round] Interim round detected (${roundToolCalls} tool calls, transitional text without content) — forcing final round without tools`;
+                      }
+                      if (roundToolCalls > 0 && roundTextLength > 0 && !reachedMaxRounds && !isDoomLoop && !isInterimRound) {
                         log.info`[llm-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — continuing with tools`;
 
                         // Push assistant's text + tool calls as a single assistant message
@@ -450,7 +463,7 @@ function chatStreamWithTools(
                         runRound(round + 1, currentToolSet)
                           .then(resolve)
                           .catch(reject);
-                      } else if (roundToolCalls > 0 && roundTextLength > 0 && (reachedMaxRounds || isDoomLoop)) {
+                      } else if (roundToolCalls > 0 && roundTextLength > 0 && (reachedMaxRounds || isDoomLoop || isInterimRound)) {
                         // MAX_ROUNDS reached with tool calls and text — force a final
                         // Force final round without tools so the model must produce text.
                         log.info`[llm-round] MAX_ROUNDS=${MAX_ROUNDS} reached, ${roundToolCalls} tool calls, ${roundTextLength} text chars — forcing final round without tools`;

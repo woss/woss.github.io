@@ -385,4 +385,104 @@ describe('streamWithRetry', () => {
 
     expect(result.answerText).toContain('[woss/woss-io#123](https://github.com/woss/woss-io/pull/123)');
   });
+
+  it('detects interim text (3+ transitional phrases, no structural content)', async () => {
+    const interimEvents: LLMEvent[] = [
+      { type: 'text-delta', text: 'Let me search. Let me check. Let me also look. ' },
+      { type: 'step-finish', reason: 'stop', toolCalls: 0, textProduced: true },
+      {
+        type: 'finish',
+        reason: 'stop',
+        modelName: 'test-model',
+        actualModelName: 'test-model',
+        provider: 'https://api.test.com/v1',
+        maxTokens: 4096,
+      },
+    ];
+    const okEvents: LLMEvent[] = [
+      { type: 'text-delta', text: 'Here are the PRs I found. Open: 3, Closed: 10.' },
+      { type: 'step-finish', reason: 'stop', toolCalls: 0, textProduced: true },
+      {
+        type: 'finish',
+        reason: 'stop',
+        modelName: 'test-model',
+        actualModelName: 'test-model',
+        provider: 'https://api.test.com/v1',
+        maxTokens: 4096,
+      },
+    ];
+
+    vi.mocked(chatStreamWithTools)
+      .mockImplementation(() => Stream.fromIterable(interimEvents));
+    vi.mocked(chatStream)
+      .mockImplementation(() => Stream.fromIterable(okEvents));
+
+    const result = await streamWithRetry(
+      [{ role: 'system', content: 'Answer' }, { role: 'user', content: 'Question?' }],
+      ['tool1'] as any,
+      'chat-6',
+      new AbortController(),
+      new Map(),
+    );
+
+    expect(result.answerText).toContain('Here are the PRs');
+    // Must have tried with tools first, then retried without tools
+    expect(chatStreamWithTools).toHaveBeenCalled();
+    expect(chatStream).toHaveBeenCalled();
+  });
+
+  it('passes through legitimate text with transitional intro', async () => {
+    const events: LLMEvent[] = [
+      { type: 'text-delta', text: 'Let me explain how the data flows work. The system processes requests asynchronously.' },
+      { type: 'step-finish', reason: 'stop', toolCalls: 0, textProduced: true },
+      {
+        type: 'finish',
+        reason: 'stop',
+        modelName: 'test-model',
+        actualModelName: 'test-model',
+        provider: 'https://api.test.com/v1',
+        maxTokens: 4096,
+      },
+    ];
+    vi.mocked(chatStream).mockReturnValue(Stream.fromIterable(events));
+
+    const result = await streamWithRetry(
+      [{ role: 'user', content: 'Explain' }],
+      null,
+      'chat-7',
+      new AbortController(),
+      new Map(),
+    );
+
+    expect(result.answerText).toContain('Let me explain');
+    expect(result.lastError).toBeNull();
+    expect(result.partial).toBe(false);
+  });
+
+  it('passes through text with structural content despite transitional phrases', async () => {
+    const events: LLMEvent[] = [
+      { type: 'text-delta', text: 'Let me search. Let me check. Let me also look. Here are results:\n| Type | Count |\n|------|-------|\n| Open | 3 |' },
+      { type: 'step-finish', reason: 'stop', toolCalls: 0, textProduced: true },
+      {
+        type: 'finish',
+        reason: 'stop',
+        modelName: 'test-model',
+        actualModelName: 'test-model',
+        provider: 'https://api.test.com/v1',
+        maxTokens: 4096,
+      },
+    ];
+    vi.mocked(chatStream).mockReturnValue(Stream.fromIterable(events));
+
+    const result = await streamWithRetry(
+      [{ role: 'user', content: 'Show PRs' }],
+      null,
+      'chat-8',
+      new AbortController(),
+      new Map(),
+    );
+
+    expect(result.answerText).toContain('Type | Count');
+    expect(result.lastError).toBeNull();
+  });
 });
