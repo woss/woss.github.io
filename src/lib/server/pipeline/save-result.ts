@@ -30,6 +30,7 @@ export interface SaveResultParams {
   queryType: string;
   startTime: number;
   irrecoverable: boolean;
+  toolCalls?: { name: string; serverId: string }[];
 }
 
 /**
@@ -63,6 +64,7 @@ export async function saveAndEmitResult(params: SaveResultParams): Promise<void>
     ragChunks,
     startTime,
     irrecoverable,
+    toolCalls = [],
   } = params;
 
   if (lastError && !partial) {
@@ -140,7 +142,7 @@ export async function saveAndEmitResult(params: SaveResultParams): Promise<void>
   // Store cache (skip if disabled via env)
   if (config().llmCache.enabled && !partial) {
     try {
-      storeCache(cacheEmbeddingData, cacheText, answerText, JSON.stringify(sources), msgId);
+      storeCache(cacheEmbeddingData, cacheText, answerText, JSON.stringify(sources), msgId, toolCalls);
     } catch (err) {
       log.error`storeCache failed: ${err}`;
     }

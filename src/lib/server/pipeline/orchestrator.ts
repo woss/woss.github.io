@@ -235,6 +235,7 @@ export async function startGeneration(
       partial,
       msgId,
       irrecoverable,
+      toolCalls = [],
     } = streamResult;
 
     // Fire error webhook on LLM error
@@ -282,6 +283,7 @@ export async function startGeneration(
       queryType,
       startTime,
       irrecoverable,
+      toolCalls,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

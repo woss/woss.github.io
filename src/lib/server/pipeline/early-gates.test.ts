@@ -262,7 +262,7 @@ describe('handleEarlyGates', () => {
     vi.mocked(needsMaculaTools).mockResolvedValue(false);
     vi.mocked(isRelevant).mockResolvedValue(true);
     vi.mocked(embedText).mockResolvedValue({ data: [0.1, 0.2, 0.3], dimensions: 3 });
-    vi.mocked(checkCache).mockReturnValueOnce({ answer: 'Cached answer', sources: '[{"title":"Source"}]' });
+    vi.mocked(checkCache).mockReturnValueOnce({ answer: 'Cached answer', sources: '[{"title":"Source"}]', toolCalls: [] });
 
     const result = await handleEarlyGates(
       'What is your name?', 'chat-8', 'user-1',
@@ -276,6 +276,56 @@ describe('handleEarlyGates', () => {
     expect(publishPersistent).toHaveBeenCalledWith(
       'chat-8', 'done',
       expect.objectContaining({ answer: 'Cached answer' }),
+    );
+    expect(publishLive).not.toHaveBeenCalledWith('chat-8', 'tool_call_start', expect.anything());
+  });
+
+  it('emits tool call events on cache hit when cached data has tool calls', async () => {
+    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Old question' } as any]);
+    vi.mocked(needsGithubTools).mockResolvedValue(false);
+    vi.mocked(needsMaculaTools).mockResolvedValue(false);
+    vi.mocked(isRelevant).mockResolvedValue(true);
+    vi.mocked(embedText).mockResolvedValue({ data: [0.1, 0.2, 0.3], dimensions: 3 });
+    vi.mocked(checkCache).mockReturnValueOnce({
+      answer: 'Cached with tools',
+      sources: '[]',
+      toolCalls: [
+        { name: 'traverse', serverId: 'macula' },
+        { name: 'get_file', serverId: 'macula' },
+      ],
+    });
+
+    const result = await handleEarlyGates(
+      'Show me files', 'chat-9', 'user-1',
+      new AbortController(), undefined, Date.now(),
+    );
+
+    expect(result).toEqual({ handled: true });
+
+    // Should emit tool_call_start for each cached tool call
+    expect(publishLive).toHaveBeenCalledWith(
+      'chat-9', 'tool_call_start',
+      expect.objectContaining({ name: 'traverse', serverId: 'macula' }),
+    );
+    expect(publishLive).toHaveBeenCalledWith(
+      'chat-9', 'tool_call_start',
+      expect.objectContaining({ name: 'get_file', serverId: 'macula' }),
+    );
+
+    // Should emit tool_call_end for each cached tool call
+    expect(publishLive).toHaveBeenCalledWith(
+      'chat-9', 'tool_call_end',
+      expect.objectContaining({ name: 'traverse' }),
+    );
+    expect(publishLive).toHaveBeenCalledWith(
+      'chat-9', 'tool_call_end',
+      expect.objectContaining({ name: 'get_file' }),
+    );
+
+    // Should still emit done event with answer
+    expect(publishPersistent).toHaveBeenCalledWith(
+      'chat-9', 'done',
+      expect.objectContaining({ answer: 'Cached with tools' }),
     );
   });
 

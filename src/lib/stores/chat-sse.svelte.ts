@@ -40,6 +40,7 @@ export const sseState = new ChatSSEState();
 export const seenErrorMsgIds = new SvelteSet<string>();
 let sseTimeout: ReturnType<typeof setTimeout> | undefined;
 let es: EventSource | null = null;
+let generation = 0;
 
 /* ─── Derived (getters — no $derived in module exports) ─── */
 
@@ -68,6 +69,7 @@ export function disconnectSSE(): void {
     es.close();
     es = null;
   }
+  resetStreamingState();
 }
 
 /* ─── Connect ─── */
@@ -75,6 +77,7 @@ export function disconnectSSE(): void {
 export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void {
   if (!browser) return () => {};
 
+  const currentGen = ++generation;
   es = new EventSource(`/api/ask/${chatId}`);
 
   const resetSseTimeout = () => {
@@ -87,6 +90,7 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
   resetSseTimeout();
 
   es.addEventListener('token', (e: MessageEvent) => {
+    if (currentGen !== generation) return;
     resetSseTimeout();
     if (typeof e.data !== 'string') return;
     const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
@@ -94,6 +98,7 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
   });
 
   es.addEventListener('done', (e: MessageEvent) => {
+    if (currentGen !== generation) return;
     clearTimeout(sseTimeout);
     if (typeof e.data !== 'string') return;
     const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
@@ -119,10 +124,12 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
   });
 
   es.addEventListener('contact_intent', () => {
+    if (currentGen !== generation) return;
     callbacks.onContactIntent();
   });
 
   es.addEventListener('tool_call_start', (e: MessageEvent) => {
+    if (currentGen !== generation) return;
     resetSseTimeout();
     if (typeof e.data !== 'string') return;
     const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
@@ -138,6 +145,7 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
   });
 
   es.addEventListener('tool_call_end', (e: MessageEvent) => {
+    if (currentGen !== generation) return;
     resetSseTimeout();
     if (typeof e.data !== 'string') return;
     const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
@@ -151,12 +159,14 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
   });
 
   es.addEventListener('status', (e: MessageEvent) => {
+    if (currentGen !== generation) return;
     if (typeof e.data !== 'string') return;
     const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
     sseState.currentStatus = data.step || '';
   });
 
   es.addEventListener('error', (e: MessageEvent) => {
+    if (currentGen !== generation) return;
     clearTimeout(sseTimeout);
     if (typeof e.data !== 'string') return;
     const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();

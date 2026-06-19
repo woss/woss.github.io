@@ -88,7 +88,7 @@ function saveIndex(): void {
  * @param embedding - Query embedding vector (1024-dim Float32Array-compatible)
  * @returns Cached { answer, sources } if a similar entry exists, null otherwise
  */
-export function checkCache(embedding: number[]): { answer: string; sources: string } | null {
+export function checkCache(embedding: number[]): { answer: string; sources: string; toolCalls?: { name: string; serverId: string }[] } | null {
   const idx = getIndex();
   if (idx.size() === 0) return null;
 
@@ -103,12 +103,15 @@ export function checkCache(embedding: number[]): { answer: string; sources: stri
   if (distance > HIT_THRESHOLD) return null;
 
   const db = getDb();
-  const row = db.prepare('SELECT answer, sources FROM llm_cache WHERE id = ?').get(cacheId) as
-    | { answer: string; sources: string }
+  const row = db.prepare('SELECT answer, sources, tool_calls FROM llm_cache WHERE id = ?').get(cacheId) as
+    | { answer: string; sources: string; tool_calls: string | null }
     | undefined;
 
   if (!row) return null;
-  return { answer: stripToolCallXml(row.answer), sources: row.sources };
+  const toolCalls: { name: string; serverId: string }[] = row.tool_calls
+    ? JSON.parse(row.tool_calls)
+    : [];
+  return { answer: stripToolCallXml(row.answer), sources: row.sources, toolCalls };
 }
 
 /**
@@ -126,6 +129,7 @@ export function storeCache(
   answer: string,
   sources: string,
   messageId?: string,
+  toolCalls?: { name: string; serverId: string }[],
 ): void {
   if (!answer) return; // Don't cache empty answers
 
@@ -133,8 +137,8 @@ export function storeCache(
   const idx = getIndex();
 
   const result = db
-    .prepare('INSERT INTO llm_cache (question, answer, sources, message_id) VALUES (?, ?, ?, ?)')
-    .run(question, stripToolCallXml(answer), sources, messageId ?? null);
+    .prepare('INSERT INTO llm_cache (question, answer, sources, tool_calls, message_id) VALUES (?, ?, ?, ?, ?)')
+    .run(question, stripToolCallXml(answer), sources, JSON.stringify(toolCalls ?? []), messageId ?? null);
 
   const vector = new Float32Array(embedding);
   try {

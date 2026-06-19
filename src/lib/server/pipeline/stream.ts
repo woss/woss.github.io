@@ -98,6 +98,7 @@ interface StreamResult {
   msgId: string;
   toolLoopDetected: boolean;
   irrecoverable: boolean;
+  toolCalls?: { name: string; serverId: string }[];
 }
 
 /**
@@ -141,6 +142,7 @@ export async function streamWithRetry(
   let anyStepHadToolCalls = false;
   let anySuccessfulToolCalls = false;
   let doomLoopDetectedInRound = false;
+  const collectedToolCalls: { name: string; serverId: string }[] = [];
 
   // Pre-generate message ID for tool-call FK tracking
   const db = getDb();
@@ -207,6 +209,10 @@ export async function streamWithRetry(
                 break;
               case 'tool-call':
                 log.debug`Tool call: ${event.name}(${JSON.stringify(event.input)})`;
+                collectedToolCalls.push({
+                  name: event.name,
+                  serverId: toolServerMap.get(event.name) ?? 'unknown',
+                });
                 publishLive(chatId, 'tool_call_start', {
                   id: event.id,
                   name: event.name,
@@ -315,8 +321,8 @@ export async function streamWithRetry(
           };
         }
         lastError = new Error(reason);
-        // Disable tools sooner — drop on attempt 2 instead of 3
-        if (attempt === 2) mcpToolDefs = null;
+        // Disable tools sooner — drop on attempt 3 instead of 4
+        if (attempt === 3) mcpToolDefs = null;
         continue;
       }
 
@@ -368,5 +374,6 @@ export async function streamWithRetry(
     msgId,
     toolLoopDetected: doomLoopDetectedInRound,
     irrecoverable,
+    toolCalls: collectedToolCalls,
   };
 }

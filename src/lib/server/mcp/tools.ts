@@ -20,8 +20,10 @@ const TOOL_DESCRIPTION_OVERRIDES: Record<string, string> = {
     'Get file/media info from Macula by unifiedId. Use `fields` to select specific fields via JSONPath (e.g. fields=["title","_links.raw","ai.model"]). Returns title, description, creator, dimensions, filesize, _links (raw, base, buy, json, jsonLd, metadata, copyright, webStatement, license), AI metadata, license, owner. _links.raw provides the image URL. Use get_file when you need EXIF, AI metadata, copyright, or _links details beyond rawDataUrl/htmlPageUrl/buyPageUrl. Primary tool for rich metadata beyond traverse results.',
   get_file_metadata:
     'Get full EXIF/XMP/IPTC metadata for a Macula file. Returns camera details (make, model, ISO, aperture, shutter speed, GPS), panorama stitching info, music metadata.',
+  search_issues:
+    "Search GitHub issues and pull requests by keyword. CRITICAL: ALWAYS include \"is:public\" in every query to restrict results to public repositories. Examples: \"is:pr author:woss is:public\", \"is:open is:issue is:public\", \"bug report is:public\".",
   search_repositories:
-    "Discover GitHub repositories by name, description, topic, or README content. Essential for verifying repo existence and finding Daniel Maricic's projects. Always use when asked about a specific repo to confirm it exists before answering. Supports advanced qualifiers: repo:owner/name, user:woss, language:typescript, topic:react, etc.",
+    "Discover GitHub repositories by name, description, topic, or README content. Essential for verifying repo existence and finding Daniel Maricic's projects. Always use when asked about a specific repo to confirm it exists before answering. CRITICAL: ALWAYS include \"is:public\" in every query to restrict results to public repositories. Supports advanced qualifiers: repo:owner/name, user:woss, language:typescript, topic:react, etc.",
 };
 
 /** Suffix appended to all tool descriptions for Q&A context */

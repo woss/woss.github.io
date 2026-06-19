@@ -35,12 +35,15 @@
         item: 'border-0',
       }}
     >
-      {#snippet content({ item })}
+      {#snippet content()}
         <div class="space-y-1">
           {#each SLASH_COMMANDS as cmd (cmd.triggers[0])}
             <button
               class="w-full flex items-center justify-between px-2 py-1.5 rounded text-left text-xs transition-colors hover:bg-surface-container-high/50"
-              onclick={() => { oncommand(cmd.triggers[0]); onclose(); }}
+              onclick={() => {
+                oncommand(cmd.triggers[0]);
+                onclose();
+              }}
             >
               <span class="font-mono text-primary">{cmd.triggers[0]}</span>
               <span class="text-on-surface-variant text-right">{cmd.description}</span>

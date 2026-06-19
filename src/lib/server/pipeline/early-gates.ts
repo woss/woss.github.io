@@ -206,13 +206,26 @@ export async function handleEarlyGates(
   }
 
   // 3. Check semantic cache (skip if disabled via env)
-  let cached: { answer: string; sources: string } | null = null;
+  let cached: { answer: string; sources: string; toolCalls?: { name: string; serverId: string }[] } | null = null;
   if (config().llmCache.enabled) {
     publishLive(chatId, 'status', { step: 'checking_cache' });
     cached = checkCache(cacheEmbeddingData);
   }
   if (cached) {
     log.info`📦 cache HIT for "${text.slice(0, 100)}"`;
+
+    // Emit tool call live events for cached responses
+    for (const tc of cached.toolCalls ?? []) {
+      const id = 'cached-' + tc.name + '-' + Date.now();
+      publishLive(chatId, 'tool_call_start', {
+        id,
+        name: tc.name,
+        serverId: tc.serverId,
+        startedAt: Date.now(),
+      });
+      publishLive(chatId, 'tool_call_end', { id, name: tc.name });
+    }
+
     const msgId = addMessage({
       userId,
       role: 'assistant',

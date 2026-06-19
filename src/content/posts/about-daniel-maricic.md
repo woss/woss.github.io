@@ -2,13 +2,16 @@
 published: true
 title: 'About Daniel Maricic'
 slug: 'about-daniel-maricic'
-description: 'Software developer, open-source contributor, and founder with a passion for building tools that empower developers and drive innovation in the tech ecosystem.'
+description: 'Software engineer, open-source contributor, and founder with a passion for building tools that empower developers and drive innovation in the tech ecosystem.'
 date: 1990-01-01
 tags:
   - bio
   - about
   - software
-  - developer
+  - engineering
+  - developer tools
+  - infrastructure
+  - ai
   - open source
 header_image: '[Star trails over Catalonia](https://u.macula.link/6P2P0eXISH-fR6PJzDhlTw-7)'
 ---
@@ -17,19 +20,19 @@ header_image: '[Star trails over Catalonia](https://u.macula.link/6P2P0eXISH-fR6
 
 I'm Daniel Maricic. I break things, fix them, and write tools so nobody else breaks them the same way.
 
-I'm a software developer and architect with over a decade of experience building robust, high-performance systems — and occasionally setting things on fire (metaphorically, mostly). My work spans the full stack: designing blockchain protocols in Rust and TypeScript, building modern web applications with SvelteKit, managing Kubernetes clusters, and writing developer tooling that makes teams around the world more productive.
+I'm a software engineer and architect with over a decade of experience building robust, high-performance systems — and occasionally setting things on fire (metaphorically, mostly). My work spans the full stack: designing blockchain protocols in Rust and TypeScript, building modern web applications with SvelteKit, managing Kubernetes clusters, and writing developer tooling that makes teams around the world more productive. In recent years I've focused on AI-native systems, building tools that integrate large language models into developer workflows and content management platforms. I've built [woss.io](https://woss.io) as an AI-native personal portfolio with streaming LLM chat and RAG, and [Macula.link](https://macula.link) — a content rights and asset management platform that uses cryptography to issue legally binding digital certificates for intellectual property.
 
 ## Technical Focus
 
-My happy place is backend and infrastructure engineering — TypeScript and Node.js are my native tongue, but I'm conversational in Rust, Deno, and Bun (yes, I tried all three runtimes so you don't have to). I've contributed to open-source projects including pnpm (the fast, disk-efficient package manager), rushstack (Microsoft's scalable monorepo build system), and sharp (high-performance image processing). My open-source work is driven by a simple belief: build tools that make other developers' lives better. Over the past decade I've built projects across distributed systems, decentralized identity, and blockchain technologies — including founding a blockchain protocol startup (Anagolay Network).
+My happy place is backend and infrastructure engineering — TypeScript and Node.js are my native tongue, but I'm conversational in Rust, Deno, and Bun. I've love contributing to open-source projects, it teaches patience, eloquence and collaboration. Some of my contributions include various PRs, code reviews and feature implementations and bug fixing for example i contributed to pnpm (the fast, disk-efficient package manager), rushstack (Microsoft's scalable monorepo build system), sharp (high-performance image processing), Shai-Hulud-2.0-Detector (supply chain security) . My open-source work is driven by a simple belief: build tools that make other developers' lives better. Over the past decade I've built projects across distributed systems, decentralized identity, and blockchain technologies — including founding a blockchain protocol startup (Anagolay Network).
 
 ## Philosophy
 
-I believe the best code is the code you don't have to write. Elegant, maintainable systems that solve real problems — not architecture astronautics. I'm drawn to projects at the intersection of infrastructure, developer tooling, and decentralized technologies. My approach combines deep technical rigor with pragmatic decision-making: choose the right tool for the problem, not the trend of the month.
+I believe the best code is the code you don't have to maintain. Elegant, maintainable systems that solve real problems — not architecture astronautics. I'm drawn to projects at the intersection of infrastructure, developer tooling, and decentralized technologies. My approach combines technical knowledge with pragmatic decision-making: choose the right tool for the problem, not the trend of the month.
 
 ## Career Overview
 
-My career includes founding a software consultancy ([7Signals Consultancy Ltd](https://github.com/woss)), a blockchain protocol startup ([Anagolay Network](https://github.com/anagolay)), and building [Kelp.Digital](https://kelp.digital) and [Macula.link](https://macula.link) — a content rights and asset management platform where I acted as solo founder and engineer, writing 44,000 lines of TypeScript and owning every layer from infrastructure to user experience. I've also led engineering teams at agencies like Nord Software, and contributed to projects across fintech, digital media, and decentralized identity. I've written Web3 Foundation grants, spoken at developer conferences, and mentored junior engineers. My experience spans early-stage startups and established product teams — I've seen software built at every scale, from a garage to a grid.
+My career includes founding a software consultancy ([7Signals Consultancy Ltd](https://github.com/woss)), a blockchain protocol startup ([Anagolay Network](https://github.com/anagolay)), and building [Kelp.Digital](https://kelp.digital) and [Macula.link](https://macula.link) — a content rights and asset management platform where I acted as solo technical founder and engineer, writing more than 44,000 lines of TypeScript and owning every layer from infrastructure to user experience. I've also led engineering teams at agencies like Nord Software, and contributed to projects across fintech, digital media, and decentralized identity. I've written Web3 Foundation grants, spoken at developer conferences, mentored junior engineers and hired for engineering roles. My experience spans early-stage startups and established product teams — I've seen software built at every scale, from a garage to a grid.
 
 ## Technical Founder — Kelp.digital & Macula.link
 

@@ -94,6 +94,7 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
       question_embedding TEXT,
       answer TEXT,
       sources TEXT,
+      tool_calls TEXT DEFAULT '[]',
       message_id TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     )
