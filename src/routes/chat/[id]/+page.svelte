@@ -15,6 +15,9 @@
   import { SUGGESTED_QUESTIONS } from '$lib/chat/suggested-questions';
   import { CONTACT_DISMISSED_KEY } from '$lib/chat/constants';
   import { Button } from 'sv5ui';
+  import FeatureTour from '$lib/components/FeatureTour.svelte';
+  import { TOUR_DEFINITIONS } from '$lib/chat/tour-config';
+  import type { TourDefinition } from '$lib/chat/tour-config';
 
   import type { ChatMessage, Chat, ToolCallInfo, Source } from '$lib/chat/types';
   import { matchSlashCommand } from '$lib/chat/slash-commands';
@@ -56,6 +59,8 @@
   /* ─── State ─── */
 
   let userId = $state('');
+  let dismissedFeatures: string[] = $state([]);
+  let activeTour: TourDefinition | undefined = $state();
   let messages: ChatMessage[] = $state(
     Array.isArray(data?.messages) ? data.messages : []
   );
@@ -404,6 +409,18 @@
     return true;
   }
 
+  function _cmdRestartTour(): boolean {
+    _clearInput();
+    fetch('/api/tours/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    }).then(() => {
+      window.location.reload();
+    }).catch(() => {});
+    return true;
+  }
+
   const SLASH_DISPATCH: Record<string, () => boolean> = {
     contact: _cmdContact,
     export_md: _cmdExportMd,
@@ -416,6 +433,7 @@
     surprise_me: _cmdSurpriseMe,
     new: _cmdNew,
     home: _cmdHome,
+    restart_tour: _cmdRestartTour,
   };
 
   function handleSlashCommand(input: string): boolean {
@@ -488,6 +506,33 @@
     userId = id;
     isOwner = id === data.chatOwnerId;
   });
+
+  // Fetch dismissed tours once userId is set
+  $effect(() => {
+    if (!browser || !userId) return;
+    fetch(`/api/tours?userId=${encodeURIComponent(userId)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        dismissedFeatures = data.dismissed ?? [];
+        // Find first undismissed tour
+        activeTour = TOUR_DEFINITIONS.find((t) => !dismissedFeatures.includes(t.featureId));
+      })
+      .catch(() => {
+        // Silently fail — tours are non-critical
+      });
+  });
+
+  function handleDismissTour(): void {
+    if (!activeTour || !userId) return;
+    fetch('/api/tours/dismiss', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, featureIds: [activeTour.featureId] }),
+    }).catch(() => {});
+    dismissedFeatures = [...dismissedFeatures, activeTour.featureId];
+    // Find next undismissed tour
+    activeTour = TOUR_DEFINITIONS.find((t) => !dismissedFeatures.includes(t.featureId));
+  }
 
   let isOwner = $state<boolean | undefined>(undefined);
 
@@ -997,3 +1042,12 @@
 
   <RightSidebar {sidebarVisible} {sidebarMessage} bind:sidebarTab onclose={closeSidebar} />
 </div>
+
+{#if activeTour}
+  <FeatureTour
+    targetSelector={activeTour.targetSelector}
+    title={activeTour.title}
+    content={activeTour.content}
+    ondismiss={handleDismissTour}
+  />
+{/if}

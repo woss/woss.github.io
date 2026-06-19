@@ -278,6 +278,32 @@ function ensureUser(userId: string, email?: string, name?: string): void {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Feature Tour Functions                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Get all feature tours that have been dismissed for a user.
+ * Returns an array of feature_id strings.
+ */
+export function getDismissedFeatureTours(userId: string): string[] {
+  const db = getDb();
+  const rows = db.prepare('SELECT feature_id FROM feature_tours WHERE user_id = ?').all(userId) as { feature_id: string }[];
+  return rows.map((r) => r.feature_id);
+}
+
+/**
+ * Dismiss one or more feature tours for a user.
+ * Inserts records — no-op if already dismissed (PRIMARY KEY constraint).
+ */
+export function dismissFeatureTours(userId: string, featureIds: string[]): void {
+  const db = getDb();
+  const stmt = db.prepare('INSERT OR IGNORE INTO feature_tours (user_id, feature_id) VALUES (?, ?)');
+  for (const featureId of featureIds) {
+    stmt.run(userId, featureId);
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Chat Functions                                                    */
 /* ------------------------------------------------------------------ */
 

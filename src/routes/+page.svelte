@@ -170,17 +170,19 @@
       oncommand={(t) => sendMessage(t)}
     />
 
-    <div class="flex-1 flex flex-col min-w-0 max-md:px-4">
+    <div class="flex-1 flex flex-col min-w-0 max-md:px-0">
       <!-- Top: hero banner -->
       {#if data?.hero}
-        <div class="px-8 max-md:px-4 pt-6">
-          <div class="w-full max-w-200 mx-auto">
+        <div class="px-8 max-md:px-1 pt-6 max-md:pt-3">
+          <div class="w-full max-w-200 max-md:max-w-full mx-auto">
             <Banner
               title={data.hero.title}
               icon="lucide:sparkles"
               color="primary"
               to={resolve('/posts/[slug]', { slug: data.hero.slug })}
               class="rounded-lg"
+              ui={{ container: 'min-h-24' }}
+              actions={[{ label: 'Read now', variant: 'solid', color: 'surface', size: 'sm', href: resolve('/posts/[slug]', { slug: data.hero.slug }) }]}
             />
           </div>
         </div>
@@ -188,7 +190,7 @@
 
       <!-- Middle: chat + suggested questions or contact form (centered) -->
       <div
-        class="flex-1 flex flex-col items-center justify-center gap-6 px-8 max-md:px-4 max-md:pt-9 max-md:justify-start"
+        class="flex-1 flex flex-col items-center justify-center gap-6 px-8 max-md:px-1 max-md:pb-3 max-md:justify-end"
       >
         {#if canCreateChat}
           <div class="w-full max-w-200 flex flex-col gap-5">

@@ -192,15 +192,16 @@
           onmouseenter={(i: number) => (slash.slashSelectedIndex = i)}
         />
         <!-- Input row -->
-        <div class="flex items-center gap-2 px-3 pt-3 max-md:pt-3 max-md:px-2">
+<div class="flex items-center gap-2 px-3 pt-3 max-md:pt-3 max-md:px-1">
           <button
             type="button"
             onclick={slash.toggle}
-            aria-label="Commands"
-            class="flex items-center justify-center size-8 shrink-0 rounded-md text-sm font-mono font-semibold text-on-surface-variant hover:text-on-surface hover:bg-[rgba(255,255,255,0.06)] transition-all duration-100"
-          >/</button>
-          <div class="relative flex-1 min-w-0">
-            <div
+          aria-label="Commands"
+          id="slash-commands"
+          class="flex items-center justify-center size-8 shrink-0 rounded-md text-sm font-mono font-semibold text-on-surface-variant hover:text-on-surface hover:bg-[rgba(255,255,255,0.06)] transition-all duration-100"
+        >/</button>
+        <div class="relative flex-1 min-w-0">
+          <div
               contenteditable="true"
               role="textbox"
               aria-multiline="true"
@@ -240,6 +241,7 @@
         type="button"
         onclick={slash.toggle}
         aria-label="Commands"
+        id="slash-commands"
         class="flex items-center justify-center size-8 shrink-0 rounded-md text-sm font-mono font-semibold text-on-surface-variant hover:text-on-surface hover:bg-[rgba(255,255,255,0.06)] transition-all duration-100"
       >/</button>
       <div class="relative flex-1 min-w-0">

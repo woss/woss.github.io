@@ -16,6 +16,7 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
   { name: 'surprise_me', triggers: ['/surprise_me'], description: 'Pick a random question' },
   { name: 'new', triggers: ['/new'], description: 'Start a new chat' },
   { name: 'home', triggers: ['/home'], description: 'Go to home page' },
+  { name: 'restart_tour', triggers: ['/tour'], description: 'Replay feature tour' },
 ];
 
 export function matchSlashCommand(input: string): SlashCommandDef | undefined {

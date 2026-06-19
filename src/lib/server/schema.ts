@@ -192,4 +192,12 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
       timestamp TEXT
     )
   `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS feature_tours (
+      user_id TEXT NOT NULL REFERENCES users(id),
+      feature_id TEXT NOT NULL,
+      dismissed_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, feature_id)
+    )
+  `);
 }
