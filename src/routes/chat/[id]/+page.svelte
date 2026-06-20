@@ -61,9 +61,9 @@
   let userId = $state('');
   let dismissedFeatures: string[] = $state([]);
   let activeTour: TourDefinition | undefined = $state();
-  let messages: ChatMessage[] = $state(
-    Array.isArray(data?.messages) ? data.messages : []
-  );
+  // svelte-ignore state_referenced_locally
+  const initialMessages = Array.isArray(data?.messages) ? data.messages : [];
+  let messages: ChatMessage[] = $state(initialMessages);
   let sidebarMessageId = $state<string | null>(null);
   let sidebarTab = $state<'sources' | 'tools'>('sources');
   let sidebarVisible = $state(false);

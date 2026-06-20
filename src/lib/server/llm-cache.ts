@@ -16,6 +16,7 @@ import { join } from 'node:path';
 import { Index, MetricKind, ScalarKind } from 'usearch';
 import { EMBEDDING_DIM } from '../search-config.ts';
 import { getDb } from './db.ts';
+import { config } from './config.ts';
 import { CAT, createLogger } from './logger';
 
 const log = createLogger(CAT.llm);
@@ -103,11 +104,15 @@ export function checkCache(embedding: number[]): { answer: string; sources: stri
   if (distance > HIT_THRESHOLD) return null;
 
   const db = getDb();
-  const row = db.prepare('SELECT answer, sources, tool_calls FROM llm_cache WHERE id = ?').get(cacheId) as
-    | { answer: string; sources: string; tool_calls: string | null }
+  const row = db.prepare('SELECT answer, sources, tool_calls, created_at FROM llm_cache WHERE id = ?').get(cacheId) as
+    | { answer: string; sources: string; tool_calls: string | null; created_at: string }
     | undefined;
 
   if (!row) return null;
+
+  // TTL check — treat expired entries as cache misses
+  const createdAt = new Date(row.created_at).getTime();
+  if (createdAt < Date.now() - config().llmCache.ttlSec * 1000) return null;
   const toolCalls: { name: string; serverId: string }[] = row.tool_calls
     ? JSON.parse(row.tool_calls)
     : [];

@@ -26,6 +26,7 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
+  // Migration for existing DBs: ALTER TABLE messages ADD COLUMN from_cache INTEGER DEFAULT 0;
   db.exec(`
     CREATE TABLE IF NOT EXISTS messages (
       id TEXT PRIMARY KEY,
@@ -46,7 +47,8 @@ export function initDatabase(db: import('better-sqlite3').Database): void {
       query_type TEXT,
       deleted_at TEXT,
       user_agent_id INTEGER,
-      trace_id TEXT
+      trace_id TEXT,
+      from_cache INTEGER DEFAULT 0
     )
   `);
 

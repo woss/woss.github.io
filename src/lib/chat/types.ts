@@ -32,6 +32,7 @@ export interface ChatMessage {
   queryType?: string;
   toolCalls?: ToolCallInfo[];
   deletedAt?: string;
+  fromCache?: boolean;
 }
 
 export interface Chat {

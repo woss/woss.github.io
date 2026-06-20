@@ -27,7 +27,7 @@ type Config = DeepReadonly<{
     maxRounds: number;
   };
   mcp: { servers: McpServerConfig[] };
-  llmCache: { enabled: boolean };
+  llmCache: { enabled: boolean; ttlSec: number };
   report: { webhookUrl: string; webhookToken: string; errorWebhookUrl: string };
 }>;
 
@@ -41,6 +41,7 @@ const {
   OPENAI_MAX_ROUNDS,
   MCP_SERVERS,
   LLM_CACHE_ENABLED,
+  LLM_CACHE_TTL,
   WOSS_USER_WEBHOOK_URL,
   WOSS_USER_WEBHOOK_TOKEN,
   WOSS_USER_WEBHOOK_ERROR_URL,
@@ -77,6 +78,7 @@ function loadConfig(): Config {
     },
     llmCache: {
       enabled: LLM_CACHE_ENABLED === 'true' || LLM_CACHE_ENABLED === '1',
+      ttlSec: Number(LLM_CACHE_TTL) > 0 ? Number(LLM_CACHE_TTL) : 86400,
     },
     report: {
       webhookUrl: WOSS_USER_WEBHOOK_URL ?? '',

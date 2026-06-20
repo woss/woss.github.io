@@ -88,6 +88,7 @@ export async function saveAndEmitResult(params: SaveResultParams): Promise<void>
         irrecoverable: irrecoverable || undefined,
         error: 'Failed to generate answer after retries',
         userAgentId,
+        fromCache: false,
       });
       log.info('Sending SSE event', {
         event: 'error',
@@ -122,6 +123,7 @@ export async function saveAndEmitResult(params: SaveResultParams): Promise<void>
       queryType,
       msgId,
       userAgentId,
+      fromCache: false,
     });
   } catch (err) {
     log.error`addMessage failed: ${err}`;
@@ -133,6 +135,7 @@ export async function saveAndEmitResult(params: SaveResultParams): Promise<void>
       queryType,
       error: 'Failed to save response',
       userAgentId,
+      fromCache: false,
     });
     log.info('Sending SSE event', { event: 'error', chatId, dataLength: 'Failed to save response'.length });
     publishPersistent(chatId, 'error', { message: 'Failed to save response', messageId: errMsgId });

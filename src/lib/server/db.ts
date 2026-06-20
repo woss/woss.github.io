@@ -78,6 +78,7 @@ interface StoredMessage {
   maxTokens: number;
   queryType?: string;
   deletedAt?: string;
+  fromCache?: boolean;
 }
 
 /** A chat conversation. */
@@ -537,6 +538,7 @@ export interface AddMessageParams {
   error?: string;
   msgId?: string;
   userAgentId?: number;
+  fromCache?: boolean;
 }
 
 function addMessage(params: AddMessageParams): string {
@@ -547,7 +549,7 @@ function addMessage(params: AddMessageParams): string {
   const id = params.msgId ?? randomUUID();
   const ctx = getCurrentTraceContext();
   db.prepare(
-    'INSERT INTO messages (id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, model_id, tokens_in, tokens_out, duration_ms, max_tokens, query_type, user_agent_id, trace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO messages (id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, model_id, tokens_in, tokens_out, duration_ms, max_tokens, query_type, user_agent_id, trace_id, from_cache) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   ).run(
     id,
     params.userId,
@@ -566,6 +568,7 @@ function addMessage(params: AddMessageParams): string {
     params.queryType ?? null,
     params.userAgentId ?? null,
     ctx?.traceId ?? null,
+    params.fromCache ? 1 : 0,
   );
   return id;
 }
@@ -577,7 +580,7 @@ function getMessages(chatId: string, limit: number = 50, offset: number = 0): St
   const db = getDb();
   const rows = queryRows<Record<string, unknown>>(
     db.prepare(
-      'SELECT id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, created_at, model_id, tokens_in, tokens_out, duration_ms, max_tokens, deleted_at FROM messages WHERE chat_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
+      'SELECT id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, created_at, model_id, tokens_in, tokens_out, duration_ms, max_tokens, deleted_at, from_cache FROM messages WHERE chat_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
     ),
     chatId,
     limit,
@@ -594,7 +597,7 @@ function getMessagesByUserId(userId: string, limit: number = 50, offset: number 
   const db = getDb();
   const rows = queryRows<Record<string, unknown>>(
     db.prepare(
-      'SELECT id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, created_at, model_id, tokens_in, tokens_out, duration_ms, max_tokens, deleted_at FROM messages WHERE user_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
+      'SELECT id, user_id, chat_id, role, content, sources, reasoning, error, irrecoverable, created_at, model_id, tokens_in, tokens_out, duration_ms, max_tokens, deleted_at, from_cache FROM messages WHERE user_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?',
     ),
     userId,
     limit,
@@ -624,6 +627,7 @@ function parseStoredMessage(row: Record<string, unknown>): StoredMessage {
     maxTokens: Number(row.max_tokens ?? 0),
     queryType: row.query_type ? String(row.query_type) : undefined,
     deletedAt: row.deleted_at ? String(row.deleted_at) : undefined,
+    fromCache: Number(row.from_cache ?? 0) === 1 ? true : undefined,
   };
 }
 

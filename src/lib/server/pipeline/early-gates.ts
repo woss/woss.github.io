@@ -233,6 +233,7 @@ export async function handleEarlyGates(
       sources: cached.sources,
       chatId,
       userAgentId,
+      fromCache: true,
     });
     const sources = parseSources(cached.sources);
     const elapsed = performance.now() - startTime;
