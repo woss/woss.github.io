@@ -13,15 +13,17 @@ function main(): void {
   const db = new Database(DB_PATH);
 
   // Find all non-deleted chats with <= 3 user messages
-  const emptyChats = db.prepare(
-    `SELECT c.id,
+  const emptyChats = db
+    .prepare(
+      `SELECT c.id,
             c.title,
             (SELECT COUNT(*) FROM messages m WHERE m.chat_id = c.id AND m.role = 'user' AND m.deleted_at IS NULL) AS msg_count
      FROM chats c
      WHERE c.deleted_at IS NULL
        AND (SELECT COUNT(*) FROM messages m WHERE m.chat_id = c.id AND m.role = 'user' AND m.deleted_at IS NULL) <= 3
-     ORDER BY c.created_at ASC`
-  ).all() as { id: string; title: string; msg_count: number }[];
+     ORDER BY c.created_at ASC`,
+    )
+    .all() as { id: string; title: string; msg_count: number }[];
 
   if (emptyChats.length === 0) {
     console.log('No empty chats found. Nothing to delete.');
@@ -37,7 +39,9 @@ function main(): void {
 
   // Soft-delete each chat and its messages
   const deleteChatStmt = db.prepare("UPDATE chats SET deleted_at = datetime('now') WHERE id = ?");
-  const deleteMessagesStmt = db.prepare("UPDATE messages SET deleted_at = datetime('now') WHERE chat_id = ? AND deleted_at IS NULL");
+  const deleteMessagesStmt = db.prepare(
+    "UPDATE messages SET deleted_at = datetime('now') WHERE chat_id = ? AND deleted_at IS NULL",
+  );
 
   const del = db.transaction((chats: { id: string }[]) => {
     for (const chat of chats) {

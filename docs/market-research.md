@@ -74,7 +74,7 @@ Target: ≤4 touchpoints, ≤2 weeks
 
 2. **System design capability** — The #1 differentiator for senior roles in 2026. Can you scope ambiguity, make trade-offs, handle pushback? Coding is baseline now (AI handles implementation).
 
-3. **AI fluency (not dependency)** — Daily use of AI tools (Cursor, Claude Code, Copilot) is the **price of admission**. But companies screen for: can you *review* AI output skeptically? Do you know when AI is wrong? Engineers with 2+ AI skills earn 43% more.
+3. **AI fluency (not dependency)** — Daily use of AI tools (Cursor, Claude Code, Copilot) is the **price of admission**. But companies screen for: can you _review_ AI output skeptically? Do you know when AI is wrong? Engineers with 2+ AI skills earn 43% more.
 
 4. **Ownership pattern** — Owned features end-to-end (problem → design → ship → operate). Grew from assigned tasks to choosing what the team works on.
 
@@ -118,8 +118,8 @@ Target: ≤4 touchpoints, ≤2 weeks
 | JavaScript | 66%                  | Stable                  | Baseline                 |
 | TypeScript | 43.6% (#1 on GitHub) | Rising fast (+66% YoY)  | Baseline (but expected)  |
 | Python     | 57.9%                | Rising (AI/ML lift)     | -2% to +3% (mass supply) |
-| Go         | 16.4%                | Rising (cloud-native)   | **+12-18%**                  |
-| Rust       | 14.8%                | Rising (systems/infra)  | **+15-22%**                  |
+| Go         | 16.4%                | Rising (cloud-native)   | **+12-18%**              |
+| Rust       | 14.8%                | Rising (systems/infra)  | **+15-22%**              |
 | Java       | 29.4%                | Stable/Enterprise       | +5-10%                   |
 | C#         | 27.8%                | Stable/Microsoft        | 0 to +5%                 |
 | Kotlin     | 10.8%                | Rising (replacing Java) | +3-8%                    |
@@ -187,7 +187,7 @@ The gap between senior generalist ($150k-210k TC) and AI infrastructure speciali
 | Your Signal                            | 2026 Value                                           |
 | -------------------------------------- | ---------------------------------------------------- |
 | TypeScript (#1 on GitHub, 43.6% usage) | Baseline expectation, high volume demand             |
-| Rust (OSS + blockchain)                | **+15-22% premium**, scarcest talent pool                |
+| Rust (OSS + blockchain)                | **+15-22% premium**, scarcest talent pool            |
 | Open-source founder/maintainer         | Single highest-leverage signal for senior roles      |
 | Backend + infrastructure focus         | In top-4 role categories, stable demand              |
 | Kubernetes, cloud experience           | Table stakes, but expected                           |
@@ -207,7 +207,7 @@ The gap between senior generalist ($150k-210k TC) and AI infrastructure speciali
 
 ### Recommended Positioning Statement
 
-> *"Senior backend and infrastructure engineer building production systems in TypeScript and Rust. Open-source maintainer, distributed systems experience, AI-augmented development workflow. Open to staff-level roles."*
+> _"Senior backend and infrastructure engineer building production systems in TypeScript and Rust. Open-source maintainer, distributed systems experience, AI-augmented development workflow. Open to staff-level roles."_
 
 This hits: role + domain + stack + proof + availability — the formula that gets past both AI screen and human recruiter in 2026.
 
@@ -215,17 +215,17 @@ This hits: role + domain + stack + proof + availability — the formula that get
 
 ## 7. Sources
 
-- CoderPad, *State of Tech Hiring 2026*
-- HireJack, *Q2 2026 Tech Hiring Report* (363 companies, 134k positions)
-- Gergely Orosz, *State of SWE Job Market 2026* (Pragmatic Engineer)
+- CoderPad, _State of Tech Hiring 2026_
+- HireJack, _Q2 2026 Tech Hiring Report_ (363 companies, 134k positions)
+- Gergely Orosz, _State of SWE Job Market 2026_ (Pragmatic Engineer)
 - Stack Overflow Developer Survey 2025
 - GitHub Octoverse 2025
-- JobsByCulture, *Sourcing Senior Engineers 2026*
-- JobsByCulture, *Tech Hiring Rebound Summer 2026*
-- Cadence, *Engineering Hiring Market 2026*
-- Kore1, *Backend Developer Salary Guide 2026*
-- Kore1, *TypeScript Engineers 2026*
-- Kore1, *Senior SWE Glut & AI Infra Drought*
-- *Vibe Coder Blog*, AI Coding Developer Job Market 2026
-- Platform Recruitment, *Cloud Skills 2026*
-- Boundev, *SWE Job Market 2026*
+- JobsByCulture, _Sourcing Senior Engineers 2026_
+- JobsByCulture, _Tech Hiring Rebound Summer 2026_
+- Cadence, _Engineering Hiring Market 2026_
+- Kore1, _Backend Developer Salary Guide 2026_
+- Kore1, _TypeScript Engineers 2026_
+- Kore1, _Senior SWE Glut & AI Infra Drought_
+- _Vibe Coder Blog_, AI Coding Developer Job Market 2026
+- Platform Recruitment, _Cloud Skills 2026_
+- Boundev, _SWE Job Market 2026_

@@ -8,9 +8,9 @@ import rehypeSlug from 'rehype-slug';
 import rehypeStringify from 'rehype-stringify';
 import { rehypeMermaidTabs } from './rehype-mermaid-tabs.ts';
 import { rehypeAdmonitions } from './rehype-admonitions.ts';
-import { walkElement, isText, isElement, findFirstChild } from './rehype-utils.ts';
+import { walkElement } from './rehype-utils.ts';
 import { load } from 'js-yaml';
-import type { Root, Element, Text } from 'hast';
+import type { Root } from 'hast';
 
 function rehypeLazyLoad() {
   return (tree: Root) => {
@@ -58,7 +58,9 @@ export async function renderMarkdown(content: string): Promise<string> {
  * Parse frontmatter from markdown content using js-yaml.
  * Returns { data, content } where content has frontmatter stripped.
  */
-export async function parseMarkdownFrontmatter(content: string): Promise<{ data: Record<string, unknown>; content: string }> {
+export async function parseMarkdownFrontmatter(
+  content: string,
+): Promise<{ data: Record<string, unknown>; content: string }> {
   const YAML_FM_RE = /^---\n([\s\S]*?)\n---\n?/;
   const match = content.match(YAML_FM_RE);
   if (match) {
@@ -68,5 +70,3 @@ export async function parseMarkdownFrontmatter(content: string): Promise<{ data:
   }
   return { data: {}, content };
 }
-
-

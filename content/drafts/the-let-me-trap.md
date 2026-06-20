@@ -178,4 +178,4 @@ All relevant source files in the woss.io repository:
 
 ---
 
-_This post is part of a series on building woss.io — an AI-native personal portfolio. Earlier posts covered the [system prompt positioning fix](/posts/system-prompt-position-matters), [Macula MCP tool design](/posts/designing-mcp-for-llms), and [taming the AI tool loop](/posts/taming-the-ai-tool-loop)._
+_This post is part of a series on building woss.io — an AI-native personal portfolio. Earlier posts covered the [system prompt positioning fix](/posts/system-prompt-position-matters), [Macula MCP tool design](/posts/macula-designing-mcp-for-llms), and [taming the AI tool loop](/posts/taming-the-ai-tool-loop)._

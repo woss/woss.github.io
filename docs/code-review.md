@@ -43,22 +43,22 @@ The `SaveResultParams` interface (`generate.ts:747`) demonstrates the team knows
 
 ```ts
 addMessage(
-  userId,       // 1
-  'assistant',  // 2
-  '',           // 3
-  undefined,    // 4
-  undefined,    // 5
-  chatId,       // 6
-  0,            // 7
-  0,            // 8
-  0,            // 9
-  0,            // 10
-  0,            // 11
-  undefined,    // 12
-  true,         // 13
+  userId, // 1
+  'assistant', // 2
+  '', // 3
+  undefined, // 4
+  undefined, // 5
+  chatId, // 6
+  0, // 7
+  0, // 8
+  0, // 9
+  0, // 10
+  0, // 11
+  undefined, // 12
+  true, // 13
   'I can only answer...', // 14
-  undefined,    // 15
-  userAgentId,  // 16
+  undefined, // 15
+  userAgentId, // 16
 );
 ```
 
@@ -87,13 +87,13 @@ At minimum, each should log at `warn` or `error` level. The current pattern mean
 
 Despite extracting `chat-helpers.ts`, `generate.ts` grew by 38 lines and now contains:
 
-| Function | Lines | Purpose |
-|---|---|---|
-| `classifyToolNeeds` | 68 | Determine if tools are needed |
-| `handleEarlyGates` | 232 | Relevance check, polite response, embedding, cache |
-| `streamWithRetry` | 238 | LLM streaming with retry logic |
-| `saveAndEmitResult` | 147 | Persist results, SSE emit |
-| `startGeneration` | 241 | Top-level orchestrator |
+| Function            | Lines | Purpose                                            |
+| ------------------- | ----- | -------------------------------------------------- |
+| `classifyToolNeeds` | 68    | Determine if tools are needed                      |
+| `handleEarlyGates`  | 232   | Relevance check, polite response, embedding, cache |
+| `streamWithRetry`   | 238   | LLM streaming with retry logic                     |
+| `saveAndEmitResult` | 147   | Persist results, SSE emit                          |
+| `startGeneration`   | 241   | Top-level orchestrator                             |
 
 // from-woss below is CORRECT
 Each of these should be a separate module under `src/lib/server/pipeline/`. The function boundaries are clean (well-defined interfaces), but living in one file makes them harder to test, review, and maintain independently.
@@ -194,7 +194,7 @@ The `seenErrorMsgIds = new Set<string>()` is initialized once at module scope wi
 
 ### Major (🟠)
 
-*(None in this cycle — primary frontend issues are captured in C2/C3)*
+_(None in this cycle — primary frontend issues are captured in C2/C3)_
 
 ### Minor (🟡)
 
@@ -270,17 +270,19 @@ Zero `ms` renders "0ms". Could show "—" or a dash for undefined/unstarted tool
 ## Task Index
 
 ### Backend
-| Task | File | Priority |
-|---|---|---|
-| BE-01: Type-safe `addMessage` | `docs/tasks/BE-01-type-safe-addMessage.md` | P1 |
-| BE-02: Pipeline decomposition | `docs/tasks/BE-02-pipeline-decomposition.md` | P1 |
-| BE-03: Error handling audit | `docs/tasks/BE-03-error-handling-audit.md` | P1 |
-| BE-04: SvelteKit Actions | `docs/tasks/BE-04-sveltekit-actions.md` | P2 |
-| BE-05: DB layer cleanup | `docs/tasks/BE-05-db-layer-cleanup.md` | P2 |
-| BE-06: Streaming & retry hardening | `docs/tasks/BE-06-streaming-retry-hardening.md` | P3 |
+
+| Task                               | File                                            | Priority |
+| ---------------------------------- | ----------------------------------------------- | -------- |
+| BE-01: Type-safe `addMessage`      | `docs/tasks/BE-01-type-safe-addMessage.md`      | P1       |
+| BE-02: Pipeline decomposition      | `docs/tasks/BE-02-pipeline-decomposition.md`    | P1       |
+| BE-03: Error handling audit        | `docs/tasks/BE-03-error-handling-audit.md`      | P1       |
+| BE-04: SvelteKit Actions           | `docs/tasks/BE-04-sveltekit-actions.md`         | P2       |
+| BE-05: DB layer cleanup            | `docs/tasks/BE-05-db-layer-cleanup.md`          | P2       |
+| BE-06: Streaming & retry hardening | `docs/tasks/BE-06-streaming-retry-hardening.md` | P3       |
 
 ### Frontend
-| Task | File | Priority |
-|---|---|---|
-| FE-01: SSE store extraction | `docs/tasks/FE-01-sse-store-extraction.md` | P1 |
-| FE-02: ChatMessage cleanup | `docs/tasks/FE-02-chatmessage-cleanup.md` | P3 |
+
+| Task                        | File                                       | Priority |
+| --------------------------- | ------------------------------------------ | -------- |
+| FE-01: SSE store extraction | `docs/tasks/FE-01-sse-store-extraction.md` | P1       |
+| FE-02: ChatMessage cleanup  | `docs/tasks/FE-02-chatmessage-cleanup.md`  | P3       |

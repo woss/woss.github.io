@@ -73,16 +73,16 @@
         type="single"
         ui={{ trigger: 'text-xs font-mono text-on-surface-variant', root: 'w-full px-4 py-2', item: 'border-0' }}
       >
-        {#snippet content({ item })}
+        {#snippet content()}
           <pre
-            class="mt-2 p-3 rounded-md bg-[rgba(0,0,0,0.3)] text-xs leading-relaxed overflow-x-auto max-h-64 overflow-y-auto font-mono text-slate-300"
+            class="mt-2 p-3 rounded-md bg-[rgba(0,0,0,0.3)] text-xs/relaxed overflow-auto max-h-64 font-mono text-slate-300"
 ><code>{formatJson(wf.json)}</code></pre>
         {/snippet}
       </Accordion>
 
       <!-- Placeholder inputs -->
       <div class="px-4 pb-3 space-y-3">
-        {#each wf.placeholders as ph}
+        {#each wf.placeholders as ph (ph.key)}
           <div class="flex flex-col gap-1">
             <label
               for="replacer-{i}-{ph.key}"

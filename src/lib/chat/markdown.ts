@@ -1,4 +1,5 @@
 import MarkdownIt from 'markdown-it';
+import type { LanguageFn } from 'highlight.js';
 import hljs from 'highlight.js/lib/core';
 import typescript from 'highlight.js/lib/languages/typescript';
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -15,21 +16,26 @@ import DOMPurify from 'isomorphic-dompurify';
 import { addMaculaRef } from './macula-utils';
 
 // Module-level: register highlight.js languages once when this chunk loads
-const langMap: Record<string, object> = {
-  typescript, ts: typescript,
-  javascript, js: javascript,
+const langMap: Record<string, LanguageFn> = {
+  typescript,
+  ts: typescript,
+  javascript,
+  js: javascript,
   json,
-  bash, sh: bash, shell: bash,
+  bash,
+  sh: bash,
+  shell: bash,
   python,
   sql,
   html: xml,
   css,
   diff,
-  yaml, yml: yaml,
+  yaml,
+  yml: yaml,
   rust,
 };
 for (const [name, lang] of Object.entries(langMap)) {
-  hljs.registerLanguage(name, lang as any);
+  hljs.registerLanguage(name, lang);
 }
 
 /**
@@ -164,7 +170,9 @@ export function createMarkdownRenderer(context: {
     if (lang && hljs.getLanguage(lang)) {
       try {
         return `<pre class="hljs"><code>${hljs.highlight(str, { language: lang, ignoreIllegals: true }).value}</code></pre>`;
-      } catch {}
+      } catch {
+        // hljs.highlight failed — fall through to plain escaped-HTML rendering
+      }
     }
     return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`;
   };

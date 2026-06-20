@@ -69,8 +69,8 @@ vi.mock('$lib/server/chat-helpers', () => ({
   isRelevant: vi.fn(),
   needsGithubTools: vi.fn().mockResolvedValue(false),
   needsMaculaTools: vi.fn().mockResolvedValue(false),
-  parseSources: vi.fn((s: string) => []),
   tryRenameChat: vi.fn(),
+  parseSources: vi.fn(),
 }));
 
 vi.mock('./tool-classifier', () => ({
@@ -82,20 +82,13 @@ vi.mock('./tool-classifier', () => ({
 // ---------------------------------------------------------------------------
 
 import { handleEarlyGates } from './early-gates';
-import { getMessages, addMessage, lockChat, incrementOffTopicCount, getChatMessageCount } from '$lib/server/db';
+import type { StoredMessage } from '$lib/server/db';
+import { getMessages, addMessage, lockChat, incrementOffTopicCount } from '$lib/server/db';
 import { embedText } from '$lib/server/embed';
 import { checkCache } from '$lib/server/llm-cache';
 import { publishLive, publishPersistent } from '$lib/server/chat-events';
 import { callWebhook } from '$lib/server/webhooks';
-import {
-  isRelevant,
-  generatePoliteResponse,
-  needsGithubTools,
-  needsMaculaTools,
-  tryRenameChat,
-} from '$lib/server/chat-helpers';
-import { classifyToolNeeds } from './tool-classifier';
-import { config } from '$lib/server/config';
+import { isRelevant, generatePoliteResponse, needsGithubTools, needsMaculaTools } from '$lib/server/chat-helpers';
 
 // ===========================================================================
 // handleEarlyGates
@@ -111,7 +104,9 @@ describe('handleEarlyGates', () => {
   // -----------------------------------------------------------------------
 
   it('rejects off-topic question with attempts left (< 3 strikes)', async () => {
-    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Previous question' } as any]);
+    vi.mocked(getMessages).mockReturnValue([
+      { role: 'user', content: 'Previous question' },
+    ] as unknown as StoredMessage[]);
     vi.mocked(needsGithubTools).mockResolvedValue(false);
     vi.mocked(needsMaculaTools).mockResolvedValue(false);
     vi.mocked(isRelevant).mockResolvedValue(false);
@@ -135,7 +130,9 @@ describe('handleEarlyGates', () => {
   });
 
   it('locks chat after 3 off-topic strikes', async () => {
-    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Previous question' } as any]);
+    vi.mocked(getMessages).mockReturnValue([
+      { role: 'user', content: 'Previous question' },
+    ] as unknown as StoredMessage[]);
     vi.mocked(needsGithubTools).mockResolvedValue(false);
     vi.mocked(needsMaculaTools).mockResolvedValue(false);
     vi.mocked(isRelevant).mockResolvedValue(false);
@@ -161,7 +158,7 @@ describe('handleEarlyGates', () => {
   // -----------------------------------------------------------------------
 
   it('skips relevance check when tool intent detected via keywords', async () => {
-    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Show repos' } as any]);
+    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Show repos' }] as unknown as StoredMessage[]);
     vi.mocked(needsGithubTools).mockResolvedValue(true);
     // Ensure we don't reach the isRelevant call
     vi.mocked(isRelevant).mockRejectedValue(new Error('should not be called'));
@@ -182,7 +179,7 @@ describe('handleEarlyGates', () => {
   });
 
   it('skips relevance check for /summarize commands', async () => {
-    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Old question' } as any]);
+    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Old question' }] as unknown as StoredMessage[]);
     vi.mocked(isRelevant).mockRejectedValue(new Error('should not be called'));
     vi.mocked(embedText).mockResolvedValue({ data: [0.5, 0.6], dimensions: 2 });
 
@@ -248,7 +245,7 @@ describe('handleEarlyGates', () => {
   // -----------------------------------------------------------------------
 
   it('returns handled: true when embedding fails', async () => {
-    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'A question' } as any]);
+    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'A question' }] as unknown as StoredMessage[]);
     vi.mocked(needsGithubTools).mockResolvedValue(false);
     vi.mocked(needsMaculaTools).mockResolvedValue(false);
     vi.mocked(isRelevant).mockResolvedValue(true);
@@ -277,7 +274,7 @@ describe('handleEarlyGates', () => {
   // -----------------------------------------------------------------------
 
   it('returns cached answer on cache hit when cache enabled', async () => {
-    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Old question' } as any]);
+    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Old question' }] as unknown as StoredMessage[]);
     vi.mocked(needsGithubTools).mockResolvedValue(false);
     vi.mocked(needsMaculaTools).mockResolvedValue(false);
     vi.mocked(isRelevant).mockResolvedValue(true);
@@ -308,7 +305,7 @@ describe('handleEarlyGates', () => {
   });
 
   it('emits tool call events on cache hit when cached data has tool calls', async () => {
-    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Old question' } as any]);
+    vi.mocked(getMessages).mockReturnValue([{ role: 'user', content: 'Old question' }] as unknown as StoredMessage[]);
     vi.mocked(needsGithubTools).mockResolvedValue(false);
     vi.mocked(needsMaculaTools).mockResolvedValue(false);
     vi.mocked(isRelevant).mockResolvedValue(true);
@@ -363,9 +360,9 @@ describe('handleEarlyGates', () => {
 
   it('returns embedding, messages, and history when all gates pass', async () => {
     vi.mocked(getMessages).mockReturnValue([
-      { role: 'user', content: 'Previous question', sources: null },
-      { role: 'assistant', content: 'Previous answer', sources: null },
-    ] as any);
+      { role: 'user', content: 'Previous question', sources: '' },
+      { role: 'assistant', content: 'Previous answer', sources: '' },
+    ] as unknown as StoredMessage[]);
     vi.mocked(needsGithubTools).mockResolvedValue(false);
     vi.mocked(needsMaculaTools).mockResolvedValue(false);
     vi.mocked(isRelevant).mockResolvedValue(true);
@@ -386,13 +383,14 @@ describe('handleEarlyGates', () => {
       cacheEmbeddingData: [0.1, 0.2, 0.3],
       cacheText: 'What is your name?',
       ctxMessages: [
-        { role: 'user', content: 'Previous question', sources: null },
-        { role: 'assistant', content: 'Previous answer', sources: null },
+        { role: 'user', content: 'Previous question', sources: '' },
+        { role: 'assistant', content: 'Previous answer', sources: '' },
       ],
       history: [
         { role: 'user', content: 'Previous question' },
         { role: 'assistant', content: 'Previous answer' },
       ],
+      classifyResult: undefined,
     });
   });
 });

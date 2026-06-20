@@ -40,7 +40,6 @@
   let hasChats = $derived(chats.length > 0);
   let canCreateChat = $derived(chats.length < config.public.maxChats);
 
-  let featuredReady = $state(false);
   let ready = $state(false);
   let showContactForm = $state(true);
 
@@ -86,16 +85,6 @@
         ready = true;
       });
   });
-
-  onMount(() => {
-    featuredReady = true;
-  });
-
-  function handleSuggestedClick(question: string): void {
-    if (!userId) return; // userId not yet initialized from localStorage
-    messageText = question;
-    sendMessage(question);
-  }
 
   async function sendMessage(text: string): Promise<void> {
     const trimmed = text.trim();
@@ -198,8 +187,7 @@
               bind:messageText
               bind:isLoading
               bind:inputEl
-              onsend={sendMessage}
-              onsuggested={handleSuggestedClick}
+               onsend={sendMessage}
               variant="home"
             />
           </div>

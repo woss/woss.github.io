@@ -12,17 +12,17 @@ Resolve all code review findings from the staged and unstaged code changes in `g
 
 ## Context & Decisions
 
-| Decision | Rationale | Source |
-| -------- | --------- | ------ |
+| Decision                                                   | Rationale                                                                               | Source                      |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------- |
 | Eliminate duplicated `startGeneration` in `ask/+server.ts` | 616-line copy creates maintenance hazard; all callers already import from `generate.ts` | `ref:only-green-flyingfish` |
-| Add `typeFilter` to `searchChunks` in `generate.ts` | Missing param changes RAG behavior for blog/article queries | `ref:only-green-flyingfish` |
-| Fix `maxOutputTokens` → `maxTokens` in synthesis round | AI SDK silently ignores misspelled option, token limit not applied | `ref:only-green-flyingfish` |
-| Extract shared helpers | 5 helpers duplicated in `generate.ts` + `ask/+server.ts` with subtle divergence | `ref:only-green-flyingfish` |
-| Move `/summarize` rename before text override | `tryRenameChat` runs after `text` overwrite → renames to prompt text | `ref:only-green-flyingfish` |
-| Add double-link guard to legacy `ask/+server.ts` | PR link conversion lacks already-linked check present in `generate.ts` | `ref:only-green-flyingfish` |
-| Fix unhandled `.catch()` in `ask/+server.ts` | Re-throws inside catch → unhandled promise rejection | `ref:only-green-flyingfish` |
-| Move MCP prompt fetch outside `if (maculaNeeded)` | Prompts also needed for GitHub-only queries | `ref:only-green-flyingfish` |
-| Remove unused `tool-error` type or implement emission | Type defined but never produced | `ref:only-green-flyingfish` |
+| Add `typeFilter` to `searchChunks` in `generate.ts`        | Missing param changes RAG behavior for blog/article queries                             | `ref:only-green-flyingfish` |
+| Fix `maxOutputTokens` → `maxTokens` in synthesis round     | AI SDK silently ignores misspelled option, token limit not applied                      | `ref:only-green-flyingfish` |
+| Extract shared helpers                                     | 5 helpers duplicated in `generate.ts` + `ask/+server.ts` with subtle divergence         | `ref:only-green-flyingfish` |
+| Move `/summarize` rename before text override              | `tryRenameChat` runs after `text` overwrite → renames to prompt text                    | `ref:only-green-flyingfish` |
+| Add double-link guard to legacy `ask/+server.ts`           | PR link conversion lacks already-linked check present in `generate.ts`                  | `ref:only-green-flyingfish` |
+| Fix unhandled `.catch()` in `ask/+server.ts`               | Re-throws inside catch → unhandled promise rejection                                    | `ref:only-green-flyingfish` |
+| Move MCP prompt fetch outside `if (maculaNeeded)`          | Prompts also needed for GitHub-only queries                                             | `ref:only-green-flyingfish` |
+| Remove unused `tool-error` type or implement emission      | Type defined but never produced                                                         | `ref:only-green-flyingfish` |
 
 ## Phase 1: Extract shared logic [PENDING]
 

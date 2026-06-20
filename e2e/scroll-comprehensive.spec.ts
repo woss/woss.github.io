@@ -5,7 +5,15 @@ import { setupTestUser, createChat } from './chat-helpers';
 async function getScrollState(page: Page) {
   return page.evaluate(() => {
     const el = document.querySelector<HTMLElement>('div.flex-1.overflow-y-auto.overflow-x-hidden');
-    if (!el) return { error: 'scroll container not found' };
+    if (!el)
+      return {
+        error: 'scroll container not found',
+        scrollTop: 0,
+        scrollHeight: 0,
+        clientHeight: 0,
+        atBottom: false,
+        overflowY: '',
+      };
     return {
       scrollTop: el.scrollTop,
       scrollHeight: el.scrollHeight,
@@ -52,7 +60,15 @@ test.describe('Comprehensive chat scroll', () => {
     // Scroll to bottom and check state in one evaluate to avoid timing race
     const initial = await page.evaluate(() => {
       const el = document.querySelector<HTMLElement>('div.flex-1.overflow-y-auto.overflow-x-hidden');
-      if (!el) return { error: 'scroll container not found' };
+      if (!el)
+        return {
+          error: 'scroll container not found',
+          scrollTop: 0,
+          scrollHeight: 0,
+          clientHeight: 0,
+          atBottom: false,
+          overflowY: '',
+        };
       el.scrollTop = el.scrollHeight;
       return {
         scrollTop: el.scrollTop,
@@ -68,7 +84,7 @@ test.describe('Comprehensive chat scroll', () => {
     await page.screenshot({ path: 'test-results/comp-initial.png' });
 
     // Check scroll container exists with correct CSS
-    expect((initial as any).overflowY).toBe('auto');
+    expect(initial.overflowY).toBe('auto');
   });
 
   test('scrolls to bottom on send', async ({ page }) => {

@@ -59,8 +59,8 @@ Open <http://localhost:5173>.
 | Variable                       | Default                    | Description                        |
 | ------------------------------ | -------------------------- | ---------------------------------- |
 | `ORIGIN`                       | `http://localhost:5173`    | App origin for CORS/redirects      |
-| `PROVIDER_API_KEY`               | `public`                   | API key for your LLM endpoint      |
-| `LLM_PROVIDER_BASE_URL`              | `http://localhost:1234/v1` | OpenAI-compatible API base URL     |
+| `PROVIDER_API_KEY`             | `public`                   | API key for your LLM endpoint      |
+| `LLM_PROVIDER_BASE_URL`        | `http://localhost:1234/v1` | OpenAI-compatible API base URL     |
 | `OPENAI_MODEL`                 | `mistralai/ministral-3-3b` | Model ID to use                    |
 | `OPENAI_MAX_TOKENS`            | `10000`                    | Max output tokens                  |
 | `OPENAI_FIRST_ROUND_MAX_STEPS` | `10`                       | Max tool steps in first round      |

@@ -440,7 +440,8 @@ h6 {
 /* ── Ambient glow ── */
 
 @keyframes ambient-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.08;
     transform: scale(1);
   }
@@ -451,12 +452,17 @@ h6 {
 }
 
 @keyframes border-glow {
-  0%, 100% {
+  0%,
+  100% {
     border-color: rgba(56, 189, 248, 0.35);
-    box-shadow: 0 0 8px rgba(56, 189, 248, 0.2), inset 0 0 8px rgba(56, 189, 248, 0.05);
+    box-shadow:
+      0 0 8px rgba(56, 189, 248, 0.2),
+      inset 0 0 8px rgba(56, 189, 248, 0.05);
   }
   50% {
     border-color: rgba(168, 85, 247, 0.45);
-    box-shadow: 0 0 16px rgba(168, 85, 247, 0.35), inset 0 0 12px rgba(168, 85, 247, 0.1);
+    box-shadow:
+      0 0 16px rgba(168, 85, 247, 0.35),
+      inset 0 0 12px rgba(168, 85, 247, 0.1);
   }
 }

@@ -67,7 +67,7 @@ function buildEvent(overrides: {
     request,
     getClientAddress: () => '127.0.0.1',
     url: new URL('http://localhost'),
-    cookies: {} as any,
+    cookies: {} as unknown,
     locals: {},
     setHeaders: () => {},
     isDataRequest: false,
@@ -75,7 +75,7 @@ function buildEvent(overrides: {
     route: { id: 'api/leads' },
     fetch: vi.fn(),
     platform: undefined,
-    tracing: { enabled: false, root: {} as any, current: {} as any },
+    tracing: { enabled: false, root: {} as unknown, current: {} as unknown },
     isRemoteRequest: false,
   } as unknown as RequestEvent;
 }
@@ -168,7 +168,10 @@ describe('POST /api/leads', () => {
     });
 
     it('rejects invalid email format', async () => {
-      const event = buildEvent({ origin: 'https://woss.io', body: { userId: 'user-1', name: 'Alice', email: 'not-an-email' } });
+      const event = buildEvent({
+        origin: 'https://woss.io',
+        body: { userId: 'user-1', name: 'Alice', email: 'not-an-email' },
+      });
       const res = await POST(event);
       expect(res.status).toBe(400);
       const json = await res.json();
@@ -176,7 +179,10 @@ describe('POST /api/leads', () => {
     });
 
     it('rejects name that sanitizes to empty', async () => {
-      const event = buildEvent({ origin: 'https://woss.io', body: { userId: 'user-1', name: '   ', email: 'alice@example.com' } });
+      const event = buildEvent({
+        origin: 'https://woss.io',
+        body: { userId: 'user-1', name: '   ', email: 'alice@example.com' },
+      });
       const res = await POST(event);
       expect(res.status).toBe(400);
       const json = await res.json();
@@ -210,7 +216,12 @@ describe('POST /api/leads', () => {
 
   describe('success path', () => {
     it('inserts lead and updates user contact on valid request', async () => {
-      const event = buildEvent({ origin: 'https://woss.io', ip: 'success-test-1', userAgent: 'TestBot/1.0', body: validBody });
+      const event = buildEvent({
+        origin: 'https://woss.io',
+        ip: 'success-test-1',
+        userAgent: 'TestBot/1.0',
+        body: validBody,
+      });
       const res = await POST(event);
 
       expect(res.status).toBe(200);
@@ -218,7 +229,15 @@ describe('POST /api/leads', () => {
       expect(json.success).toBe(true);
 
       expect(updateUserContact).toHaveBeenCalledWith('user-1', 'Alice', 'alice@example.com');
-      expect(insertLead).toHaveBeenCalledWith('user-1', 'Alice', 'alice@example.com', 'Acme Inc', 'Engineer', 'Interested in your product', 'success-test-1');
+      expect(insertLead).toHaveBeenCalledWith(
+        'user-1',
+        'Alice',
+        'alice@example.com',
+        'Acme Inc',
+        'Engineer',
+        'Interested in your product',
+        'success-test-1',
+      );
       expect(callWebhook).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'contactSubmitted',

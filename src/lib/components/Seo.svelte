@@ -43,7 +43,7 @@
  {#if publishedTime}
  <meta property="article:published_time" content={publishedTime} />
  {/if}
- {#each tags as tag}
- <meta property="article:tag" content={tag} />
- {/each}
+  {#each tags as tag (tag)}
+  <meta property="article:tag" content={tag} />
+  {/each}
 </svelte:head>

@@ -30,19 +30,14 @@ vi.mock('../lib/server/db.js', () => ({
 }));
 
 vi.mock('../lib/server/embed.js', () => ({
-  embedTexts: vi.fn().mockResolvedValue([
-    { data: Array(1024).fill(0.1) },
-    { data: Array(1024).fill(0.2) },
-  ]),
+  embedTexts: vi.fn().mockResolvedValue([{ data: Array(1024).fill(0.1) }, { data: Array(1024).fill(0.2) }]),
   releaseExtractor: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('./chunk-content.js', () => ({
   chunkContent: vi.fn().mockImplementation(async (body: string) => {
     if (!body || !body.trim()) return [];
-    return [
-      { text: body, section: '', title: '', date: null, tags: [] },
-    ];
+    return [{ text: body, section: '', title: '', date: null, tags: [] }];
   }),
 }));
 
@@ -82,7 +77,7 @@ import {
 import { chunkContent } from './chunk-content.js';
 import { embedTexts } from '../lib/server/embed.js';
 
-import type { FileEntry, ChunkRow } from './build-index.js';
+import type { FileEntry } from './build-index.js';
 
 import { readdirSync, existsSync, readFileSync } from 'node:fs';
 
@@ -90,12 +85,7 @@ import { readdirSync, existsSync, readFileSync } from 'node:fs';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function entry(
-  slug: string,
-  hash: string,
-  type: 'post' | 'experience' = 'post',
-  relativePath?: string,
-): FileEntry {
+function entry(slug: string, hash: string, type: 'post' | 'experience' = 'post', relativePath?: string): FileEntry {
   return { slug, hash, type, relativePath: relativePath ?? `${slug}.md` };
 }
 
@@ -204,11 +194,7 @@ describe('parseSlugHashRows', () => {
   });
 
   it('skips null/undefined rows', () => {
-    const rows = [
-      null,
-      undefined,
-      { slug: 'valid', hash: '123' },
-    ];
+    const rows = [null, undefined, { slug: 'valid', hash: '123' }];
     const result = parseSlugHashRows(rows as unknown[]);
     expect(result).toHaveLength(1);
     expect(result[0]).toEqual({ slug: 'valid', hash: '123' });
@@ -258,9 +244,7 @@ describe('generateChunkId', () => {
   });
 
   it('handles slugs with special characters', () => {
-    expect(generateChunkId('hello-world-123', 42)).toBe(
-      'hello-world-123_chunk_42',
-    );
+    expect(generateChunkId('hello-world-123', 42)).toBe('hello-world-123_chunk_42');
   });
 });
 
@@ -306,8 +290,7 @@ describe('processFile', () => {
   });
 
   it('processes content into rows and index keys', async () => {
-    const content =
-      '# Hello\n\nThis is a test post body with enough text to create chunks.';
+    const content = '# Hello\n\nThis is a test post body with enough text to create chunks.';
     const file = {
       slug: 'test-post',
       title: 'Test Post',
@@ -460,9 +443,7 @@ describe('walkMdFiles', () => {
   });
 
   it('yields .md file paths', () => {
-    vi.mocked(readdirSync).mockReturnValue([
-      { name: 'post.md', isDirectory: () => false },
-    ] as any);
+    vi.mocked(readdirSync).mockReturnValue([{ name: 'post.md', isDirectory: () => false }] as unknown as never[]);
     const result = [...walkMdFiles('/posts')];
     expect(result).toHaveLength(1);
     expect(result[0]).toMatch(/post\.md$/);
@@ -473,21 +454,21 @@ describe('walkMdFiles', () => {
       { name: 'post.md', isDirectory: () => false },
       { name: 'notes.txt', isDirectory: () => false },
       { name: 'data.json', isDirectory: () => false },
-    ] as any);
+    ] as unknown as never[]);
     const result = [...walkMdFiles('/posts')];
     expect(result).toHaveLength(1);
     expect(result[0]).toMatch(/post\.md$/);
   });
 
   it('recurses into subdirectories', () => {
-    vi.mocked(readdirSync).mockImplementation((dirPath: any) => {
+    vi.mocked(readdirSync).mockImplementation((dirPath: unknown) => {
       if (typeof dirPath === 'string' && dirPath.includes('subdir')) {
-        return [{ name: 'nested.md', isDirectory: () => false }] as any;
+        return [{ name: 'nested.md', isDirectory: () => false }] as unknown as never[];
       }
       return [
         { name: 'root.md', isDirectory: () => false },
         { name: 'subdir', isDirectory: () => true },
-      ] as any;
+      ] as unknown as never[];
     });
     const result = [...walkMdFiles('/posts')];
     expect(result).toHaveLength(2);
@@ -519,9 +500,9 @@ describe('readFileEntries', () => {
   });
 
   it('returns post entries from POSTS_DIR', () => {
-    vi.mocked(readdirSync).mockImplementation((dirPath: any) => {
-      if (dirPath.includes('posts')) {
-        return [{ name: 'hello.md', isDirectory: () => false }] as any;
+    vi.mocked(readdirSync).mockImplementation((dirPath: unknown) => {
+      if (typeof dirPath === 'string' && dirPath.includes('posts')) {
+        return [{ name: 'hello.md', isDirectory: () => false }] as unknown as never[];
       }
       return [];
     });
@@ -534,9 +515,9 @@ describe('readFileEntries', () => {
   });
 
   it('uses frontmatter slug when present (overrides filename slug)', () => {
-    vi.mocked(readdirSync).mockImplementation((dirPath: any) => {
-      if (dirPath.includes('posts')) {
-        return [{ name: 'hello.md', isDirectory: () => false }] as any;
+    vi.mocked(readdirSync).mockImplementation((dirPath: unknown) => {
+      if (typeof dirPath === 'string' && dirPath.includes('posts')) {
+        return [{ name: 'hello.md', isDirectory: () => false }] as unknown as never[];
       }
       return [];
     });
@@ -547,9 +528,9 @@ describe('readFileEntries', () => {
   });
 
   it('returns experience entries from EXPERIENCE_DIR', () => {
-    vi.mocked(readdirSync).mockImplementation((dirPath: any) => {
-      if (dirPath.includes('experience')) {
-        return [{ name: 'work.md', isDirectory: () => false }] as any;
+    vi.mocked(readdirSync).mockImplementation((dirPath: unknown) => {
+      if (typeof dirPath === 'string' && dirPath.includes('experience')) {
+        return [{ name: 'work.md', isDirectory: () => false }] as unknown as never[];
       }
       return [];
     });

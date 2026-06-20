@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { setupTestUser, createChat } from './chat-helpers';
 
 // Generate mock messages - enough to overflow any normal viewport
@@ -86,7 +86,8 @@ test.describe('Chat navigation scroll', () => {
     // Scroll to bottom and check state in one evaluate to avoid timing race
     const state = await page.evaluate(() => {
       const el = document.querySelector<HTMLElement>('div.flex-1.overflow-y-auto.overflow-x-hidden');
-      if (!el) return { error: 'scroll container not found', scrollTop: 0, scrollHeight: 0, clientHeight: 0, atBottom: false };
+      if (!el)
+        return { error: 'scroll container not found', scrollTop: 0, scrollHeight: 0, clientHeight: 0, atBottom: false };
       el.scrollTop = el.scrollHeight;
       return {
         scrollTop: el.scrollTop,
@@ -97,9 +98,9 @@ test.describe('Chat navigation scroll', () => {
     });
     console.log('Chat 1 scroll state:', JSON.stringify(state));
 
-    if ((state as any).scrollHeight > (state as any).clientHeight) {
-      expect((state as any).atBottom).toBe(true);
-    } else if (!(state as any).error) {
+    if (state.scrollHeight > state.clientHeight) {
+      expect(state.atBottom).toBe(true);
+    } else if (state.error) {
       console.log('No overflow (content fits viewport), skipping overflow assertion');
     }
 
@@ -138,7 +139,8 @@ test.describe('Chat navigation scroll', () => {
     // Scroll to bottom and check state in one evaluate to avoid timing race
     const state2 = await page.evaluate(() => {
       const el = document.querySelector<HTMLElement>('div.flex-1.overflow-y-auto.overflow-x-hidden');
-      if (!el) return { error: 'scroll container not found', scrollTop: 0, scrollHeight: 0, clientHeight: 0, atBottom: false };
+      if (!el)
+        return { error: 'scroll container not found', scrollTop: 0, scrollHeight: 0, clientHeight: 0, atBottom: false };
       el.scrollTop = el.scrollHeight;
       return {
         scrollTop: el.scrollTop,
@@ -149,8 +151,8 @@ test.describe('Chat navigation scroll', () => {
     });
     console.log('Chat 2 scroll state:', JSON.stringify(state2));
 
-    if ((state2 as any).scrollHeight > (state2 as any).clientHeight) {
-      expect((state2 as any).atBottom).toBe(true);
+    if (state2.scrollHeight > state2.clientHeight) {
+      expect(state2.atBottom).toBe(true);
     }
 
     // Now navigate BACK to chat 1 via direct URL (simulates sidebar click)
@@ -162,7 +164,8 @@ test.describe('Chat navigation scroll', () => {
     // Scroll to bottom and check state in one evaluate to avoid timing race
     const state3 = await page.evaluate(() => {
       const el = document.querySelector<HTMLElement>('div.flex-1.overflow-y-auto.overflow-x-hidden');
-      if (!el) return { error: 'scroll container not found', scrollTop: 0, scrollHeight: 0, clientHeight: 0, atBottom: false };
+      if (!el)
+        return { error: 'scroll container not found', scrollTop: 0, scrollHeight: 0, clientHeight: 0, atBottom: false };
       el.scrollTop = el.scrollHeight;
       return {
         scrollTop: el.scrollTop,
@@ -173,8 +176,8 @@ test.describe('Chat navigation scroll', () => {
     });
     console.log('After nav back to chat 1:', JSON.stringify(state3));
 
-    if ((state3 as any).scrollHeight > (state3 as any).clientHeight) {
-      expect((state3 as any).atBottom).toBe(true);
+    if (state3.scrollHeight > state3.clientHeight) {
+      expect(state3.atBottom).toBe(true);
     }
 
     if (logs.length > 0) {

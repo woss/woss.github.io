@@ -375,13 +375,13 @@
                 item: 'border-0',
               }}
             >
-              {#snippet label({ item })}
+              {#snippet label()}
                 <span>Series: {series.title}</span>
                 <span class="text-xs font-mono text-on-surface-variant">Part {idx + 1} of {items.length}</span>
               {/snippet}
-              {#snippet content({ item })}
+              {#snippet content()}
                 <div class="px-4 pb-4 space-y-1">
-                  {#each series.items as item, i}
+                  {#each series.items as item, i (item.slug)}
                     {@const isCurrent = item.slug === series.currentSlug}
                     <a
                       href={resolve('/posts/[slug]', { slug: item.slug })}

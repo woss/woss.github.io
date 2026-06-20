@@ -43,4 +43,3 @@ export function nameToInitial(name: string, category?: string): string {
   const match = name.match(/[a-zA-Z0-9]/);
   return match ? match[0].toUpperCase() : '?';
 }
-

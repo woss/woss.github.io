@@ -32,10 +32,7 @@ import { GET } from './+server';
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function buildEvent(overrides: {
-  chatId?: string;
-  lastEventId?: string | null;
-}): RequestEvent {
+function buildEvent(overrides: { chatId?: string; lastEventId?: string | null }): RequestEvent {
   const headers = new Map<string, string>();
   if (overrides.lastEventId) headers.set('Last-Event-ID', overrides.lastEventId);
 
@@ -119,7 +116,15 @@ describe('GET /api/ask/[id]', () => {
         { id: 3, chatId: 'chat-1', type: 'message', data: { content: 'hello' } },
         { id: 4, chatId: 'chat-1', type: 'done', data: null },
       ];
-      vi.mocked(getChatEventsSince).mockReturnValueOnce(events as any);
+      vi.mocked(getChatEventsSince).mockReturnValueOnce(
+        events as Array<{
+          id: number;
+          chatId: string;
+          type: string;
+          data: Record<string, unknown> | null;
+          createdAt: string;
+        }>,
+      );
 
       const event = buildEvent({ chatId: 'chat-1' });
       await GET(event);
@@ -133,7 +138,15 @@ describe('GET /api/ask/[id]', () => {
         type: 'error',
         data: { irrecoverable: true, message: 'bad' },
       };
-      vi.mocked(getChatEventsSince).mockReturnValueOnce([irrecoverableEvent as any]);
+      vi.mocked(getChatEventsSince).mockReturnValueOnce([
+        irrecoverableEvent as {
+          id: number;
+          chatId: string;
+          type: string;
+          data: { irrecoverable?: boolean; message?: string } | null;
+          createdAt: string;
+        },
+      ]);
       vi.mocked(isChatLocked).mockReturnValueOnce(false);
 
       const event = buildEvent({ chatId: 'chat-1' });
@@ -150,7 +163,15 @@ describe('GET /api/ask/[id]', () => {
         type: 'error',
         data: { irrecoverable: true, message: 'bad' },
       };
-      vi.mocked(getChatEventsSince).mockReturnValueOnce([irrecoverableEvent as any]);
+      vi.mocked(getChatEventsSince).mockReturnValueOnce([
+        irrecoverableEvent as {
+          id: number;
+          chatId: string;
+          type: string;
+          data: { irrecoverable?: boolean; message?: string } | null;
+          createdAt: string;
+        },
+      ]);
       vi.mocked(isChatLocked).mockReturnValueOnce(true);
 
       const event = buildEvent({ chatId: 'chat-1' });
@@ -165,7 +186,15 @@ describe('GET /api/ask/[id]', () => {
         type: 'error',
         data: { message: 'recoverable error' },
       };
-      vi.mocked(getChatEventsSince).mockReturnValueOnce([errorEvent as any]);
+      vi.mocked(getChatEventsSince).mockReturnValueOnce([
+        errorEvent as {
+          id: number;
+          chatId: string;
+          type: string;
+          data: { message?: string } | null;
+          createdAt: string;
+        },
+      ]);
 
       const event = buildEvent({ chatId: 'chat-1' });
       await GET(event);

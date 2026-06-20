@@ -3,7 +3,6 @@ import {
   getChatMessageCount,
   getMessages,
   lockChat,
-  getOffTopicCount,
   incrementOffTopicCount,
   type StoredMessage,
 } from '$lib/server/db';

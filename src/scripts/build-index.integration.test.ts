@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { existsSync, unlinkSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { initDatabase } from '../lib/server/schema.js';
-import { parseSlugHashRows, computeChanges, generateChunkId } from './build-index.js';
+import { parseSlugHashRows, computeChanges } from './build-index.js';
 import type { FileEntry } from './build-index.js';
 
 const TEST_DB_PATH = join(process.cwd(), 'data/test-woss.db');
@@ -37,16 +37,8 @@ describe('build-index integration (real SQLite)', () => {
   });
 
   it('parseSlugHashRows with real DB rows', () => {
-    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run(
-      'hello',
-      'abc123',
-      'first post',
-    );
-    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run(
-      'world',
-      'def456',
-      'second post',
-    );
+    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run('hello', 'abc123', 'first post');
+    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run('world', 'def456', 'second post');
 
     const rows = db.prepare('SELECT slug, hash FROM page_posts').all();
     const result = parseSlugHashRows(rows);
@@ -58,21 +50,11 @@ describe('build-index integration (real SQLite)', () => {
   });
 
   it('hash query -> Map -> computeChanges: all match', () => {
-    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run(
-      'a',
-      'hash1',
-      'content A',
-    );
-    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run(
-      'b',
-      'hash2',
-      'content B',
-    );
+    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run('a', 'hash1', 'content A');
+    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run('b', 'hash2', 'content B');
 
     const storedHashes = new Map<string, string>();
-    for (const row of parseSlugHashRows(
-      db.prepare('SELECT slug, hash FROM page_posts').all(),
-    )) {
+    for (const row of parseSlugHashRows(db.prepare('SELECT slug, hash FROM page_posts').all())) {
       storedHashes.set(row.slug, row.hash);
     }
 
@@ -95,15 +77,11 @@ describe('build-index integration (real SQLite)', () => {
     );
 
     const storedHashes = new Map<string, string>();
-    for (const row of parseSlugHashRows(
-      db.prepare('SELECT slug, hash FROM page_posts').all(),
-    )) {
+    for (const row of parseSlugHashRows(db.prepare('SELECT slug, hash FROM page_posts').all())) {
       storedHashes.set(row.slug, row.hash);
     }
 
-    const files: FileEntry[] = [
-      { slug: 'test-post', hash: 'newhash', type: 'post', relativePath: 'test-post.md' },
-    ];
+    const files: FileEntry[] = [{ slug: 'test-post', hash: 'newhash', type: 'post', relativePath: 'test-post.md' }];
 
     const { changedEntries, removedSlugs } = computeChanges(files, storedHashes, false);
 
@@ -113,16 +91,10 @@ describe('build-index integration (real SQLite)', () => {
   });
 
   it('slug override detection (frontmatter slug != filename slug)', () => {
-    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run(
-      'old-filename',
-      'abc',
-      'content',
-    );
+    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run('old-filename', 'abc', 'content');
 
     const storedHashes = new Map<string, string>();
-    for (const row of parseSlugHashRows(
-      db.prepare('SELECT slug, hash FROM page_posts').all(),
-    )) {
+    for (const row of parseSlugHashRows(db.prepare('SELECT slug, hash FROM page_posts').all())) {
       storedHashes.set(row.slug, row.hash);
     }
 
@@ -143,11 +115,7 @@ describe('build-index integration (real SQLite)', () => {
   });
 
   it('file deletion detection', () => {
-    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run(
-      'keep-me',
-      'hash1',
-      'content keep',
-    );
+    db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run('keep-me', 'hash1', 'content keep');
     db.prepare('INSERT INTO page_posts (slug, hash, content) VALUES (?, ?, ?)').run(
       'delete-me',
       'hash2',
@@ -155,15 +123,11 @@ describe('build-index integration (real SQLite)', () => {
     );
 
     const storedHashes = new Map<string, string>();
-    for (const row of parseSlugHashRows(
-      db.prepare('SELECT slug, hash FROM page_posts').all(),
-    )) {
+    for (const row of parseSlugHashRows(db.prepare('SELECT slug, hash FROM page_posts').all())) {
       storedHashes.set(row.slug, row.hash);
     }
 
-    const files: FileEntry[] = [
-      { slug: 'keep-me', hash: 'hash1', type: 'post', relativePath: 'keep-me.md' },
-    ];
+    const files: FileEntry[] = [{ slug: 'keep-me', hash: 'hash1', type: 'post', relativePath: 'keep-me.md' }];
 
     const { changedEntries, removedSlugs } = computeChanges(files, storedHashes, false);
 
@@ -188,16 +152,7 @@ describe('build-index integration (real SQLite)', () => {
 
     db.prepare(
       'INSERT INTO chunks (chunk_id, text, title, date, tags, section, embedding, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(
-      'test-post_chunk_0',
-      'new text',
-      'Post',
-      null,
-      '[]',
-      '',
-      '[0.3,0.4]',
-      'post',
-    );
+    ).run('test-post_chunk_0', 'new text', 'Post', null, '[]', '', '[0.3,0.4]', 'post');
 
     const afterReinsert = db.prepare('SELECT COUNT(*) AS c FROM chunks').get() as {
       c: number;

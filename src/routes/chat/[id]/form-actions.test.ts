@@ -50,7 +50,7 @@ function buildEvent(chatId: string, fields: Record<string, string>): RequestEven
     request,
     getClientAddress: () => '127.0.0.1',
     url: new URL('http://localhost'),
-    cookies: {} as any,
+    cookies: {} as unknown,
     locals: {},
     setHeaders: () => {},
     isDataRequest: false,
@@ -58,7 +58,7 @@ function buildEvent(chatId: string, fields: Record<string, string>): RequestEven
     route: { id: 'chat/[id]' },
     fetch: vi.fn(),
     platform: undefined,
-    tracing: { enabled: false, root: {} as any, current: {} as any },
+    tracing: { enabled: false, root: {} as unknown, current: {} as unknown },
     isRemoteRequest: false,
   } as unknown as RequestEvent<{ id: string }, '/chat/[id]'>;
 }
@@ -66,7 +66,13 @@ function buildEvent(chatId: string, fields: Record<string, string>): RequestEven
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(lookupCountry).mockReturnValue('US');
-  vi.mocked(getChat).mockReturnValue({ id: 'chat-1', title: 'Test Chat', createdAt: '2025-01-15T10:00:00.000Z', messageCount: 1, userId: 'user-1' });
+  vi.mocked(getChat).mockReturnValue({
+    id: 'chat-1',
+    title: 'Test Chat',
+    createdAt: '2025-01-15T10:00:00.000Z',
+    messageCount: 1,
+    userId: 'user-1',
+  });
 });
 
 describe('reaction action', () => {

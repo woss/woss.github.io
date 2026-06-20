@@ -16,7 +16,6 @@ import { initLogger, CAT, createLogger } from '../lib/server/logger.js';
 import { centroidDataChanged, embedAndComputeCentroids, saveCentroids } from './seed-data.js';
 import { saveEmbeddingVisualizations } from './visualize-embedding-space.js';
 
-
 // ---------------------------------------------------------------------------
 // Frontmatter helpers
 // ---------------------------------------------------------------------------

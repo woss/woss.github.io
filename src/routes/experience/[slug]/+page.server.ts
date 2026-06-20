@@ -58,9 +58,10 @@ export async function load({ params }: { params: Record<string, string> }) {
         : null,
   };
 
-  const markdown = entry.company && entry.role
-    ? `# ${entry.company} — ${entry.role}\n\n${currentRaw.content.trim()}`
-    : `# ${entry.slug}\n\n${currentRaw.content.trim()}`;
+  const markdown =
+    entry.company && entry.role
+      ? `# ${entry.company} — ${entry.role}\n\n${currentRaw.content.trim()}`
+      : `# ${entry.slug}\n\n${currentRaw.content.trim()}`;
 
   return { entry, html, nav, markdown };
 }

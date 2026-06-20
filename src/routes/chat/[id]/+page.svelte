@@ -142,10 +142,6 @@
   let hasMessages = $derived(messages.length > 0);
   let currentChat = $derived(chats.find((c) => c.id === chatId) ?? null);
   let currentChatTitle = $derived(currentChat?.title ?? '');
-  let canSend = $derived(
-    !isLoading && !currentChat?.locked && messageText.trim().length > 0 && messageText.length <= 500,
-  );
-
   let chatCount = $derived(chats.length);
   let canCreateChat = $derived(chatCount < config.public.maxChats);
   let userMessageCount = $derived(messages.filter((m) => m.role === 'user').length);
@@ -937,7 +933,6 @@
     {/if}
 
     {#if showContactForm}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 max-md:p-3"
         onclick={dismissContactOverlay}
@@ -947,7 +942,6 @@
         aria-label="Contact form"
         tabindex="-1"
       >
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           class="w-full max-w-lg rounded-2xl bg-surface border border-[rgba(255,255,255,0.08)] shadow-2xl overflow-hidden"
           onclick={(e) => e.stopPropagation()}
@@ -1015,7 +1009,6 @@
             <ChatInput
               bind:messageText
               {isLoading}
-              {canSend}
               {currentChat}
               {attemptsLeft}
               messagesCount={userMessageCount}
@@ -1024,7 +1017,6 @@
               {completedToolCount}
               currentStatus={sseState.currentStatus}
               bind:inputEl
-              {userId}
               onsend={(text: string) => sendMessage(text)}
               onstop={handleStop}
               oncreateChat={createChat}

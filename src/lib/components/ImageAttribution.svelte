@@ -36,13 +36,14 @@
   {#if line1}
     <div class="text-white/90">
       {#if maculaUrl}
-        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+        <!-- eslint-disable svelte/no-navigation-without-resolve -->
         <a
           href={maculaUrl}
           target="_blank"
           rel="noopener"
           class="text-white/90 hover:text-white transition-colors duration-150 pointer-events-auto">{line1}</a
         >
+        <!-- eslint-enable svelte/no-navigation-without-resolve -->
       {:else}
         {line1}
       {/if}

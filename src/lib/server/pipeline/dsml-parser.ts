@@ -26,7 +26,8 @@ const toolCallRegex = /<｜DSML｜tool_calls\s*>([\s\S]*?)<\/｜DSML｜tool_call
 const invokeRegex =
   /<｜DSML｜invoke\s+name="([^"]+)"\s*\/\s*>|<｜DSML｜invoke\s+name="([^"]+)"\s*>([\s\S]*?)<\/｜DSML｜invoke\s*>/gi;
 
-const paramRegex = /<｜DSML｜parameter\s+name="([^"]+)"\s+string="(true|false)"\s*>([\s\S]*?)<\/｜DSML｜parameter\s*>/gi;
+const paramRegex =
+  /<｜DSML｜parameter\s+name="([^"]+)"\s+string="(true|false)"\s*>([\s\S]*?)<\/｜DSML｜parameter\s*>/gi;
 
 /**
  * Extract `name="value"` pairs from an HTML/XML opening tag string,

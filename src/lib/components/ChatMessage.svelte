@@ -206,6 +206,7 @@
         <!-- Markdown content -->
         {#if message.text}
           <div class={proseCls}>
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -->
             {@html cardHtml}
           </div>
         {:else if !isLoading}

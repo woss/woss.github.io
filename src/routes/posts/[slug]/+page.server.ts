@@ -41,17 +41,15 @@ export async function load({ params, fetch }: { params: Record<string, string>; 
   }
 
   // Load workflow files with placeholder replacements
-  let workflowFiles: {
-    label: string;
-    json: string;
-    placeholders: { key: string; label: string; hint?: string }[];
-  }[] | null = null;
-  if ((currentRaw as any).workflowFiles?.length) {
-    const wfEntries = (currentRaw as any).workflowFiles as {
-      label: string;
-      file: string;
-      placeholders: { key: string; label: string; hint?: string }[];
-    }[];
+  let workflowFiles:
+    | {
+        label: string;
+        json: string;
+        placeholders: { key: string; label: string; hint?: string }[];
+      }[]
+    | null = null;
+  if (currentRaw.workflowFiles?.length) {
+    const wfEntries = currentRaw.workflowFiles;
     const loaded: {
       label: string;
       json: string;

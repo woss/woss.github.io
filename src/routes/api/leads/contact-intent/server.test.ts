@@ -49,7 +49,7 @@ function buildEvent(overrides: {
     request,
     getClientAddress: () => '127.0.0.1',
     url: new URL('http://localhost'),
-    cookies: {} as any,
+    cookies: {} as unknown,
     locals: {},
     setHeaders: () => {},
     isDataRequest: false,
@@ -57,7 +57,7 @@ function buildEvent(overrides: {
     route: { id: 'api/leads/contact-intent' },
     fetch: vi.fn(),
     platform: undefined,
-    tracing: { enabled: false, root: {} as any, current: {} as any },
+    tracing: { enabled: false, root: {} as unknown, current: {} as unknown },
     isRemoteRequest: false,
   } as unknown as RequestEvent;
 }

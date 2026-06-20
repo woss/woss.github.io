@@ -118,13 +118,13 @@ let showMobile = $state(false);
  <div class="flex-1 flex flex-col items-center justify-center bg-surface px-4 py-8">
  <h2 class="text-xl font-heading font-semibold text-on-surface mb-6">Why not start with these?</h2>
  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl w-full">
- {#each SUGGESTED_QUESTIONS as q}
+  {#each SUGGESTED_QUESTIONS as q (q)}
  <button
  onclick={() => askQuestion(q)}
  class="text-left flex items-start gap-3 p-4 rounded-xl bg-surface-container-high border border-[rgba(255,255,255,0.06)] hover:border-primary/30 hover:shadow-[0_0_20px_rgba(0,218,140,0.06)] hover:-translate-y-0.5 transition-all duration-150 cursor-pointer"
  >
  <Icon name="lucide:message-circle" size={18} class="shrink-0 mt-0.5 text-on-surface-variant" />
- <span class="text-sm text-on-surface leading-snug">{q}</span>
+  <span class="text-sm/snug text-on-surface">{q}</span>
  </button>
  {/each}
  </div>

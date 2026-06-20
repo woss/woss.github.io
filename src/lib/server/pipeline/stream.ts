@@ -159,7 +159,6 @@ export async function streamWithRetry(
 
   // change from 3 to 10 attempts after adding retry-on-doom-loop logic, to give the model more chances to recover with tools disabled
   const baseSystemPrompt = messages[0].content;
-  let dsmlRetryCount = 0;
   let irrecoverable = false;
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
@@ -260,12 +259,9 @@ export async function streamWithRetry(
       {
         const modelRow = db
           .prepare('SELECT model_name, actual_model_name FROM models WHERE id = ?')
-          .get(currentModelId) as
-          | { model_name: string; actual_model_name: string }
-          | undefined;
+          .get(currentModelId) as { model_name: string; actual_model_name: string } | undefined;
         const isDeepSeekModel =
-          modelRow &&
-          (/deepseek/i.test(modelRow.model_name) || /deepseek/i.test(modelRow.actual_model_name));
+          modelRow && (/deepseek/i.test(modelRow.model_name) || /deepseek/i.test(modelRow.actual_model_name));
 
         if (isDeepSeekModel && hasDsmlBlocks(answerText)) {
           answerText = stripDsmlBlocks(answerText).trim();

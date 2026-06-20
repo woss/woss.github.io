@@ -51,7 +51,7 @@ function buildEvent(searchParams?: Record<string, string>, ip?: string): Request
     request: new Request('http://localhost', { headers: Object.fromEntries(headers) as Record<string, string> }),
     getClientAddress: () => '127.0.0.1',
     url,
-    cookies: {} as any,
+    cookies: {} as unknown,
     locals: {},
     setHeaders: () => {},
     isDataRequest: false,
@@ -59,7 +59,7 @@ function buildEvent(searchParams?: Record<string, string>, ip?: string): Request
     route: { id: 'api/search' },
     fetch: vi.fn(),
     platform: undefined,
-    tracing: { enabled: false, root: {} as any, current: {} as any },
+    tracing: { enabled: false, root: {} as unknown, current: {} as unknown },
     isRemoteRequest: false,
   } as unknown as RequestEvent;
 }

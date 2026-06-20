@@ -33,7 +33,7 @@ I wanted my music data somewhere I actually control. Queryable, relational, some
 
 I landed on this stack after trying a few other approaches. Here's the thinking behind each choice.
 
-**SurrealDB over Postgres or SQLite.** The music domain is a graph: tracks belong to albums, albums have artists, playlists contain tracks, users like tracks. You *can* model that with foreign keys in Postgres, but SurrealDB makes graph edges a first-class concept. The `->likes_track->` and `->playlist_track->` relations are stored as edges, not join table rows. SurrealDB also has UPSERT built in: define a unique index and `UPSERT` either creates or updates a record in one call. No read-check-write cycle. And live queries let me subscribe to changes without polling. [Install docs here](https://surrealdb.com/docs/surrealdb/installation/running/docker).
+**SurrealDB over Postgres or SQLite.** The music domain is a graph: tracks belong to albums, albums have artists, playlists contain tracks, users like tracks. You _can_ model that with foreign keys in Postgres, but SurrealDB makes graph edges a first-class concept. The `->likes_track->` and `->playlist_track->` relations are stored as edges, not join table rows. SurrealDB also has UPSERT built in: define a unique index and `UPSERT` either creates or updates a record in one call. No read-check-write cycle. And live queries let me subscribe to changes without polling. [Install docs here](https://surrealdb.com/docs/surrealdb/installation/running/docker).
 
 **n8n over a Python script or cron.** This could have been a Python script on a cron job. I've written those before. What n8n gives you is visual feedback while you're building. You can run one node at a time, inspect the output, and see exactly where something broke. That's invaluable when you're dealing with an API that paginates unpredictably and a database that serializes types differently than you expect. n8n also handles scheduling, retries, and OAuth token refresh out of the box. [Install docs here](https://docs.n8n.io/hosting/installation/docker/).
 
@@ -137,12 +137,12 @@ Switch the Surrealist query tab to "Live" mode and results stream in as records 
 
 15 years of music history weighs about 93MB in SurrealDB. That's pure metadata — track names, artist IDs, album references, relation edges. No audio files. Passports for every song, not the bags.
 
-| Type        | Count |
-| ----------- | ----- |
+| Type        | Count  |
+| ----------- | ------ |
 | tracks      | 27,009 |
 | albums      | 17,563 |
-| playlists   | 126   |
-| liked songs | 1,580 |
+| playlists   | 126    |
+| liked songs | 1,580  |
 
 ## Try It
 

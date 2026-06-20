@@ -1,12 +1,13 @@
 # Perplexity AI — Complete UI Reverse Engineering Report
 
-*Reverse-engineered from perplexity.ai search result pages, desktop (2560×1323) and mobile (390×844).*
+_Reverse-engineered from perplexity.ai search result pages, desktop (2560×1323) and mobile (390×844)._
 
 ---
 
 ## 1. Overall Page Architecture
 
 **3-section layout:**
+
 ```
 ┌──────────┬──────────────────────────────────────┐
 │ SIDEBAR  │          MAIN CONTENT                 │
@@ -41,6 +42,7 @@
 ## 2. Sidebar (Radix UI Collapsible)
 
 **Expanded (200px):**
+
 - Top: Perplexity logo (40×40 at x=8) + Collapse button (40×40 at x=152)
 - "New" button with ⌘K shortcut
 - Nav groups (each collapsible with expand chevron): Computer, Spaces, Artefacts, Customise
@@ -48,10 +50,12 @@
 - Bottom: Upgrade plan button | Notifications icon | User avatar "perplexity63139"
 
 **Collapsed (56px):**
+
 - All nav items visible as 40×40 icon-only buttons with aria-labels
 - Nav text labels hidden
 
 **Collapse/Expand mechanism:**
+
 - Toggle button: `aria-label` switches between "Collapse sidebar" / "Expand sidebar", `data-state` toggles "open"/"closed"
 - From collapsed state, expand triggered by **CSS group-hover on logo area** (x=8, y=8, 40×40px)
   - Logo has `group-hover/sidebar:invisible` class — fades on hover
@@ -66,21 +70,21 @@
 ## 3. Top Bar (Tabs + Session Actions)
 
 **Tablist** (role=tablist):
-| Tab               | Icon | Label    |
+| Tab | Icon | Label |
 | ----------------- | ---- | -------- |
-| Answer (selected) | ✓    | "Answer" |
-| Links             | -    | "Links"  |
-| Images            | -    | "Images" |
+| Answer (selected) | ✓ | "Answer" |
+| Links | - | "Links" |
+| Images | - | "Images" |
 
 - **Desktop**: icon + text label
 - **Mobile**: icon only, no text
 
 **Session actions** (right side):
-| Desktop                       | Mobile               |
+| Desktop | Mobile |
 | ----------------------------- | -------------------- |
-| ⋮ kebab menu                  | ⋮ kebab menu         |
-| Share (icon + label)          | Share (icon + label) |
-| Download Comet (icon + label) | _(hidden)_           |
+| ⋮ kebab menu | ⋮ kebab menu |
+| Share (icon + label) | Share (icon + label) |
+| Download Comet (icon + label) | _(hidden)_ |
 
 ---
 
@@ -89,6 +93,7 @@
 **Query header**: h1 styled, 16px/24px weight 590, color `rgb(214,213,212)`. In shared sessions, the user message is rendered as the page heading (no chat bubble). Beside it: Edit query icon + Copy query icon (both 32×32).
 
 **Answer body**: Rich text rendered as plain page content (no chat bubble/bg). Uses `pplxSerif` for body and h2s.
+
 - h2: 18px/22.5px weight 530
 - Paragraphs: 16px/26px weight 430
 - Bottom margin between paragraphs: 8px
@@ -122,12 +127,13 @@ Single prominent source card appears below the title header, before answer body.
 
 Two types embedded as `<button>` or `<a>` within answer text:
 
-| Type                   | Rendering                                             | Behavior                                    |
-| ---------------------- | ----------------------------------------------------- | ------------------------------------------- |
+| Type                       | Rendering                                               | Behavior                                    |
+| -------------------------- | ------------------------------------------------------- | ------------------------------------------- |
 | **Named source citation**  | `<button>` with source name + optional "+N" count badge | Click opens popup/modal with source details |
 | **Linked source citation** | `<a>` linking directly to source URL                    | Opens source in new tab                     |
 
 Citation styling:
+
 - `display:inline-flex`, `align-items:center`
 - Source name: `pplxSans` 10px/13.75px weight 430, color `rgb(214,213,212)`, truncated with `max-width`
 - Count badge (+N): `pplxSansMono` 10px weight 430, same color
@@ -165,6 +171,7 @@ Modal dialog overlay triggered by clicking sources count pill:
 - Scrollable list of source cards
 
 **Source card in dialog**:
+
 - Small favicon (~16×16px)
 - Domain label (e.g., "deno", "neon", "reddit")
 - Link title
@@ -178,6 +185,7 @@ Rendered as tabpanel at root DOM level, not nested in main content.
 ## 9. Follow-ups Section
 
 Below action bar + feedback:
+
 - "Follow-ups" heading
 - 5 pill-shaped suggestion buttons, horizontally arranged (wrap on narrow screens)
 - Each pill: leading icon + full text of suggested follow-up question
@@ -190,17 +198,20 @@ Below action bar + feedback:
 **Between follow-ups and chat input** (bottom of scrollable content):
 
 **Pro banner** (dismissible):
+
 ```
 ┌──────────────────────────────────────────┐
 │ [Pro badge] Free preview of advanced     │
 │ search enabled.      [Learn more] [×]    │
 └──────────────────────────────────────────┘
 ```
+
 - Pro badge: teal `color(srgb 0.305882 0.6 0.639216)`, 11px weight 500
 - **Auto-dismisses from DOM on first character typed** into chat input
 - Reappears on new page load
 
 **Status bar** (persistent, non-dismissible):
+
 ```
 ┌──────────────────────────────────────────┐
 │ [icon] Viewing a shared session. Your    │
@@ -259,6 +270,7 @@ Below action bar + feedback:
 4. **Complete**: Textbox cleared, arrow returns to disabled state
 
 Additional changes on submit:
+
 - New URL `/search/{new-uuid}`
 - "Forked from [query]" banner appears
 - Action bar changes: Download → Rewrite Session, More actions appears
@@ -270,24 +282,24 @@ Additional changes on submit:
 
 ### Color Palette
 
-| Token        | Value                              | Usage                         |
-| ------------ | ---------------------------------- | ----------------------------- |
-| Accent       | `#016A71` (teal/blue-green)          | Buttons, links, active states |
-| Dark surface | `#27251E` (warm dark)                | Sidebar bottom, dark sections |
-| Surface warm | `#FAF8F5`                            | Section backgrounds           |
-| Input bg     | `#FDFBFA`                            | Chat input area               |
-| Warm tint 1  | `rgba(39,26,0,0.035)`                | Subtle backgrounds            |
-| Warm tint 2  | `rgba(39,26,0,0.07)`                 | Stronger element backgrounds  |
+| Token        | Value                                  | Usage                         |
+| ------------ | -------------------------------------- | ----------------------------- |
+| Accent       | `#016A71` (teal/blue-green)            | Buttons, links, active states |
+| Dark surface | `#27251E` (warm dark)                  | Sidebar bottom, dark sections |
+| Surface warm | `#FAF8F5`                              | Section backgrounds           |
+| Input bg     | `#FDFBFA`                              | Chat input area               |
+| Warm tint 1  | `rgba(39,26,0,0.035)`                  | Subtle backgrounds            |
+| Warm tint 2  | `rgba(39,26,0,0.07)`                   | Stronger element backgrounds  |
 | Body text    | `#27251E` / `oklch(0.2642 0.013 93.9)` | Dark warm gray                |
 | Muted text   | `rgba(39,37,30,0.5)` and `0.65`        | Secondary text                |
-| On-dark text | `#FDFBFA`                            | Text on dark backgrounds      |
+| On-dark text | `#FDFBFA`                              | Text on dark backgrounds      |
 
 **Important**: No pure grays or pure whites — all neutrals have warm brown undertones.
 
 ### Typography
 
-| Font         | Stack                                                     | Usage                                         |
-| ------------ | --------------------------------------------------------- | --------------------------------------------- |
+| Font           | Stack                                                     | Usage                                         |
+| -------------- | --------------------------------------------------------- | --------------------------------------------- |
 | `pplxSans`     | ui-sans-serif, system-ui, -apple-system, ...CJK fallbacks | Tabs, buttons, sidebar, input fields, UI text |
 | `pplxSerif`    | ui-serif, Georgia, Cambria, ...CJK fallbacks              | Answer body, h2 headings                      |
 | `pplxSansMono` | ui-monospace, SFMono-Regular, ...                         | Inline code, citation count badges            |
@@ -358,4 +370,4 @@ Additional changes on submit:
 
 ---
 
-*21 source memories consolidated. Perplexity's UI is characterized by warm minimalism (no pure grays), generous rounding, a collapsible Radix-based sidebar, content-focused answer display (720px centered), and a clear button state machine for the chat input's submit/stop transition.*
+_21 source memories consolidated. Perplexity's UI is characterized by warm minimalism (no pure grays), generous rounding, a collapsible Radix-based sidebar, content-focused answer display (720px centered), and a clear button state machine for the chat input's submit/stop transition._

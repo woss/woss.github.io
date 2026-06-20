@@ -18,6 +18,7 @@ vi.mock('$lib/server/logger', () => ({
   })),
 }));
 
+import type { StoredMessage } from '$lib/server/db';
 import { getMessages, getToolCallsForMessages } from '$lib/server/db';
 import { GET } from './+server';
 
@@ -27,7 +28,7 @@ function buildEvent(chatId: string | null): RequestEvent {
     request: {} as Request,
     url: new URL(`http://localhost/api/chat/${chatId ?? ''}/messages`),
     getClientAddress: () => '127.0.0.1',
-    cookies: {} as any,
+    cookies: {} as unknown,
     locals: {},
     setHeaders: () => {},
     isDataRequest: false,
@@ -35,7 +36,7 @@ function buildEvent(chatId: string | null): RequestEvent {
     route: { id: 'api/chat/[id]/messages' },
     fetch: vi.fn(),
     platform: undefined,
-    tracing: { enabled: false, root: {} as any, current: {} as any },
+    tracing: { enabled: false, root: {} as unknown, current: {} as unknown },
     isRemoteRequest: false,
   } as unknown as RequestEvent;
 }
@@ -77,7 +78,7 @@ describe('GET /api/chat/[id]/messages', () => {
       ],
     };
 
-    vi.mocked(getMessages).mockReturnValue(mockMessages as any);
+    vi.mocked(getMessages).mockReturnValue(mockMessages as unknown as StoredMessage[]);
     vi.mocked(getToolCallsForMessages).mockReturnValue(mockToolCalls);
 
     const event = buildEvent('chat-1');
@@ -99,7 +100,7 @@ describe('GET /api/chat/[id]/messages', () => {
 
   it('returns 200 with empty toolCalls when getToolCallsForMessages returns empty', async () => {
     const mockMessages = [{ id: 'msg-1', role: 'user', content: 'Hello' }];
-    vi.mocked(getMessages).mockReturnValue(mockMessages as any);
+    vi.mocked(getMessages).mockReturnValue(mockMessages as unknown as StoredMessage[]);
     vi.mocked(getToolCallsForMessages).mockReturnValue({});
 
     const event = buildEvent('chat-1');
@@ -113,7 +114,7 @@ describe('GET /api/chat/[id]/messages', () => {
   it('returns sources as undefined for invalid JSON', async () => {
     const mockMessages = [{ id: 'msg-1', role: 'user', content: 'Hello', sources: 'not-valid-json' }];
 
-    vi.mocked(getMessages).mockReturnValue(mockMessages as any);
+    vi.mocked(getMessages).mockReturnValue(mockMessages as unknown as StoredMessage[]);
     vi.mocked(getToolCallsForMessages).mockReturnValue({});
 
     const event = buildEvent('chat-1');
@@ -138,7 +139,7 @@ describe('GET /api/chat/[id]/messages', () => {
   });
 
   it('returns 500 when getToolCallsForMessages throws', async () => {
-    vi.mocked(getMessages).mockReturnValue([{ id: 'msg-1' }] as any);
+    vi.mocked(getMessages).mockReturnValue([{ id: 'msg-1' }] as unknown as StoredMessage[]);
     vi.mocked(getToolCallsForMessages).mockImplementation(() => {
       throw new Error('DB connection lost');
     });

@@ -77,6 +77,7 @@ vi.mock('$lib/utils/random-uuid', () => ({
 // ---------------------------------------------------------------------------
 
 import { ToolCallXmlStripper, streamWithRetry } from './stream';
+import type { McpToolDef } from '$lib/server/mcp/tools';
 import { chatStreamWithTools } from '$lib/server/openai-provider';
 import { publishLive } from '$lib/server/chat-events';
 import { Stream } from 'effect';
@@ -272,8 +273,9 @@ describe('streamWithRetry', () => {
 
     // With mcpToolDefs set, attempts use chatStreamWithTools with tools.
     // On retry, mcpToolDefs is null → chatStreamWithTools with empty tools.
-    vi.mocked(chatStreamWithTools).mockImplementation((_messages: any, tools: any) =>
-      tools?.length > 0 ? Stream.fromIterable(doomEvents) : Stream.fromIterable(okEvents),
+    vi.mocked(chatStreamWithTools).mockImplementation(
+      (_messages: unknown, tools: { length: number } | null | undefined) =>
+        (tools?.length ?? 0) > 0 ? Stream.fromIterable(doomEvents) : Stream.fromIterable(okEvents),
     );
 
     const result = await streamWithRetry(
@@ -281,7 +283,7 @@ describe('streamWithRetry', () => {
         { role: 'system', content: 'Answer' },
         { role: 'user', content: 'Question?' },
       ],
-      ['tool1'] as any,
+      ['tool1'] as unknown as McpToolDef[],
       'chat-2',
       new AbortController(),
       new Map(),
@@ -321,8 +323,9 @@ describe('streamWithRetry', () => {
 
     // With mcpToolDefs set, first attempts use chatStreamWithTools with tools.
     // After mcpToolDefs is disabled, chatStreamWithTools with empty tools.
-    vi.mocked(chatStreamWithTools).mockImplementation((_messages: any, tools: any) =>
-      tools?.length > 0 ? Stream.fromIterable(events) : Stream.fromIterable(retryEvents),
+    vi.mocked(chatStreamWithTools).mockImplementation(
+      (_messages: unknown, tools: { length: number } | null | undefined) =>
+        (tools?.length ?? 0) > 0 ? Stream.fromIterable(events) : Stream.fromIterable(retryEvents),
     );
 
     const result = await streamWithRetry(
@@ -330,7 +333,9 @@ describe('streamWithRetry', () => {
         { role: 'system', content: 'Answer' },
         { role: 'user', content: 'Show photos' },
       ],
-      [{ name: 'traverse', description: 'Macula traverse', inputSchema: {} }] as any,
+      [
+        { name: 'traverse', serverId: 'macula', description: 'Macula traverse', inputSchema: {} },
+      ] as unknown as McpToolDef[],
       'chat-3',
       new AbortController(),
       new Map([['traverse', 'macula']]),
@@ -415,8 +420,9 @@ describe('streamWithRetry', () => {
       },
     ];
 
-    vi.mocked(chatStreamWithTools).mockImplementation((_messages: any, tools: any) =>
-      tools?.length > 0 ? Stream.fromIterable(interimEvents) : Stream.fromIterable(okEvents),
+    vi.mocked(chatStreamWithTools).mockImplementation(
+      (_messages: unknown, tools: { length: number } | null | undefined) =>
+        (tools?.length ?? 0) > 0 ? Stream.fromIterable(interimEvents) : Stream.fromIterable(okEvents),
     );
 
     const result = await streamWithRetry(
@@ -424,7 +430,7 @@ describe('streamWithRetry', () => {
         { role: 'system', content: 'Answer' },
         { role: 'user', content: 'Question?' },
       ],
-      ['tool1'] as any,
+      ['tool1'] as unknown as McpToolDef[],
       'chat-6',
       new AbortController(),
       new Map(),

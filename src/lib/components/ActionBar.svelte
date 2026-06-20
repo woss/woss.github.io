@@ -9,7 +9,7 @@
  message,
  userId = '',
  chatId = '',
- onOpenSidebar = (_tab: 'sources' | 'tools') => {},
+  onOpenSidebar = () => {},
  }: {
  message: ChatMessage;
  userId?: string;
@@ -22,10 +22,7 @@
  let hasTools = $derived(!!(message.toolCalls?.length));
  let toolCalls = $derived(message.toolCalls || []);
 
- const iconBtnCls =
- 'bg-transparent border-0 cursor-pointer h-8 w-8 flex items-center justify-center rounded-full text-outline hover:text-on-surface hover:bg-surface-container-high transition-colors active:scale-[0.97]';
-
- function shareMessage(): void {
+  function shareMessage(): void {
  const url = `${window.location.origin}${window.location.pathname}#msg-${message.id}`;
  if (copyToClipboard(url)) toast.success('Link copied');
  }
@@ -103,7 +100,6 @@
  <div class="flex items-center gap-1">
   <!-- Share -->
   <Tooltip text="Copy link" side="bottom">
-  {#snippet children()}
     <Button variant="ghost" square size="sm" onclick={shareMessage} aria-label="Share link">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -111,12 +107,10 @@
         <line x1="12" y1="2" x2="12" y2="15" />
       </svg>
     </Button>
-  {/snippet}
   </Tooltip>
 
   <!-- Copy -->
   <Tooltip text="Copy" side="bottom">
-  {#snippet children()}
     <Button variant="ghost" square size="sm" onclick={copyMessage} aria-label="Copy message">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -125,7 +119,6 @@
         <line x1="16" y1="17" x2="8" y2="17" />
       </svg>
     </Button>
-  {/snippet}
   </Tooltip>
 
  <!-- Sources & Tools chip -->
@@ -139,7 +132,7 @@
  <AvatarGroup
  size="2xs"
  max={3}
- avatars={message.sources!.slice(0, 3).map((s: any) => ({
+  avatars={message.sources!.slice(0, 3).map((s) => ({
  text: nameToInitial(s.title || s.url || 'S', s.type),
  color: nameToColor(s.title || s.url || 'Source', s.type),
  alt: s.title || 'Source'

@@ -18,6 +18,7 @@ vi.mock('$lib/server/logger', () => ({
   })),
 }));
 
+import type { StoredMessage } from '$lib/server/db';
 import { getMessages, getMessagesByUserId } from '$lib/server/db';
 import { GET } from './+server';
 
@@ -32,7 +33,7 @@ function buildEvent(params: Record<string, string>): RequestEvent {
     request: {} as Request,
     url,
     getClientAddress: () => '127.0.0.1',
-    cookies: {} as any,
+    cookies: {} as unknown,
     locals: {},
     setHeaders: () => {},
     isDataRequest: false,
@@ -40,7 +41,7 @@ function buildEvent(params: Record<string, string>): RequestEvent {
     route: { id: 'api/chat/history' },
     fetch: vi.fn(),
     platform: undefined,
-    tracing: { enabled: false, root: {} as any, current: {} as any },
+    tracing: { enabled: false, root: {} as unknown, current: {} as unknown },
     isRemoteRequest: false,
   } as unknown as RequestEvent;
 }
@@ -65,7 +66,7 @@ describe('GET /api/chat/history', () => {
         { id: 'msg-1', role: 'user', content: 'Hello' },
         { id: 'msg-2', role: 'assistant', content: 'Hi there' },
       ];
-      vi.mocked(getMessages).mockReturnValue(mockMessages as any);
+      vi.mocked(getMessages).mockReturnValue(mockMessages as unknown as StoredMessage[]);
 
       const event = buildEvent({ chatId: 'chat-1' });
       const res = await GET(event);
@@ -93,10 +94,8 @@ describe('GET /api/chat/history', () => {
 
   describe('userId fallback path', () => {
     it('returns 200 with messages when userId is provided', async () => {
-      const mockMessages = [
-        { id: 'msg-1', role: 'user', content: 'Hello' },
-      ];
-      vi.mocked(getMessagesByUserId).mockReturnValue(mockMessages as any);
+      const mockMessages = [{ id: 'msg-1', role: 'user', content: 'Hello' }];
+      vi.mocked(getMessagesByUserId).mockReturnValue(mockMessages as unknown as StoredMessage[]);
 
       const event = buildEvent({ userId: 'user-1' });
       const res = await GET(event);

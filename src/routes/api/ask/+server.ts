@@ -1,36 +1,10 @@
-import { publishLive, publishPersistent } from '$lib/server/chat-events';
-import { callWebhook } from '$lib/server/webhooks';
-import {
-  addMessage,
-  ensureModel,
-  getChat,
-  getChatMessageCount,
-  getDb,
-  getMessages,
-  getOrCreateUserAgent,
-  isChatLocked,
-  lockChat,
-  searchChunks,
-} from '$lib/server/db';
-import { embedText } from '$lib/server/embed';
-import { buildRagPrompt, isAvailable } from '$lib/server/openai-provider';
-import { checkCache, storeCache } from '$lib/server/llm-cache';
+import { addMessage, getChat, getChatMessageCount, getOrCreateUserAgent, isChatLocked } from '$lib/server/db';
+import { isAvailable } from '$lib/server/openai-provider';
 import { checkRateLimit } from '$lib/server/rate-limiter';
-import { getMcpToolDefs, getMcpResourceContent, type McpToolDef } from '$lib/server/mcp/tools';
-import { config } from '$lib/server/config';
 import { config as clientConfig } from '$lib/config';
 import type { RequestEvent } from '@sveltejs/kit';
 import { CAT, createLogger } from '$lib/server/logger';
-import { classifyQuery } from '$lib/query-classifier';
-import type { QueryClass } from '$lib/query-classifier';
-import { Effect, Stream } from 'effect';
-import {
-  generatePoliteResponse,
-  isRelevant,
-  needsGithubTools,
-  needsMaculaTools,
-  tryRenameChat,
-} from '$lib/server/chat-helpers';
+
 import { sanitizeText } from '$lib/server/sanitize';
 import { startGeneration } from '$lib/server/generate';
 import { generateTraceId, generateSpanId, withTrace } from '$lib/server/trace-context';

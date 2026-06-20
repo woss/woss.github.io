@@ -63,7 +63,7 @@
   {#if !isChatPage}
     <nav
       aria-label="Main navigation"
-      class="flex-shrink-0 h-(--nav-height) bg-surface/80 backdrop-blur-md border-b border-[rgba(255,255,255,0.08)] max-md:bg-transparent max-md:backdrop-blur-none max-md:border-b-0"
+      class="shrink-0 h-(--nav-height) bg-surface/80 backdrop-blur-md border-b border-[rgba(255,255,255,0.08)] max-md:bg-transparent max-md:backdrop-blur-none max-md:border-b-0"
     >
       <div class="flex items-center justify-between h-full mx-auto px-8 max-md:px-4">
         <a

@@ -30,10 +30,12 @@ src/lib/server/pipeline/
 ```
 
 ## Files affected
+
 - `src/lib/server/generate.ts` — Shrink to imports and orchestration
 - `src/lib/server/pipeline/` — New directory with 5 modules + index
 
 ## Acceptance criteria
+
 - [ ] Each function extracted to its own module with same signature
 - [ ] `src/lib/server/generate.ts` imports from `pipeline/` and delegates
 - [ ] No logic changes — pure structural decomposition

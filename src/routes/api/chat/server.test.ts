@@ -17,6 +17,7 @@ vi.mock('$lib/server/logger', () => ({
   })),
 }));
 
+import type { Chat } from '$lib/server/db';
 import { getChats } from '$lib/server/db';
 import { GET } from './+server';
 
@@ -29,7 +30,7 @@ function buildEvent(userId: string | null): RequestEvent {
     request: {} as Request,
     url,
     getClientAddress: () => '127.0.0.1',
-    cookies: {} as any,
+    cookies: {} as unknown,
     locals: {},
     setHeaders: () => {},
     isDataRequest: false,
@@ -37,7 +38,7 @@ function buildEvent(userId: string | null): RequestEvent {
     route: { id: 'api/chat' },
     fetch: vi.fn(),
     platform: undefined,
-    tracing: { enabled: false, root: {} as any, current: {} as any },
+    tracing: { enabled: false, root: {} as unknown, current: {} as unknown },
     isRemoteRequest: false,
   } as unknown as RequestEvent;
 }
@@ -61,7 +62,7 @@ describe('GET /api/chat', () => {
       { id: 'chat-1', title: 'Chat 1', created_at: '2024-01-01' },
       { id: 'chat-2', title: 'Chat 2', created_at: '2024-01-02' },
     ];
-    vi.mocked(getChats).mockReturnValue(mockChats as any);
+    vi.mocked(getChats).mockReturnValue(mockChats as unknown as Chat[]);
 
     const event = buildEvent('user-1');
     const res = await GET(event);

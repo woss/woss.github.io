@@ -16,10 +16,12 @@ Audit every `try/catch` block in `src/lib/server/` and `src/routes/api/`:
 4. For DB cleanup errors (WAL/SHM — note: WAL is no longer used): still log the error
 
 Excluded from this task:
+
 - Client-side catch blocks in `.svelte` files (handled in FE tasks)
 - Chats with intentional no-ops (document with comment)
 
 ## Files affected
+
 - `src/lib/server/mcp/client.ts` — ~6 catch blocks
 - `src/lib/server/db.ts` — ~4 catch blocks
 - `src/lib/server/chat-events.ts` — ~2 catch blocks
@@ -29,6 +31,7 @@ Excluded from this task:
 - Plus all others discovered during audit
 
 ## Acceptance criteria
+
 - [ ] Every empty `catch` block in server code logs at `warn` or `error` level
 - [ ] No functional behavior changes (catch still handles, just logs)
 - [ ] Logger context includes: file name, operation attempted, error message

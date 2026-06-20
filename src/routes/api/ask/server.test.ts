@@ -280,7 +280,13 @@ describe('POST /api/ask', () => {
     });
 
     it('returns 403 when userId does not match chat owner', async () => {
-      vi.mocked(getChat).mockReturnValueOnce({ userId: 'other-user' } as any);
+      vi.mocked(getChat).mockReturnValueOnce({
+        userId: 'other-user',
+        id: 'chat-1',
+        title: 'Test',
+        createdAt: new Date().toISOString(),
+        messageCount: 5,
+      } as { id: string; title: string; createdAt: string; messageCount: number; userId: string });
       const event = buildEvent({ body: VALID_BODY_WITH_CHAT });
       const res = await POST(event);
       expect(res.status).toBe(403);

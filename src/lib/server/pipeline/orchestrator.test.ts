@@ -4,8 +4,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 // Mock ALL external dependencies BEFORE imports
 // ---------------------------------------------------------------------------
 
-const mockAbortController = new AbortController();
-
 vi.mock('$lib/server/chat-events', () => ({
   publishLive: vi.fn(),
   publishPersistent: vi.fn(),
@@ -81,7 +79,7 @@ vi.mock('$lib/query-classifier', () => ({
 vi.mock('$lib/server/chat-helpers', () => ({
   needsGithubTools: vi.fn().mockResolvedValue(false),
   needsMaculaTools: vi.fn().mockResolvedValue(false),
-  parseSources: vi.fn((s: string) => []),
+  parseSources: vi.fn(() => []),
   tryRenameChat: vi.fn(),
 }));
 
@@ -117,7 +115,7 @@ import { abortGeneration, startGeneration } from './orchestrator';
 import { handleEarlyGates } from './early-gates';
 import { streamWithRetry } from './stream';
 import { saveAndEmitResult } from './save-result';
-import { publishLive, publishPersistent } from '$lib/server/chat-events';
+import { publishPersistent } from '$lib/server/chat-events';
 import { addMessage, searchChunks } from '$lib/server/db';
 import { CAT, createLogger } from '$lib/server/logger';
 

@@ -16,8 +16,6 @@
   let cardEl: HTMLDivElement | undefined = $state();
   let style = $state('');
   let arrowStyle = $state('');
-  let placement: 'top' | 'bottom' = $state('top');
-
   function position(): void {
     const target = document.querySelector(targetSelector);
     if (!target || !cardEl) return;
@@ -30,8 +28,6 @@
     const spaceAbove = targetRect.top;
     const spaceBelow = window.innerHeight - targetRect.bottom;
     const useTop = spaceAbove >= cardRect.height + gap + 24 || spaceAbove >= spaceBelow;
-
-    placement = useTop ? 'top' : 'bottom';
 
     const arrowSize = 8;
     const cardTop = useTop

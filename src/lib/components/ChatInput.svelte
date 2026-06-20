@@ -19,8 +19,8 @@
   let {
     messageText = $bindable(''),
     isLoading = $bindable(false),
-    canSend = false,
-    userId = '',
+
+
     currentChat = null as Chat | null,
     attemptsLeft = 0,
     messagesCount = 0,
@@ -32,13 +32,11 @@
     onsend = () => {},
     oncreateChat = () => {},
     onstop = () => {},
-    onsuggested = (_question: string) => {},
+
     variant = 'chat',
   }: {
     messageText?: string;
     isLoading?: boolean;
-    canSend?: boolean;
-    userId?: string;
     currentChat?: Chat | null;
     attemptsLeft?: number;
     messagesCount?: number;
@@ -50,7 +48,6 @@
     onsend?: (text: string) => void;
     oncreateChat?: () => void;
     onstop?: () => void;
-    onsuggested?: (question: string) => void;
     variant?: string;
   } = $props();
 
@@ -65,10 +62,8 @@
   );
 
   function handleSubmit({
-    formData,
     cancel,
   }: {
-    formData: FormData;
     action: URL;
     cancel: () => void;
     submitter: HTMLElement | null;
@@ -172,9 +167,7 @@
 {#if variant === 'chat'}
   {#if currentChat?.locked}
     <Banner color="secondary" title="This chat has been locked because the question was off-topic.">
-      {#snippet children()}
-        <Button variant="link" size="sm" onclick={() => oncreateChat()}>Start a new chat</Button>
-      {/snippet}
+      <Button variant="link" size="sm" onclick={() => oncreateChat()}>Start a new chat</Button>
     </Banner>
   {:else}
     {#if attemptsLeft > 0}

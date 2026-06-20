@@ -172,7 +172,7 @@
             </svg>
           </button>
         {:else}
-          <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+          <!-- eslint-disable svelte/no-navigation-without-resolve -->
           <a
             href={link.url}
             target={link.url.startsWith('http') ? '_blank' : undefined}
@@ -206,6 +206,7 @@
               </svg>
             {/if}
           </a>
+          <!-- eslint-enable svelte/no-navigation-without-resolve -->
         {/if}
       {/each}
     </div>

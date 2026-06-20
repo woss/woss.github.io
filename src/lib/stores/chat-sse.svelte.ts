@@ -93,7 +93,13 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
     if (currentGen !== generation) return;
     resetSseTimeout();
     if (typeof e.data !== 'string') return;
-    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
+    const data = (() => {
+      try {
+        return JSON.parse(e.data);
+      } catch {
+        return {};
+      }
+    })();
     callbacks.onToken(data.token);
   });
 
@@ -101,7 +107,13 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
     if (currentGen !== generation) return;
     clearTimeout(sseTimeout);
     if (typeof e.data !== 'string') return;
-    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
+    const data = (() => {
+      try {
+        return JSON.parse(e.data);
+      } catch {
+        return {};
+      }
+    })();
     if (typeof data.messageId !== 'string') return;
 
     const completedToolCalls = Object.values(sseState.streamingToolCalls).map((tc) => ({
@@ -132,7 +144,13 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
     if (currentGen !== generation) return;
     resetSseTimeout();
     if (typeof e.data !== 'string') return;
-    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
+    const data = (() => {
+      try {
+        return JSON.parse(e.data);
+      } catch {
+        return {};
+      }
+    })();
     sseState.streamingToolCalls = {
       ...sseState.streamingToolCalls,
       [data.id]: {
@@ -148,7 +166,13 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
     if (currentGen !== generation) return;
     resetSseTimeout();
     if (typeof e.data !== 'string') return;
-    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
+    const data = (() => {
+      try {
+        return JSON.parse(e.data);
+      } catch {
+        return {};
+      }
+    })();
     const existing = sseState.streamingToolCalls[data.id];
     if (existing) {
       sseState.streamingToolCalls = {
@@ -161,7 +185,13 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
   es.addEventListener('status', (e: MessageEvent) => {
     if (currentGen !== generation) return;
     if (typeof e.data !== 'string') return;
-    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
+    const data = (() => {
+      try {
+        return JSON.parse(e.data);
+      } catch {
+        return {};
+      }
+    })();
     sseState.currentStatus = data.step || '';
   });
 
@@ -169,7 +199,13 @@ export function connectSSE(chatId: string, callbacks: SSECallbacks): () => void 
     if (currentGen !== generation) return;
     clearTimeout(sseTimeout);
     if (typeof e.data !== 'string') return;
-    const data = (() => { try { return JSON.parse(e.data); } catch { return {}; } })();
+    const data = (() => {
+      try {
+        return JSON.parse(e.data);
+      } catch {
+        return {};
+      }
+    })();
 
     if (typeof data.messageId === 'string') {
       if (seenErrorMsgIds.has(data.messageId)) return;

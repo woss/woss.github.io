@@ -49,11 +49,7 @@ function linkContextRefs(text: string, chunks: { slug: string; type: string }[])
   chunks.forEach((ch, i) => {
     map.set(
       i + 1,
-      ch.type === 'experience'
-        ? `/experience/${ch.slug}`
-        : ch.slug === 'about'
-          ? `/about`
-          : `/posts/${ch.slug}`,
+      ch.type === 'experience' ? `/experience/${ch.slug}` : ch.slug === 'about' ? `/about` : `/posts/${ch.slug}`,
     );
   });
   return text.replace(/\(\[Context (\d+)\]\)|\[Context (\d+)\]/g, (match, p1, p2) => {

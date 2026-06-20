@@ -25,7 +25,7 @@ service (`$lib/server/db`) with typed interfaces for future swapability.
 - `pnpm add surrealdb.js`
 - SurrealDB for dev:
   - Docker: `docker run -p 8000:8000 surrealdb/surrealdb start --log trace
-    --user root --pass root`
+--user root --pass root`
   - Or binary: `surreal start --log trace --user root --pass root`
 - `.env` additions:
   - `SURREAL_DB_URL=http://localhost:8000`
@@ -62,19 +62,19 @@ service (`$lib/server/db`) with typed interfaces for future swapability.
 
 Key SurrealDB type mappings:
 
-| SQLite             | SurrealDB                       |
-| ------------------ | ------------------------------- |
-| INTEGER PRIMARY KEY | auto-generated record ID        |
-| TEXT                | string                          |
-| INTEGER (bool)      | bool                            |
-| REAL                | float                           |
-| TEXT (datetime)     | datetime                        |
-| TEXT (JSON array)   | array\<string\>                   |
-| TEXT (embedding)    | array\<float\>                    |
-| FOREIGN KEY         | record\<linked_table\>            |
-| UNIQUE constraint   | DEFINE INDEX ... UNIQUE         |
-| DEFAULT value       | DEFAULT value                   |
-| DATETIME('now')     | DEFAULT now()                   |
+| SQLite              | SurrealDB                |
+| ------------------- | ------------------------ |
+| INTEGER PRIMARY KEY | auto-generated record ID |
+| TEXT                | string                   |
+| INTEGER (bool)      | bool                     |
+| REAL                | float                    |
+| TEXT (datetime)     | datetime                 |
+| TEXT (JSON array)   | array\<string\>          |
+| TEXT (embedding)    | array\<float\>           |
+| FOREIGN KEY         | record\<linked_table\>   |
+| UNIQUE constraint   | DEFINE INDEX ... UNIQUE  |
+| DEFAULT value       | DEFAULT value            |
+| DATETIME('now')     | DEFAULT now()            |
 
 ### Vector Search (replaces both USearch indices)
 
@@ -136,22 +136,52 @@ export interface IMessageRepo {
   getChatSummaryForApi(chatId: string): Promise<ChatSummary>;
 }
 
-export interface IEventRepo { /* insertEvent, getEvents */ }
-export interface IReactionRepo { /* upsertReaction, removeReaction, getReaction */ }
-export interface IToolCallRepo { /* getToolCalls, getToolCall, insertToolCall, updateToolCall */ }
-export interface IContentRepo { /* getRelatedBusinessPages, getPosts, getExperiences, searchChunks */ }
-export interface ILeadRepo { /* createLead */ }
-export interface IContactIntentRepo { /* createContactIntent */ }
-export interface IUserAgentRepo { /* getOrCreateUserAgent, getUserAgents */ }
-export interface ILlmCacheRepo { /* getCached, setCached, getCacheStats */ }
-export interface IRateLimitRepo { /* getRateLimit, incrementRateLimit, resetRateLimit */ }
-export interface IVectorRepo { /* searchChunks, searchCache */ }
+export interface IEventRepo {
+  /* insertEvent, getEvents */
+}
+export interface IReactionRepo {
+  /* upsertReaction, removeReaction, getReaction */
+}
+export interface IToolCallRepo {
+  /* getToolCalls, getToolCall, insertToolCall, updateToolCall */
+}
+export interface IContentRepo {
+  /* getRelatedBusinessPages, getPosts, getExperiences, searchChunks */
+}
+export interface ILeadRepo {
+  /* createLead */
+}
+export interface IContactIntentRepo {
+  /* createContactIntent */
+}
+export interface IUserAgentRepo {
+  /* getOrCreateUserAgent, getUserAgents */
+}
+export interface ILlmCacheRepo {
+  /* getCached, setCached, getCacheStats */
+}
+export interface IRateLimitRepo {
+  /* getRateLimit, incrementRateLimit, resetRateLimit */
+}
+export interface IVectorRepo {
+  /* searchChunks, searchCache */
+}
 
 export interface IDatabaseService
-  extends IUserRepo, IChatRepo, IMessageRepo, IEventRepo,
-    IReactionRepo, IToolCallRepo, IContentRepo, ILeadRepo,
-    IContactIntentRepo, IUserAgentRepo, ILlmCacheRepo,
-    IRateLimitRepo, IVectorRepo {
+  extends
+    IUserRepo,
+    IChatRepo,
+    IMessageRepo,
+    IEventRepo,
+    IReactionRepo,
+    IToolCallRepo,
+    IContentRepo,
+    ILeadRepo,
+    IContactIntentRepo,
+    IUserAgentRepo,
+    ILlmCacheRepo,
+    IRateLimitRepo,
+    IVectorRepo {
   init(): Promise<void>;
   close(): Promise<void>;
   transaction<T>(fn: (tx: IDatabaseService) => Promise<T>): Promise<T>;
@@ -189,10 +219,9 @@ export class SurrealDatabaseService implements IDatabaseService {
 
   // User operations
   async getOrCreateUser(githubUser: GithubUser): Promise<User> {
-    const [result] = await this.db.query<[User[]]>(
-      'SELECT * FROM users WHERE email = $email',
-      { email: githubUser.email }
-    );
+    const [result] = await this.db.query<[User[]]>('SELECT * FROM users WHERE email = $email', {
+      email: githubUser.email,
+    });
     if (result.length > 0) return result[0];
     const [created] = await this.db.create('users', {
       id: crypto.randomUUID(),
@@ -376,17 +405,17 @@ Run: `tsx src/scripts/migrate-to-surreal.ts`
 
 ## Effort Summary
 
-| Phase | Task                           | Time    | Dependencies       |
-| ----- | ------------------------------ | ------- | ------------------ |
-| 1     | Setup + migrate.surql          | 1.5 hrs | —                  |
-| 2     | Schema definition              | 1 hr    | Phase 1            |
-| 3a    | SurrealDB client singleton     | 0.5 hr  | Phase 2            |
-| 3b    | Repository interfaces          | 1 hr    | — (parallel to 3a) |
-| 3c    | SurrealDatabaseService (30 fn) | 3-4 hrs | Phase 3a + 3b      |
-| 3d    | db/index.ts entry point        | 0.25 hr | Phase 3c           |
-| 4     | Consumer refactoring (26+5)    | 3-4 hrs | Phase 3d           |
-| 5     | Data migration + validation    | 1-2 hrs | Phase 4            |
-| **Total** |                             | **~12 hrs** | (2 full days)      |
+| Phase     | Task                           | Time        | Dependencies       |
+| --------- | ------------------------------ | ----------- | ------------------ |
+| 1         | Setup + migrate.surql          | 1.5 hrs     | —                  |
+| 2         | Schema definition              | 1 hr        | Phase 1            |
+| 3a        | SurrealDB client singleton     | 0.5 hr      | Phase 2            |
+| 3b        | Repository interfaces          | 1 hr        | — (parallel to 3a) |
+| 3c        | SurrealDatabaseService (30 fn) | 3-4 hrs     | Phase 3a + 3b      |
+| 3d        | db/index.ts entry point        | 0.25 hr     | Phase 3c           |
+| 4         | Consumer refactoring (26+5)    | 3-4 hrs     | Phase 3d           |
+| 5         | Data migration + validation    | 1-2 hrs     | Phase 4            |
+| **Total** |                                | **~12 hrs** | (2 full days)      |
 
 **Parallelizable:** Phases 1-2 linear, Phase 3a+3b parallel, Phase 3c linear,
 Phase 4 parallelizable across files, Phase 5 linear.
@@ -398,9 +427,9 @@ Phase 4 parallelizable across files, Phase 5 linear.
 | Risk                               | Mitigation                                                  |
 | ---------------------------------- | ----------------------------------------------------------- |
 | SurrealDB ANN index != USearch KNN | Benchmark top-N recall before cutover                       |
-| Async conversion introduces bugs   | Every consumer file must add `await` — test per route         |
+| Async conversion introduces bugs   | Every consumer file must add `await` — test per route       |
 | build-index.ts env adapter fails   | Use same pattern as logger fix (env vars passed explicitly) |
-| Migration loses data               | Snapshot `data/woss.db` before migration                      |
+| Migration loses data               | Snapshot `data/woss.db` before migration                    |
 | SurrealDB network latency          | SurrealDatabaseService uses connection pool, keep-alive     |
 | No SurrealDB experience in team    | Start with simple queries, use raw SurrealQL in repos       |
 
