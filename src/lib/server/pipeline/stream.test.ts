@@ -4,8 +4,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 // Mock ALL external dependencies BEFORE imports
 // ---------------------------------------------------------------------------
 
-vi.mock('$lib/server/llm', () => ({
-  chatStream: vi.fn(),
+vi.mock('$lib/server/openai-provider', () => ({
   chatStreamWithTools: vi.fn(),
   buildRagPrompt: vi.fn().mockReturnValue([{ role: 'system', content: 'test' }]),
 }));
@@ -78,7 +77,7 @@ vi.mock('$lib/utils/random-uuid', () => ({
 // ---------------------------------------------------------------------------
 
 import { ToolCallXmlStripper, streamWithRetry } from './stream';
-import { chatStream, chatStreamWithTools } from '$lib/server/llm';
+import { chatStreamWithTools } from '$lib/server/openai-provider';
 import { publishLive } from '$lib/server/chat-events';
 import { Stream } from 'effect';
 import type { LLMEvent } from '$lib/server/llm/types';
@@ -186,7 +185,7 @@ describe('streamWithRetry', () => {
         maxTokens: 4096,
       },
     ];
-    vi.mocked(chatStream).mockReturnValue(Stream.fromIterable(events));
+    vi.mocked(chatStreamWithTools).mockReturnValue(Stream.fromIterable(events));
 
     const result = await streamWithRetry(
       [{ role: 'user', content: 'Hello' }],
@@ -225,7 +224,7 @@ describe('streamWithRetry', () => {
         maxTokens: 4096,
       },
     ];
-    vi.mocked(chatStream).mockReturnValue(Stream.fromIterable(events));
+    vi.mocked(chatStreamWithTools).mockReturnValue(Stream.fromIterable(events));
 
     const result = await streamWithRetry(
       [{ role: 'user', content: 'Search' }],
@@ -271,15 +270,17 @@ describe('streamWithRetry', () => {
       },
     ];
 
-    // With mcpToolDefs set, attempts 0 and 1 use chatStreamWithTools
-    vi.mocked(chatStreamWithTools)
-      .mockImplementation(() => Stream.fromIterable(doomEvents));
-    // On attempt >= 2, mcpToolDefs is null → chatStream is used
-    vi.mocked(chatStream)
-      .mockImplementation(() => Stream.fromIterable(okEvents));
+    // With mcpToolDefs set, attempts use chatStreamWithTools with tools.
+    // On retry, mcpToolDefs is null → chatStreamWithTools with empty tools.
+    vi.mocked(chatStreamWithTools).mockImplementation((_messages: any, tools: any) =>
+      tools?.length > 0 ? Stream.fromIterable(doomEvents) : Stream.fromIterable(okEvents),
+    );
 
     const result = await streamWithRetry(
-      [{ role: 'system', content: 'Answer' }, { role: 'user', content: 'Question?' }],
+      [
+        { role: 'system', content: 'Answer' },
+        { role: 'user', content: 'Question?' },
+      ],
       ['tool1'] as any,
       'chat-2',
       new AbortController(),
@@ -289,7 +290,7 @@ describe('streamWithRetry', () => {
     expect(result.answerText).toContain('Here is the answer');
     // First 2 attempts with tools → doom loop → eventually tools disabled
     expect(chatStreamWithTools).toHaveBeenCalled();
-    expect(chatStream).toHaveBeenCalled();
+    expect(chatStreamWithTools).toHaveBeenCalled();
   });
 
   it('detects hallucinated Macula URLs when tools available but not used', async () => {
@@ -318,15 +319,17 @@ describe('streamWithRetry', () => {
       },
     ];
 
-    // With mcpToolDefs set, first attempts use chatStreamWithTools
-    vi.mocked(chatStreamWithTools)
-      .mockImplementation(() => Stream.fromIterable(events));
-    // After mcpToolDefs is disabled (attempt >= 2), chatStream is used
-    vi.mocked(chatStream)
-      .mockImplementation(() => Stream.fromIterable(retryEvents));
+    // With mcpToolDefs set, first attempts use chatStreamWithTools with tools.
+    // After mcpToolDefs is disabled, chatStreamWithTools with empty tools.
+    vi.mocked(chatStreamWithTools).mockImplementation((_messages: any, tools: any) =>
+      tools?.length > 0 ? Stream.fromIterable(events) : Stream.fromIterable(retryEvents),
+    );
 
     const result = await streamWithRetry(
-      [{ role: 'system', content: 'Answer' }, { role: 'user', content: 'Show photos' }],
+      [
+        { role: 'system', content: 'Answer' },
+        { role: 'user', content: 'Show photos' },
+      ],
       [{ name: 'traverse', description: 'Macula traverse', inputSchema: {} }] as any,
       'chat-3',
       new AbortController(),
@@ -341,7 +344,7 @@ describe('streamWithRetry', () => {
   });
 
   it('breaks on non-recoverable error and sets irrecoverable', async () => {
-    vi.mocked(chatStream).mockImplementation(() => {
+    vi.mocked(chatStreamWithTools).mockImplementation(() => {
       throw new Error('Rate limit exceeded');
     });
 
@@ -373,7 +376,7 @@ describe('streamWithRetry', () => {
         maxTokens: 4096,
       },
     ];
-    vi.mocked(chatStream).mockReturnValue(Stream.fromIterable(events));
+    vi.mocked(chatStreamWithTools).mockReturnValue(Stream.fromIterable(events));
 
     const result = await streamWithRetry(
       [{ role: 'user', content: 'Show PRs' }],
@@ -412,13 +415,15 @@ describe('streamWithRetry', () => {
       },
     ];
 
-    vi.mocked(chatStreamWithTools)
-      .mockImplementation(() => Stream.fromIterable(interimEvents));
-    vi.mocked(chatStream)
-      .mockImplementation(() => Stream.fromIterable(okEvents));
+    vi.mocked(chatStreamWithTools).mockImplementation((_messages: any, tools: any) =>
+      tools?.length > 0 ? Stream.fromIterable(interimEvents) : Stream.fromIterable(okEvents),
+    );
 
     const result = await streamWithRetry(
-      [{ role: 'system', content: 'Answer' }, { role: 'user', content: 'Question?' }],
+      [
+        { role: 'system', content: 'Answer' },
+        { role: 'user', content: 'Question?' },
+      ],
       ['tool1'] as any,
       'chat-6',
       new AbortController(),
@@ -428,12 +433,15 @@ describe('streamWithRetry', () => {
     expect(result.answerText).toContain('Here are the PRs');
     // Must have tried with tools first, then retried without tools
     expect(chatStreamWithTools).toHaveBeenCalled();
-    expect(chatStream).toHaveBeenCalled();
+    expect(chatStreamWithTools).toHaveBeenCalled();
   });
 
   it('passes through legitimate text with transitional intro', async () => {
     const events: LLMEvent[] = [
-      { type: 'text-delta', text: 'Let me explain how the data flows work. The system processes requests asynchronously.' },
+      {
+        type: 'text-delta',
+        text: 'Let me explain how the data flows work. The system processes requests asynchronously.',
+      },
       { type: 'step-finish', reason: 'stop', toolCalls: 0, textProduced: true },
       {
         type: 'finish',
@@ -444,7 +452,7 @@ describe('streamWithRetry', () => {
         maxTokens: 4096,
       },
     ];
-    vi.mocked(chatStream).mockReturnValue(Stream.fromIterable(events));
+    vi.mocked(chatStreamWithTools).mockReturnValue(Stream.fromIterable(events));
 
     const result = await streamWithRetry(
       [{ role: 'user', content: 'Explain' }],
@@ -461,7 +469,10 @@ describe('streamWithRetry', () => {
 
   it('passes through text with structural content despite transitional phrases', async () => {
     const events: LLMEvent[] = [
-      { type: 'text-delta', text: 'Let me search. Let me check. Let me also look. Here are results:\n| Type | Count |\n|------|-------|\n| Open | 3 |' },
+      {
+        type: 'text-delta',
+        text: 'Let me search. Let me check. Let me also look. Here are results:\n| Type | Count |\n|------|-------|\n| Open | 3 |',
+      },
       { type: 'step-finish', reason: 'stop', toolCalls: 0, textProduced: true },
       {
         type: 'finish',
@@ -472,7 +483,7 @@ describe('streamWithRetry', () => {
         maxTokens: 4096,
       },
     ];
-    vi.mocked(chatStream).mockReturnValue(Stream.fromIterable(events));
+    vi.mocked(chatStreamWithTools).mockReturnValue(Stream.fromIterable(events));
 
     const result = await streamWithRetry(
       [{ role: 'user', content: 'Show PRs' }],

@@ -42,6 +42,16 @@ Respond like smart caveman. Cut all filler, keep technical substance.
 All logs are stored in the `./data/logs` directory. Use `tail -f ./data/logs/woss.io.log` to stream logs in real-time.
 Read the @timestamp on each log line. then filter for given chatId..., then subtract consecutive timestamps per step. The traceId groups related events but I just used ordering. The ✅ done line also gives the definitive tokensIn/tokensOut/durationMs directly.
 
+### Message ID Log Lookup
+
+Every log call inside message processing auto-carries `"msgId":"xxx"` as a JSON field (via ALS). When user shares a link with chatId/messageId:
+
+1. Extract chatId and messageId from URL
+2. Grep logs directly by messageId: `grep '"msgId":"<messageId>"' ./data/logs/woss.io.log` — no DB query needed
+3. For broader scope, also grep by traceId (extract traceId from the msgId-matched lines)
+
+Do NOT query the DB for traceId as a first step — msgId in logs is sufficient. DB query only if logs don't contain the message (e.g. pre-msgId messages or log rotation).
+
 ### Mandatory Protocol
 
 Before EVERY grep/glob/read:

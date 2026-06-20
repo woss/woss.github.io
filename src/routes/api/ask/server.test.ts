@@ -20,10 +20,8 @@ vi.mock('$lib/server/embed', () => ({
   embedText: vi.fn(),
 }));
 
-vi.mock('$lib/server/llm', () => ({
+vi.mock('$lib/server/openai-provider', () => ({
   buildRagPrompt: vi.fn(),
-  chatStream: vi.fn(),
-  chatStreamWithTools: vi.fn(),
   isAvailable: vi.fn().mockResolvedValue(true),
 }));
 
@@ -103,7 +101,7 @@ vi.mock('$lib/server/webhooks', () => ({
 // ── Imports (after mocks are set up) ─────────────────────────────────────
 
 import { addMessage, getChat, getChatMessageCount, getOrCreateUserAgent, isChatLocked } from '$lib/server/db';
-import { isAvailable } from '$lib/server/llm';
+import { isAvailable } from '$lib/server/openai-provider';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { sanitizeText } from '$lib/server/sanitize';
 import { startGeneration } from '$lib/server/generate';
@@ -114,11 +112,7 @@ import { POST } from './+server';
 const VALID_BODY = { text: 'What is your name?', userId: 'user-1' };
 const VALID_BODY_WITH_CHAT = { text: 'What is your name?', userId: 'user-1', chatId: 'chat-1' };
 
-function buildEvent(overrides: {
-  body?: Record<string, unknown>;
-  ip?: string;
-  userAgent?: string;
-}): RequestEvent {
+function buildEvent(overrides: { body?: Record<string, unknown>; ip?: string; userAgent?: string }): RequestEvent {
   const body = JSON.stringify(overrides.body ?? {});
   const headers = new Map<string, string>();
   if (overrides.ip) headers.set('x-forwarded-for', overrides.ip);
@@ -162,7 +156,12 @@ describe('POST /api/ask', () => {
         headers: { 'Content-Type': 'application/json' },
         body: 'not json',
       });
-      const event = { params: {}, request, getClientAddress: () => '127.0.0.1', url: new URL('http://localhost') } as RequestEvent;
+      const event = {
+        params: {},
+        request,
+        getClientAddress: () => '127.0.0.1',
+        url: new URL('http://localhost'),
+      } as RequestEvent;
       const res = await POST(event);
       expect(res.status).toBe(400);
       const json = await res.json();
@@ -372,9 +371,7 @@ describe('POST /api/ask', () => {
     it('passes undefined userAgentId when no user-agent header', async () => {
       const event = buildEvent({ body: VALID_BODY_WITH_CHAT });
       await POST(event);
-      expect(addMessage).toHaveBeenCalledWith(
-        expect.objectContaining({ userAgentId: undefined }),
-      );
+      expect(addMessage).toHaveBeenCalledWith(expect.objectContaining({ userAgentId: undefined }));
     });
 
     it('calls startGeneration when chatId is present', async () => {
@@ -384,9 +381,9 @@ describe('POST /api/ask', () => {
         'What is your name?',
         'chat-1',
         'user-1',
-        8,         // default maxChunks
-        42,        // userAgentId
-        'msg-id',  // userMsgId
+        8, // default maxChunks
+        42, // userAgentId
+        'msg-id', // userMsgId
         'test-trace-id',
       );
     });

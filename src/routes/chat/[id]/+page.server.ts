@@ -15,7 +15,7 @@ import {
 import { config as clientConfig } from '$lib/config';
 import { callWebhook } from '$lib/server/webhooks';
 import { checkRateLimit } from '$lib/server/rate-limiter';
-import { isAvailable } from '$lib/server/llm';
+import { isAvailable } from '$lib/server/openai-provider';
 import { startGeneration, abortGeneration } from '$lib/server/generate';
 import { generateTraceId, generateSpanId, withTrace } from '$lib/server/trace-context';
 import { CAT, createLogger } from '$lib/server/logger';
@@ -280,7 +280,15 @@ export const load: PageServerLoad = async ({ params }) => {
       id: m.id,
       role: m.role === 'system' ? 'assistant' : m.role === 'user' ? 'user' : 'assistant',
       text: m.content || '',
-      sources: m.sources ? (() => { try { return JSON.parse(m.sources); } catch { return undefined; } })() : undefined,
+      sources: m.sources
+        ? (() => {
+            try {
+              return JSON.parse(m.sources);
+            } catch {
+              return undefined;
+            }
+          })()
+        : undefined,
       reasoning: m.reasoning || undefined,
       error: m.error || undefined,
       irrecoverable: m.irrecoverable || undefined,

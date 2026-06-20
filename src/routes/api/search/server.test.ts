@@ -10,7 +10,7 @@ vi.mock('$lib/server/embed', () => ({
   embedText: vi.fn(),
 }));
 
-vi.mock('$lib/server/llm', () => ({
+vi.mock('$lib/server/openai-provider', () => ({
   isAvailable: vi.fn(),
 }));
 
@@ -32,7 +32,7 @@ vi.mock('$lib/server/logger', () => ({
 
 import { searchChunks } from '$lib/server/db';
 import { embedText } from '$lib/server/embed';
-import { isAvailable } from '$lib/server/llm';
+import { isAvailable } from '$lib/server/openai-provider';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { GET } from './+server';
 

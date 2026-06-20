@@ -21,9 +21,7 @@ import { CAT, createLogger } from './logger';
 
 const log = createLogger(CAT.llm);
 
-/* ------------------------------------------------------------------ */
-/*  Configuration                                                      */
-/* ------------------------------------------------------------------ */
+/** @group Configuration */
 
 const CACHE_INDEX_PATH = join(process.cwd(), 'data', 'cache.usearch');
 
@@ -34,15 +32,11 @@ const CACHE_INDEX_PATH = join(process.cwd(), 'data', 'cache.usearch');
  */
 const HIT_THRESHOLD = 0.04;
 
-/* ------------------------------------------------------------------ */
-/*  State                                                              */
-/* ------------------------------------------------------------------ */
+/** @group State */
 
 let _index: Index | null = null;
 
-/* ------------------------------------------------------------------ */
-/*  Internal helpers                                                   */
-/* ------------------------------------------------------------------ */
+/** @group Internal helpers */
 
 /**
  * Strip <tool_calls>...</tool_calls> blocks from LLM responses.
@@ -79,9 +73,7 @@ function saveIndex(): void {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  Public API                                                         */
-/* ------------------------------------------------------------------ */
+/** @group Public API */
 
 /**
  * Check the semantic cache for a question with similar embedding.
@@ -89,7 +81,9 @@ function saveIndex(): void {
  * @param embedding - Query embedding vector (1024-dim Float32Array-compatible)
  * @returns Cached { answer, sources } if a similar entry exists, null otherwise
  */
-export function checkCache(embedding: number[]): { answer: string; sources: string; toolCalls?: { name: string; serverId: string }[] } | null {
+export function checkCache(
+  embedding: number[],
+): { answer: string; sources: string; toolCalls?: { name: string; serverId: string }[] } | null {
   const idx = getIndex();
   if (idx.size() === 0) return null;
 
@@ -113,9 +107,7 @@ export function checkCache(embedding: number[]): { answer: string; sources: stri
   // TTL check — treat expired entries as cache misses
   const createdAt = new Date(row.created_at).getTime();
   if (createdAt < Date.now() - config().llmCache.ttlSec * 1000) return null;
-  const toolCalls: { name: string; serverId: string }[] = row.tool_calls
-    ? JSON.parse(row.tool_calls)
-    : [];
+  const toolCalls: { name: string; serverId: string }[] = row.tool_calls ? JSON.parse(row.tool_calls) : [];
   return { answer: stripToolCallXml(row.answer), sources: row.sources, toolCalls };
 }
 

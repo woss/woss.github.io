@@ -21,16 +21,14 @@ const TOOL_DESCRIPTION_OVERRIDES: Record<string, string> = {
   get_file_metadata:
     'Get full EXIF/XMP/IPTC metadata for a Macula file. Returns camera details (make, model, ISO, aperture, shutter speed, GPS), panorama stitching info, music metadata.',
   search_issues:
-    "Search GitHub issues and pull requests by keyword. CRITICAL: ALWAYS include \"is:public\" in every query to restrict results to public repositories. Examples: \"is:pr author:woss is:public\", \"is:open is:issue is:public\", \"bug report is:public\".",
+    'Search GitHub issues and pull requests by keyword. CRITICAL: ALWAYS include "is:public" in every query to restrict results to public repositories. Examples: "is:pr author:woss is:public", "is:open is:issue is:public", "bug report is:public".',
   search_repositories:
-    "Discover GitHub repositories by name, description, topic, or README content. Essential for verifying repo existence and finding Daniel Maricic's projects. Always use when asked about a specific repo to confirm it exists before answering. CRITICAL: ALWAYS include \"is:public\" in every query to restrict results to public repositories. Supports advanced qualifiers: repo:owner/name, user:woss, language:typescript, topic:react, etc.",
+    'Discover GitHub repositories by name, description, topic, or README content. Essential for verifying repo existence and finding Daniel Maricic\'s projects. Always use when asked about a specific repo to confirm it exists before answering. CRITICAL: ALWAYS include "is:public" in every query to restrict results to public repositories. Supports advanced qualifiers: repo:owner/name, user:woss, language:typescript, topic:react, etc.',
 };
 
 /** Suffix appended to all tool descriptions for Q&A context */
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                             */
-/* ------------------------------------------------------------------ */
+/** @group Helpers */
 
 /**
  * Parse a JSON string into Record<string, unknown>.
@@ -52,9 +50,7 @@ function parseRecord(value: string | undefined): Record<string, unknown> {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  Cache                                                              */
-/* ------------------------------------------------------------------ */
+/** @group Cache */
 
 export interface McpToolDef {
   name: string;
@@ -79,9 +75,7 @@ let _mcpToolDefsCache: { data: McpToolDef[]; ts: number } | null = null;
 let _mcpResourceContent: { data: string; ts: number } | null = null;
 let _mcpPromptContent: { data: string; ts: number } | null = null;
 
-/* ------------------------------------------------------------------ */
-/*  OpenAI Tool Format                                                 */
-/* ------------------------------------------------------------------ */
+/** @group OpenAI Tool Format */
 
 /**
  * Map an MCP tool definition to OpenAI function-calling format.

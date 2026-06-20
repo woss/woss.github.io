@@ -1,10 +1,11 @@
 import { publishLive } from '$lib/server/chat-events';
 import { ensureModel, getDb } from '$lib/server/db';
-import { chatStream, chatStreamWithTools } from '$lib/server/llm';
+import { chatStreamWithTools } from '$lib/server/openai-provider';
 import type { LLMEvent } from '$lib/server/llm/types';
 import type { McpToolDef } from '$lib/server/mcp/tools';
 import { getDoomLoopRecoveryPrompt } from '../prompts.ts';
 import { config } from '$lib/server/config';
+import { setMsgId } from '../trace-context.ts';
 import { CAT, createLogger } from '$lib/server/logger';
 import type { ChatMessage } from '$lib/server/openai-provider';
 import { Effect, Stream } from 'effect';
@@ -147,6 +148,7 @@ export async function streamWithRetry(
   // Pre-generate message ID for tool-call FK tracking
   const db = getDb();
   const msgId = randomUUID();
+  setMsgId(msgId);
   const toolCallStmt = db.prepare(
     `INSERT INTO tool_calls (id, message_id, name, server_id, tool_input, started_at) VALUES (?, ?, ?, ?, ?, datetime('now'))`,
   );
@@ -162,7 +164,7 @@ export async function streamWithRetry(
       const xmlStripper = new ToolCallXmlStripper();
       const llmStream = mcpToolDefs
         ? chatStreamWithTools(messages, mcpToolDefs, abortController.signal)
-        : chatStream(messages, abortController.signal);
+        : chatStreamWithTools(messages, [], abortController.signal);
 
       const streamStartTime = performance.now();
 
@@ -302,12 +304,19 @@ export async function streamWithRetry(
         hasMaculaTools && !anyStepHadToolCalls && hasFabricatedUrls && answerText.trim().length > 0;
 
       // Interim text detection: 3+ transitional phrases, no structural content
-      const INTERIM_PATTERNS = /\b(let me|i'll|i will|i should|i need to)\b/ig;
+      const INTERIM_PATTERNS = /\b(let me|i'll|i will|i should|i need to)\b/gi;
       const interimMatchCount = (answerText.match(INTERIM_PATTERNS) ?? []).length;
       const hasContentStructure = /```|`[^`]+`|\|.*\|.*\||^#+\s/m.test(answerText);
       const isInterimText = interimMatchCount >= 3 && !hasContentStructure && answerText.trim().length < 2000;
 
-      if (answerText.trim().length === 0 || isDoomLoop || isTinyText || isToolLoop || isHallucination || isInterimText) {
+      if (
+        answerText.trim().length === 0 ||
+        isDoomLoop ||
+        isTinyText ||
+        isToolLoop ||
+        isHallucination ||
+        isInterimText
+      ) {
         const reason = isHallucination
           ? 'Hallucination (tools available, zero calls, Macula URLs in output)'
           : isToolLoop

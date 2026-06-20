@@ -1,7 +1,7 @@
 import { publishLive, publishPersistent } from '$lib/server/chat-events';
 import { callErrorWebhook } from '$lib/server/webhooks';
 import { addMessage, getDb, searchChunks } from '$lib/server/db';
-import { buildRagPrompt } from '$lib/server/llm';
+import { buildRagPrompt } from '$lib/server/openai-provider';
 import { getMcpToolDefs, type McpToolDef } from '$lib/server/mcp/tools';
 import { getToolSystemPrompt } from '../prompts.ts';
 import { config } from '$lib/server/config';

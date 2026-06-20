@@ -30,7 +30,7 @@ vi.mock('$lib/server/db', () => ({
   searchChunks: vi.fn(() => []),
 }));
 
-vi.mock('$lib/server/llm', () => ({
+vi.mock('$lib/server/openai-provider', () => ({
   buildRagPrompt: vi.fn((text: string) => [
     { role: 'system', content: 'You are Haistlin.' },
     { role: 'user', content: text },
@@ -105,7 +105,10 @@ vi.mock('./save-result', () => ({
 }));
 
 // Mock setTimeout used for the pipeline timeout
-vi.stubGlobal('setTimeout', vi.fn(() => 1));
+vi.stubGlobal(
+  'setTimeout',
+  vi.fn(() => 1),
+);
 vi.stubGlobal('clearTimeout', vi.fn());
 
 // ---------------------------------------------------------------------------

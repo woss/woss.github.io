@@ -13,7 +13,7 @@ import {
   searchChunks,
 } from '$lib/server/db';
 import { embedText } from '$lib/server/embed';
-import { buildRagPrompt, chatStream, chatStreamWithTools, isAvailable } from '$lib/server/llm';
+import { buildRagPrompt, isAvailable } from '$lib/server/openai-provider';
 import { checkCache, storeCache } from '$lib/server/llm-cache';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { getMcpToolDefs, getMcpResourceContent, type McpToolDef } from '$lib/server/mcp/tools';

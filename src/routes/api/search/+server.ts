@@ -1,6 +1,6 @@
 import { searchChunks } from '$lib/server/db';
 import { embedText } from '$lib/server/embed';
-import { isAvailable } from '$lib/server/llm';
+import { isAvailable } from '$lib/server/openai-provider';
 import { checkRateLimit } from '$lib/server/rate-limiter';
 import { CAT, createLogger } from '$lib/server/logger';
 import type { RequestEvent } from '@sveltejs/kit';

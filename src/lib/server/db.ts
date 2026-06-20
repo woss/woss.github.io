@@ -278,9 +278,7 @@ function ensureUser(userId: string, email?: string, name?: string): void {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  Feature Tour Functions                                            */
-/* ------------------------------------------------------------------ */
+/** @group Feature Tour Functions */
 
 /**
  * Get all feature tours that have been dismissed for a user.
@@ -288,7 +286,9 @@ function ensureUser(userId: string, email?: string, name?: string): void {
  */
 export function getDismissedFeatureTours(userId: string): string[] {
   const db = getDb();
-  const rows = db.prepare('SELECT feature_id FROM feature_tours WHERE user_id = ?').all(userId) as { feature_id: string }[];
+  const rows = db.prepare('SELECT feature_id FROM feature_tours WHERE user_id = ?').all(userId) as {
+    feature_id: string;
+  }[];
   return rows.map((r) => r.feature_id);
 }
 
@@ -304,9 +304,7 @@ export function dismissFeatureTours(userId: string, featureIds: string[]): void 
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  Chat Functions                                                    */
-/* ------------------------------------------------------------------ */
+/** @group Chat Functions */
 
 /**
  * Ensure a chat exists. Creates the chat row if absent.
@@ -512,9 +510,7 @@ function insertContactIntent(userId: string, chatId: string, text: string): void
   db.prepare('INSERT INTO contact_intents (user_id, chat_id, text) VALUES (?, ?, ?)').run(userId, chatId, text);
 }
 
-/* ------------------------------------------------------------------ */
-/*  Message Functions                                                 */
-/* ------------------------------------------------------------------ */
+/** @group Message Functions */
 
 /**
  * Add a message to a chat history.
@@ -541,6 +537,11 @@ export interface AddMessageParams {
   fromCache?: boolean;
 }
 
+/**
+ * Add a message to chat history, auto-creating user and chat records as needed.
+ * @param params - Message parameters including role, content, and metadata
+ * @returns The message ID
+ */
 function addMessage(params: AddMessageParams): string {
   const db = getDb();
   ensureUser(params.userId);
@@ -631,6 +632,14 @@ function parseStoredMessage(row: Record<string, unknown>): StoredMessage {
   };
 }
 
+/**
+ * Ensure a model record exists in the models table and return its ID.
+ * @param provider - LLM provider name
+ * @param modelName - Configured model name
+ * @param actualModelName - Actual model name returned by the provider
+ * @param maxTokens - Maximum tokens for this model
+ * @returns Model record ID
+ */
 function ensureModel(provider: string, modelName: string, actualModelName: string, maxTokens: number): number {
   const safeMaxTokens = maxTokens ?? 0;
   const db = getDb();
@@ -648,9 +657,7 @@ function ensureModel(provider: string, modelName: string, actualModelName: strin
   return row.id;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Chat Events (SSE reconnect)                                       */
-/* ------------------------------------------------------------------ */
+/** @group Chat Events (SSE reconnect) */
 
 /**
  * Insert a chat event. Returns the new event ID.
@@ -688,9 +695,7 @@ function getChatEventsSince(
   }));
 }
 
-/* ------------------------------------------------------------------ */
-/*  Reaction Functions                                                */
-/* ------------------------------------------------------------------ */
+/** @group Reaction Functions */
 
 /**
  * Save or update a reaction for a message.
@@ -759,7 +764,9 @@ function getPosts(slug?: string): {
   featured: boolean;
   position: number | null;
   partOfSeries: number | null;
-  workflowFiles: { label: string; file: string; placeholders: { key: string; label: string; hint?: string }[] }[] | null;
+  workflowFiles:
+    | { label: string; file: string; placeholders: { key: string; label: string; hint?: string }[] }[]
+    | null;
 }[] {
   const db = getDb();
   let rows;
@@ -801,8 +808,11 @@ function getPosts(slug?: string): {
       position: r.position != null ? Number(r.position) : null,
       partOfSeries: r.part_of_series != null ? Number(r.part_of_series) : null,
       workflowFiles: (() => {
-        try { return JSON.parse(String(r.workflow_files ?? 'null')); }
-        catch { return null; }
+        try {
+          return JSON.parse(String(r.workflow_files ?? 'null'));
+        } catch {
+          return null;
+        }
       })(),
     };
   });
@@ -853,9 +863,7 @@ function getExperience(slug?: string): {
   }));
 }
 
-/* ------------------------------------------------------------------ */
-/*  Chat Locking                                                       */
-/* ------------------------------------------------------------------ */
+/** @group Chat Locking */
 
 function lockChat(chatId: string): void {
   const db = getDb();

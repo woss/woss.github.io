@@ -13,9 +13,7 @@ import type { jsonSchemaValidator, JsonSchemaType, JsonSchemaValidator } from '@
 
 const log = createLogger(CAT.mcp);
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
+/** @group Types */
 
 type McpConnection = {
   client: Client;
@@ -56,9 +54,7 @@ export type McpPromptMessage = {
   text: string;
 };
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                             */
-/* ------------------------------------------------------------------ */
+/** @group Helpers */
 
 /**
  * Extract type/text fields from MCP content items without type casts.
@@ -74,9 +70,7 @@ function parseMcpContent(content: unknown[]): Array<{ type?: string; text?: stri
   });
 }
 
-/* ------------------------------------------------------------------ */
-/*  Noop JSON Schema Validator                                         */
-/* ------------------------------------------------------------------ */
+/** @group Noop JSON Schema Validator */
 
 /**
  * No-op validator that accepts all input without validation.
@@ -96,9 +90,7 @@ class NoopValidator implements jsonSchemaValidator {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  Manager                                                            */
-/* ------------------------------------------------------------------ */
+/** @group Manager */
 
 export class McpManager {
   private connections = new Map<string, McpConnection>();
@@ -230,6 +222,11 @@ export class McpManager {
     return all;
   }
 
+  /** Read a specific resource by URI, optionally scoped to a server.
+   * @param uri - Resource URI to read
+   * @param serverId - When provided, queries only that server
+   * @returns Resource content or null when not found
+   */
   async readResource(uri: string, serverId?: string): Promise<McpResourceContent | null> {
     if (serverId) {
       const conn = this.connections.get(serverId);
@@ -282,6 +279,11 @@ export class McpManager {
     return all;
   }
 
+  /** Get a specific prompt by name, optionally scoped to a server.
+   * @param name - Prompt name
+   * @param serverId - When provided, queries only that server
+   * @returns Array of prompt messages
+   */
   async getPrompt(name: string, serverId?: string): Promise<McpPromptMessage[]> {
     if (serverId) {
       const conn = this.connections.get(serverId);
@@ -313,6 +315,11 @@ export class McpManager {
 
   /* ── Tool Execution ───────────────────────────────────────────── */
 
+  /** Execute a tool by its resolved name (may include serverId prefix for collision resolution).
+   * @param resolvedName - Tool name, optionally prefixed with serverId_
+   * @param args - Tool arguments
+   * @returns Tool execution result with content items
+   */
   async executeTool(resolvedName: string, args: Record<string, unknown>): Promise<McpToolCallResult> {
     const serverId = this.toolIndex.get(resolvedName);
     if (!serverId) throw new Error(`Unknown tool: ${resolvedName}`);
@@ -330,7 +337,10 @@ export class McpManager {
     const result = await Promise.race([
       conn.client.callTool({ name: originalName, arguments: args }),
       new Promise<never>((_, reject) => {
-        timeoutHandle = setTimeout(() => reject(new Error(`MCP callTool timed out after 60s for ${resolvedName}`)), 60_000);
+        timeoutHandle = setTimeout(
+          () => reject(new Error(`MCP callTool timed out after 60s for ${resolvedName}`)),
+          60_000,
+        );
       }),
     ]);
     clearTimeout(timeoutHandle);

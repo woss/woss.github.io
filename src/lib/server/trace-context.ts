@@ -4,6 +4,7 @@ import { v7 as uuidv7, v4 as uuidv4 } from 'uuid';
 export interface TraceContext {
   traceId: string;
   spanId: string;
+  msgId?: string;
 }
 
 /**
@@ -37,6 +38,15 @@ export function getCurrentTraceContext(): TraceContext | undefined {
     traceId: store.traceId as string,
     spanId: store.spanId as string,
   };
+}
+
+/**
+ * Set the message ID on the current trace context.
+ * All subsequent log calls in this trace will carry msgId as a JSON field.
+ */
+export function setMsgId(msgId: string): void {
+  const store = traceStorage.getStore();
+  if (store) store.msgId = msgId;
 }
 
 /**

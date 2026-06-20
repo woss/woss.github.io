@@ -16,9 +16,7 @@ import type { ModelMessage, ToolSet } from 'ai';
 import type { McpToolCallResult } from './mcp/client';
 import { getSystemPrompt } from './prompts.ts';
 
-/* ------------------------------------------------------------------ */
-/*  LLMEvent Factory Functions (type-safe constructors)                */
-/* ------------------------------------------------------------------ */
+/** @group LLMEvent Factory Functions */
 
 function textDeltaEvent(text: string): LLMEvent {
   return { type: 'text-delta', text };
@@ -66,9 +64,7 @@ function finishEvent(
   };
 }
 
-/* ------------------------------------------------------------------ */
-/*  ModelMessage Converter (type-safe ChatMessage -> ModelMessage)     */
-/* ------------------------------------------------------------------ */
+/** @group ModelMessage Converter */
 
 function toModelMessages(messages: ChatMessage[]): Array<ModelMessage> {
   const result: Array<ModelMessage> = [];
@@ -103,9 +99,7 @@ function toModelMessages(messages: ChatMessage[]): Array<ModelMessage> {
 
 const log = createLogger(CAT.llm);
 
-/* ------------------------------------------------------------------ */
-/*  Types                                                              */
-/* ------------------------------------------------------------------ */
+/** @group Types */
 
 interface RagChunk {
   title: string;
@@ -115,15 +109,13 @@ interface RagChunk {
 
 type ChatRole = 'system' | 'user' | 'assistant' | 'tool';
 
-interface ChatMessage {
+export interface ChatMessage {
   role: ChatRole;
   content: string;
   tool_call_id?: string;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Configuration                                                      */
-/* ------------------------------------------------------------------ */
+/** @group Configuration */
 
 const BASE_URL = config().openai.baseUrl;
 const MODEL = config().openai.model;
@@ -133,18 +125,14 @@ const MAX_HISTORY_MESSAGES = 10;
 
 log.debug`[openai-provider] BASE_URL: ${BASE_URL} | MODEL: ${MODEL}`;
 
-/* ------------------------------------------------------------------ */
-/*  Model Instance                                                     */
-/* ------------------------------------------------------------------ */
+/** @group Model Instance */
 
 const model = provider(modelName);
 
-/* ------------------------------------------------------------------ */
-/*  RAG Prompt Builder                                                 */
-/* ------------------------------------------------------------------ */
+/** @group RAG Prompt Builder */
 
 /** Merge consecutive messages with the same role to satisfy strict role alternation (e.g., Mistral). */
-function mergeSameRole(messages: ChatMessage[]): ChatMessage[] {
+export function mergeSameRole(messages: ChatMessage[]): ChatMessage[] {
   // Disabled — role merging confuses DeepSeek V4 Flash, causes monologue leak
   // return messages.reduce((acc, msg) => {
   //   const last = acc[acc.length - 1];
@@ -158,7 +146,14 @@ function mergeSameRole(messages: ChatMessage[]): ChatMessage[] {
   return messages;
 }
 
-function buildRagPrompt(question: string, chunks: RagChunk[], history?: ChatMessage[]): ChatMessage[] {
+/**
+ * Build a system prompt enriched with RAG context from relevant chunks.
+ * @param question - User's question text
+ * @param chunks - Relevant chunks from vector search
+ * @param history - Previous conversation messages
+ * @returns Array of chat messages with system prompt, history, and current question
+ */
+export function buildRagPrompt(question: string, chunks: RagChunk[], history?: ChatMessage[]): ChatMessage[] {
   const messages: ChatMessage[] = [];
 
   let systemPrompt = getSystemPrompt();
@@ -176,9 +171,7 @@ function buildRagPrompt(question: string, chunks: RagChunk[], history?: ChatMess
     // Filter to user/assistant only, then truncate to last MAX_HISTORY_MESSAGES
     // to prevent context buildup that degrades tool-using behavior
     const filtered = history.filter((m) => m.role === 'user' || m.role === 'assistant');
-    const slice = filtered.length > MAX_HISTORY_MESSAGES
-      ? filtered.slice(-MAX_HISTORY_MESSAGES)
-      : filtered;
+    const slice = filtered.length > MAX_HISTORY_MESSAGES ? filtered.slice(-MAX_HISTORY_MESSAGES) : filtered;
     for (const msg of slice) {
       messages.push({ role: msg.role, content: msg.content });
     }
@@ -189,9 +182,7 @@ function buildRagPrompt(question: string, chunks: RagChunk[], history?: ChatMess
   return mergeSameRole(messages);
 }
 
-/* ------------------------------------------------------------------ */
-/*  MCP Tool -> AI SDK ToolSet Converter                              */
-/* ------------------------------------------------------------------ */
+/** @group MCP Tool -> AI SDK ToolSet Converter */
 
 interface McpToolDef {
   name: string;
@@ -242,25 +233,12 @@ function buildToolSet(
   return toolSet;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Streaming Chat                                                     */
-/* ------------------------------------------------------------------ */
-
-/**
- * Stream chat tokens from the LLM via Vercel AI SDK streamText.
- * Returns a Stream of typed LLMEvents.
- */
-function chatStream(messages: ChatMessage[], signal?: AbortSignal): StreamType<LLMEvent, Error> {
-  const tools: never[] = [];
-  return chatStreamWithTools(messages, tools, signal);
-}
-
 /**
  * Stream chat with MCP tool definitions via streamText.
  * Uses maxSteps for automatic multi-round tool execution.
  * Returns a Stream of typed LLMEvents.
  */
-function chatStreamWithTools(
+export function chatStreamWithTools(
   messages: ChatMessage[],
   mcpToolDefs: McpToolDef[],
   signal?: AbortSignal,
@@ -415,7 +393,13 @@ function chatStreamWithTools(
                       if (isInterimRound) {
                         log.warn`[llm-round] Interim round detected (${roundToolCalls} tool calls, transitional text without content) — forcing final round without tools`;
                       }
-                      if (roundToolCalls > 0 && roundTextLength > 0 && !reachedMaxRounds && !isDoomLoop && !isInterimRound) {
+                      if (
+                        roundToolCalls > 0 &&
+                        roundTextLength > 0 &&
+                        !reachedMaxRounds &&
+                        !isDoomLoop &&
+                        !isInterimRound
+                      ) {
                         log.info`[llm-round] ${roundToolCalls} tool calls, ${roundTextLength} text chars — continuing with tools`;
 
                         // Push assistant's text + tool calls as a single assistant message
@@ -462,7 +446,11 @@ function chatStreamWithTools(
                         runRound(round + 1, currentToolSet)
                           .then(resolve)
                           .catch(reject);
-                      } else if (roundToolCalls > 0 && roundTextLength > 0 && (reachedMaxRounds || isDoomLoop || isInterimRound)) {
+                      } else if (
+                        roundToolCalls > 0 &&
+                        roundTextLength > 0 &&
+                        (reachedMaxRounds || isDoomLoop || isInterimRound)
+                      ) {
                         // MAX_ROUNDS reached with tool calls and text — force a final
                         // Force final round without tools so the model must produce text.
                         log.info`[llm-round] MAX_ROUNDS=${MAX_ROUNDS} reached, ${roundToolCalls} tool calls, ${roundTextLength} text chars — forcing final round without tools`;
@@ -568,10 +556,13 @@ function chatStreamWithTools(
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Finish Reason Mapping                                              */
-/* ------------------------------------------------------------------ */
+/** @group Finish Reason Mapping */
 
+/**
+ * Map a string finish reason from the AI SDK to the internal FinishReason type.
+ * @param reason - Finish reason string (stop, tool-calls, error, length, or unknown)
+ * @returns The corresponding internal FinishReason enum value
+ */
 export function mapFinishReason(reason: string): FinishReason {
   switch (reason) {
     case 'stop':
@@ -587,45 +578,36 @@ export function mapFinishReason(reason: string): FinishReason {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/*  Health Check                                                       */
-/* ------------------------------------------------------------------ */
-
-async function isAvailable(): Promise<boolean> {
+/**
+ * Check connectivity to the LLM provider by listing available models.
+ * @returns True when the configured model is found in the provider model list.
+ */
+export async function isAvailable(): Promise<boolean> {
   if (!config().openai.apiKey) {
-    log.debug`[isAvailable] false: no API_KEY`;
+    log.error`[isAvailable] false: no API_KEY`;
     return false;
   }
-    const url = `${BASE_URL}/models`;
-    log.debug`[isAvailable] fetching: ${url}`;
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(15000),
-      headers: { Authorization: `Bearer ${config().openai.apiKey}` },
-    });
+  const url = `${BASE_URL}/models`;
+  log.debug`[isAvailable] fetching: ${url}`;
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(15000),
+    headers: { Authorization: `Bearer ${config().openai.apiKey}` },
+  });
 
-    if(!res.ok) {
-      log.error`[isAvailable] fetch failed: ${res.status} ${res.statusText}`;
-      return false;
-    }
+  if (!res.ok) {
+    log.error`[isAvailable] fetch failed: ${res.status} ${res.statusText}`;
+    return false;
+  }
 
-    log.debug`[isAvailable] status: ${res.status} ok: ${res.ok}`;
+  log.debug`[isAvailable] status: ${res.status} ok: ${res.ok}`;
 
-    const models = await res.json();
-    console.log('[isAvailable] models:', models);
-    const modelExists = models.data.find((model: { id: string }) => model.id === MODEL);
+  const models = await res.json();
+  const modelExists = models.data.find((model: { id: string }) => model.id === MODEL);
 
-    if(!modelExists) {
-      log.debug`[isAvailable] model ${MODEL} not found in available models`;
-      return false;
-    }
+  if (!modelExists) {
+    log.error`[isAvailable] model ${MODEL} not found in available models`;
+    return false;
+  }
 
-    return true
-
+  return true;
 }
-
-/* ------------------------------------------------------------------ */
-/*  Exports                                                            */
-/* ------------------------------------------------------------------ */
-
-export { buildRagPrompt, chatStream, chatStreamWithTools, isAvailable, mergeSameRole };
-export type { ChatMessage, ChatRole, RagChunk };
