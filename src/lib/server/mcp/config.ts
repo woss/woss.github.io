@@ -34,7 +34,12 @@ export type McpServerConfig = {
 export function parseMcpServers(raw: string | undefined): McpServerConfig[] {
   if (!raw) return [];
 
-  const parsed: McpServerConfig[] = JSON.parse(raw);
+  // Resolve $VAR and ${VAR} placeholders from process.env
+  const resolved = raw.replace(/\$(\w+)|\$\{(\w+)\}/g, (match, v1, v2) => {
+    const name = v1 ?? v2;
+    return process.env[name] ?? match;
+  });
+  const parsed: McpServerConfig[] = JSON.parse(resolved);
 
   return parsed.filter((s) => s.enabled !== false);
 }

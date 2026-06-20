@@ -46,7 +46,7 @@ export async function GET(event: RequestEvent): Promise<Response> {
   }
 
   // Guard: rate limit
-  const ip = event.request.headers.get('x-forwarded-for') ?? event.getClientAddress();
+  const ip = event.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? event.getClientAddress();
   const limit = checkRateLimit(ip);
   if (!limit.allowed) {
     const retryAfter = Math.ceil((limit.resetAt - Date.now()) / 1000);
