@@ -22,7 +22,7 @@ audience: developers
 header_image: '[DaliORM logo](https://u.macula.link/OhwxSXORQUCgirpGcMJfDg-7?preset=sys_lg)'
 ---
 
-This is a technical reference for developers who already know DaliORM from the [announcement post](./dali-orm-announcement). It covers the migration system architecture, CLI command design, schema definition APIs, programmatic integration, and the DDL layer that powers everything.
+This is a technical reference for developers who already know DaliORM from the [announcement post](./daliorm-announcement). It covers the migration system architecture, CLI command design, schema definition APIs, programmatic integration, and the DDL layer that powers everything.
 
 ## Quick Start
 

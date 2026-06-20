@@ -12,7 +12,7 @@ tags:
   - deepseek
   - DSML
 featured: false
-part_of_series: 'new-woss-io'
+part_of_series: 'building-woss-io'
 ---
 
 ## The Query That Should've Been Simple
@@ -41,11 +41,11 @@ grep '"msgId":"<msgId>"' ./data/logs/woss.io.log
 
 The `RAW_LLM_OUTPUT` lines told the story. The model (DeepSeek V4 Flash via a Zen proxy) was producing its answer, but something was stripping it before it reached the user. The log showed near-empty text — just transitional phrases — followed by the pipeline deciding to retry.
 
-The model uses DeepSeek V4 Flash through a Zen proxy. This model outputs something called DSML — a DeepSeek-specific XML-like format for tool calls — *after* it's already done native JSON tool calls. It's redundant metadata. The model runs its tool calls through native function calling (JSON), produces the answer, then tacks on a DSML block as a bonus.
+The model uses DeepSeek V4 Flash through a Zen proxy. This model outputs something called DSML — a DeepSeek-specific XML-like format for tool calls — _after_ it's already done native JSON tool calls. It's redundant metadata. The model runs its tool calls through native function calling (JSON), produces the answer, then tacks on a DSML block as a bonus.
 
-The problem: the `ToolCallXmlStripper` in the pipeline was stripping both DSML *and* plain XML from the answer text. It didn't differentiate. It just saw `<tags>` and removed them. What was left? Only the transitional phrases the model had written before getting to its actual point: "Let me check," "Let me look," "Let me find..."
+The problem: the `ToolCallXmlStripper` in the pipeline was stripping both DSML _and_ plain XML from the answer text. It didn't differentiate. It just saw `<tags>` and removed them. What was left? Only the transitional phrases the model had written before getting to its actual point: "Let me check," "Let me look," "Let me find..."
 
-These hit the `isInterimText` detection. The pipeline classified the round as "interim" — the model was *about* to call tools, it just hadn't done it yet. Retry. Burn tokens. Repeat.
+These hit the `isInterimText` detection. The pipeline classified the round as "interim" — the model was _about_ to call tools, it just hadn't done it yet. Retry. Burn tokens. Repeat.
 
 Attempt 0: stripped to "Let me check..." → interim → retry.
 Attempt 1: same pattern → retry.
@@ -54,9 +54,9 @@ Attempt 2: same pattern → retry.
 The fix was a dedicated DSML parser. I created `src/lib/server/pipeline/dsml-parser.ts` with three functions:
 
 ```typescript
-hasDsmlBlocks(text)     // Quick check for ｜DSML｜ token
-parseDsmlToolCalls(text) // Regex parser extracting tool calls from DSML blocks
-stripDsmlBlocks(text)    // Remove ｜DSML｜tool_calls blocks, keep surrounding text
+hasDsmlBlocks(text); // Quick check for ｜DSML｜ token
+parseDsmlToolCalls(text); // Regex parser extracting tool calls from DSML blocks
+stripDsmlBlocks(text); // Remove ｜DSML｜tool_calls blocks, keep surrounding text
 ```
 
 The interface is minimal:
@@ -85,14 +85,14 @@ const isInterimRound =
   roundTextLength > 0 &&
   roundToolCalls > 0 &&
   /(let me|i'll|i will|i should|i need to)/i.test(roundText) &&
-  !/```|`[^`]+`|\|.*\|.*\||^#+\s/m.test(roundText);
+  !/`{3}|`[^`]+`|\|.*\|.*\||^#+\s/m.test(roundText);
 ```
 
-Spot the problem. A single match of "let me" — one of the most common phrases in conversational English — would classify an entire round as interim. The model had just called `get_users`, gotten real data, and was beginning to write "Let me look up..." as a natural discourse transition. Not as a stall. It was about to *use* the tool results.
+Spot the problem. A single match of "let me" — one of the most common phrases in conversational English — would classify an entire round as interim. The model had just called `get_users`, gotten real data, and was beginning to write "Let me look up..." as a natural discourse transition. Not as a stall. It was about to _use_ the tool results.
 
 The regex didn't care. One match, boom, interim round detected.
 
-This is the bug that was hidden behind Bug 1. Before the DSML fix, the model's text was stripped to *only* transitional phrases, so the retry loop was the visible failure mode. Once DSML was handled properly, the model could actually produce enough text to trigger the interim detection — which then killed the round anyway.
+This is the bug that was hidden behind Bug 1. Before the DSML fix, the model's text was stripped to _only_ transitional phrases, so the retry loop was the visible failure mode. Once DSML was handled properly, the model could actually produce enough text to trigger the interim detection — which then killed the round anyway.
 
 Two bugs, same query, different failure modes. Fixing the first revealed the second.
 
@@ -105,7 +105,7 @@ const isInterimRound =
   roundTextLength > 0 &&
   roundToolCalls > 0 &&
   interimMatchCount >= 3 &&
-  !/```|`[^`]+`|\|.*\|.*\||^#+\s/m.test(roundText) &&
+  !/`{3}|`[^`]+`|\|.*\|.*\||^#+\s/m.test(roundText) &&
   roundTextLength < 2000;
 ```
 
@@ -115,11 +115,11 @@ Three changes: bumped the threshold from 1 to 3, added a word-boundary check (`\
 
 The difference between broken and fixed:
 
-| State | Duration | Tool Calls | Answer Length | Quality |
-|-------|----------|------------|---------------|---------|
-| Before both fixes | 2m44s | 0 (all retries) | 0 chars | No answer |
-| Bug 1 fixed only | 9.9s | 1 (get_users) | ~300 chars | Useless text |
-| Both fixed | 33s | 6 (get_users + 5 traverse) | 5,230 chars | Actual photo URLs + markdown |
+| State             | Duration | Tool Calls                 | Answer Length | Quality                      |
+| ----------------- | -------- | -------------------------- | ------------- | ---------------------------- |
+| Before both fixes | 2m44s    | 0 (all retries)            | 0 chars       | No answer                    |
+| Bug 1 fixed only  | 9.9s     | 1 (get_users)              | ~300 chars    | Useless text                 |
+| Both fixed        | 33s      | 6 (get_users + 5 traverse) | 5,230 chars   | Actual photo URLs + markdown |
 
 The log line that confirmed everything worked:
 
@@ -162,7 +162,7 @@ Without these log markers, this would've been guesswork. The `RAW_LLM_OUTPUT` lo
 
 **Thresholds matter in LLM pipelines.** A regex with a single-match threshold for transitional phrases is a landmine. Humans say "let me" all the time as natural language, not as a stall signal. The regex didn't distinguish between "let me check" (stall) and "let me look up what I just found" (natural transition). The fix required 3 matches because a human saying "let me" three times in one round actually is stalling.
 
-**Log at every decision point.** The `RAW_LLM_OUTPUT` log and `[llm-round]` markers made this debugging possible. Without seeing exactly what the model said vs what the pipeline decided about it, I'd have been guessing at root causes. The `RAW_LLM_OUTPUT` log was the turning point — it showed me the model *was* producing text, and the stripping pipeline was eating it.
+**Log at every decision point.** The `RAW_LLM_OUTPUT` log and `[llm-round]` markers made this debugging possible. Without seeing exactly what the model said vs what the pipeline decided about it, I'd have been guessing at root causes. The `RAW_LLM_OUTPUT` log was the turning point — it showed me the model _was_ producing text, and the stripping pipeline was eating it.
 
 **Aligned thresholds prevent future bugs.** The interim round detection now matches the `stream.ts` behavior — both require 3+ transitional phrases. When two parts of the system make the same decision, they should use the same logic. Inconsistency between `stream.ts` and `openai-provider.ts` on what counts as "interim" was asking for a bug.
 
@@ -178,4 +178,4 @@ All relevant source files in the woss.io repository:
 
 ---
 
-*This post is part of a series on building woss.io — an AI-native personal portfolio. Earlier posts covered the [system prompt positioning fix](/posts/system-prompt-position-matters), [Macula MCP tool design](/posts/designing-mcp-for-llms), and [taming the AI tool loop](/posts/taming-the-ai-tool-loop).*
+_This post is part of a series on building woss.io — an AI-native personal portfolio. Earlier posts covered the [system prompt positioning fix](/posts/system-prompt-position-matters), [Macula MCP tool design](/posts/designing-mcp-for-llms), and [taming the AI tool loop](/posts/taming-the-ai-tool-loop)._

@@ -11,8 +11,6 @@ tags:
   - AI agents
   - API design
 header_image: '[Making Content Accessible to AI](https://u.macula.link/tY372ROkTd-nvcoFnh9bHw-7)'
-part_of_series: macula-mcp-series
-id: macula-mcp-series
 ---
 
 Macula is a platform for photographers and creators to publish their work with proper licensing and metadata. We've been serving a public API (`unified-link`) for a while, but AI agents don't connect to REST APIs easily. They need MCP.
@@ -251,4 +249,4 @@ We're continuing to expand our toolset based on real usage patterns. If you're b
 
 ---
 
-_For technical details on our MCP implementation, see [Building a Public MCP Server: From Zero to Production](./macula-mcp-technical-v0)._
+_For technical details on our MCP implementation, see [Building a Public MCP Server: From Zero to Production](./macula-mcp-v1-lessons)._

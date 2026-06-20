@@ -11,7 +11,7 @@ tags:
   - security
   - API design
   - production
-part_of_series: macula-mcp-series
+part_of_series: macula-mcp-announcement
 header_image: '[Building a Public MCP Server](https://u.macula.link/G_6XL5TeQbS0g3SkbxyWDQ-7)'
 ---
 
@@ -135,7 +135,7 @@ We exposed 14 read-only tools organized by domain:
 ### Search (3)
 
 | Tool                    | Input                    | Description         |
-| ----------------------- | -----------------------  | ------------------- |
+| ----------------------- | ------------------------ | ------------------- |
 | `search_keywords`       | `search?, page?, limit?` | Search keywords     |
 | `list_files_by_keyword` | `keyword`                | Files for a keyword |
 | `list_files_by_license` | `license, limit?, page?` | Files by license    |

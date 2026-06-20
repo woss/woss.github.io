@@ -1,7 +1,7 @@
 ---
 published: true
 title: 'Designing MCP Servers for How LLMs Think'
-slug: 'designing-mcp-for-llms'
+slug: 'macula-designing-mcp-for-llms'
 description: "A design retrospective on three iterations of MCP server refinement driven by observing real LLM behavior — tool design is LLM UX, and a tool an LLM doesn't understand is a tool that might as well not exist."
 date: 2026-06-01
 tags:
@@ -12,7 +12,7 @@ tags:
   - UX
   - content graph
   - prompt engineering
-part_of_series: macula-mcp-series
+part_of_series: macula-mcp-announcement
 header_image: '[Macula Content Graph Visualization](https://u.macula.link/Pi4guk9pQGebQU0lWPIGxQ-7)'
 ---
 
@@ -117,7 +117,7 @@ Prompts are training data for the LLM. Write them like tutorials, not command li
 | Tool              | Purpose                                                         |
 | ----------------- | --------------------------------------------------------------- |
 | traverse          | Graph navigation — discover files, users, directories, keywords |
-| get_file          | Full file metadata including _links, AI info, copyright         |
+| get_file          | Full file metadata including \_links, AI info, copyright        |
 | get_file_metadata | Raw EXIF/XMP/IPTC technical data                                |
 | get_users         | Batch user profile lookup                                       |
 

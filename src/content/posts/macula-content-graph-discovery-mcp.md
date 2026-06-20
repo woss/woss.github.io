@@ -1,7 +1,7 @@
 ---
 published: true
 title: 'Your Content Is a Gallery, Not a Filing Cabinet: Graph Discovery for AI Agents'
-slug: 'content-graph-discovery-mcp'
+slug: 'macula-content-graph-discovery-mcp'
 description: 'How AI agents navigate creative content by following relationships — a conceptual deep-dive into graph-based discovery using a gallery metaphor, comparing graph walks against traditional REST APIs.'
 date: 2026-06-17
 tags:
@@ -11,7 +11,7 @@ tags:
   - graph traversal
   - REST
   - API design
-part_of_series: macula-mcp-series
+part_of_series: macula-mcp-announcement
 header_image: '[Content Graph Visualization](https://u.macula.link/Kh9NMfIeSUakGgg3sOL12w-7)'
 ---
 
@@ -262,7 +262,7 @@ _These tool names map to the content graph operations described above._
 | `search(query)`               | `traverse(from: { type: 'root' }, edge: 'search', query)`                                      |
 | `search_keywords(search)`     | `traverse(from: { type: 'root' }, edge: 'keywords', query)`                                    |
 | `list_files_by_license`       | `traverse(from: { type: 'license', license }, edge: 'has_license')`                            |
-| `list_files_for_ai`           | `traverse(filter: { allowedAiTraining: true })`                                                          |
+| `list_files_for_ai`           | `traverse(filter: { allowedAiTraining: true })`                                                |
 | `list_user_files`             | `traverse(from: { type: 'user', nickname }, edge: 'uploads')`                                  |
 | `list_random_files`           | `traverse(from: { type: 'root' }, edge: 'random')`                                             |
 | `list_files_by_keyword`       | `traverse(from: { type: 'keyword', keyword }, edge: 'tagged_files')`                           |
@@ -271,13 +271,13 @@ _These tool names map to the content graph operations described above._
 
 ### All 5 Prompts
 
-| Prompt              | Description                                                                                            |
-| ------------------- | ------------------------------------------------------------------------------------------------------ |
-| `browse_user`       | Explore a creator's profile, directories, and published files via user to directory to file navigation |
-| `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                   |
-| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                      |
-| `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs              |
-| `discover_content` | Discover and filter content — search, browse random/recent, filter by AI generation status, data mining permission, type, and license |
+| Prompt              | Description                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `browse_user`       | Explore a creator's profile, directories, and published files via user to directory to file navigation                                |
+| `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                                                  |
+| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                                                     |
+| `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs                                             |
+| `discover_content`  | Discover and filter content — search, browse random/recent, filter by AI generation status, data mining permission, type, and license |
 
 ### Resources (2)
 
@@ -322,4 +322,4 @@ We're continuing to expand our toolset based on real usage patterns. If you're b
 
 ---
 
-_For technical details on our MCP implementation, see [Building a Public MCP Server: From Zero to Production](./macula-content-graph-mcp-implementation)._
+_For technical details on our MCP implementation, see [Building a Public MCP Server: From Zero to Production](./macula-mcp-production-lessons)._

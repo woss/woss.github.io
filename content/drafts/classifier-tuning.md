@@ -11,7 +11,7 @@ tags:
   - optimization
   - woss.io
 featured: false
-part_of_series: 'new-woss-io'
+part_of_series: 'building-woss-io'
 ---
 
 ## A 7-Second Classification
@@ -115,11 +115,11 @@ Spoiler: it failed. No results to show — the first MiMo request returned an em
 
 The MiMo experiment lasted exactly one request. The log for chat `4d0e8274` told the story:
 
-| Problem | Detail |
-| ------- | ------ |
-| Field name mismatch | MiMo returns reasoning in a `reasoning` field, not `reasoning_content`. The TypeScript interface only checks `reasoning_content`, so all output was silently dropped. |
-| Token limit | `max_tokens: 500`. MiMo burned every single token on internal reasoning — `finish_reason: "length"` — and never emitted `content`. The actual classification was somewhere in the reasoning text, inaccessible. |
-| Empty answer | `rawAnswer = ""` → classifier fell back to `"none"`. Correct result, but by accident. |
+| Problem             | Detail                                                                                                                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Field name mismatch | MiMo returns reasoning in a `reasoning` field, not `reasoning_content`. The TypeScript interface only checks `reasoning_content`, so all output was silently dropped.                                           |
+| Token limit         | `max_tokens: 500`. MiMo burned every single token on internal reasoning — `finish_reason: "length"` — and never emitted `content`. The actual classification was somewhere in the reasoning text, inaccessible. |
+| Empty answer        | `rawAnswer = ""` → classifier fell back to `"none"`. Correct result, but by accident.                                                                                                                           |
 
 The classifier got the right answer (`"none"`) despite the model failure, not because of it. The code's fail-safe pattern masked the bug entirely.
 

@@ -12,7 +12,7 @@ tags:
   - security
   - TypeScript
   - SurrealDB
-part_of_series: macula-mcp-series
+part_of_series: macula-mcp-announcement
 header_image: '[Macula Content Graph Visualization](https://u.macula.link/URMl_ZDDQh2rbEyeo7xngQ-7)'
 ---
 
@@ -184,12 +184,12 @@ One graph-walk tool plus three leaf readers.
 
 `traverse` is the primary navigation tool — it walks edges between graph nodes. `get_file`, `get_file_metadata`, and `get_users` are terminal operations that read leaf data (file details, metadata, user profiles). They terminate the traversal at a node rather than continuing across edges.
 
-| Tool                | Input                                                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tool                | Input                                                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `traverse`          | `from`, `edge`, `filter?`, `limit?`, `after?`, `query?` | Graph walk: navigate from a starting node across a named edge to discover connected nodes. 11 valid `from`-`edge` pairs across 6 node types and 10 edge types. Full-text search via `edge: search` + `query`. Keyword search via `edge: keywords`. User profiles via `edge: profile`. File/directory details via `edge: info`. Cursor pagination via `after`. Filters: what, allowedAiTraining, allowAi, nickname. Images work correctly — `contains` and `tagged_files` follow both direct file and rendition chains. |
-| `get_file`          | `unifiedId`, `fields?`                                  | Leaf reader: get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` for JSONPath-based selective field retrieval.                                                                                                                                                                                                                                                                                                         |
-| `get_file_metadata` | `unifiedId, a?`                                         | Leaf reader: get full EXIF/XMP/IPTC metadata. Optional `a` for specific metadata fields.                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `get_users`         | `nicknames`                                             | Leaf reader: batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                                                                                                                                                                                                                   |
+| `get_file`          | `unifiedId`, `fields?`                                  | Leaf reader: get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` for JSONPath-based selective field retrieval.                                                                                                                                                                                                                                                                                                                            |
+| `get_file_metadata` | `unifiedId, a?`                                         | Leaf reader: get full EXIF/XMP/IPTC metadata. Optional `a` for specific metadata fields.                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `get_users`         | `nicknames`                                             | Leaf reader: batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                                                                                                                                                                                                                                      |
 
 The `traverse` tool alone replaced seven specialized tools via its 11 valid traversals. The three leaf readers handle everything else.
 
@@ -201,13 +201,13 @@ The `traverse` tool alone replaced seven specialized tools via its 11 valid trav
 
 We reduced from 14 specialized prompts to 5 task-oriented prompts. Rather than naming prompts after tool names, each prompt describes a user goal — what the agent should accomplish, not which tool it should use.
 
-| Prompt              | Description                                                                                          | Wraps                           |
-| ------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------- |
-| `browse_user`       | Explore a creator's profile, directories, and published files via user → directory → file navigation | `traverse`, `get_users`         |
-| `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                 | `get_file`                      |
-| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                    | `traverse`                      |
-| `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs            | `get_file`, `get_file_metadata` |
-| `discover_content`  | Discover and filter content — search, browse random/recent, filter by AI generation status, data mining permission, type, and license | `traverse` |
+| Prompt              | Description                                                                                                                           | Wraps                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `browse_user`       | Explore a creator's profile, directories, and published files via user → directory → file navigation                                  | `traverse`, `get_users`         |
+| `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                                                  | `get_file`                      |
+| `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                                                     | `traverse`                      |
+| `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs                                             | `get_file`, `get_file_metadata` |
+| `discover_content`  | Discover and filter content — search, browse random/recent, filter by AI generation status, data mining permission, type, and license | `traverse`                      |
 
 Key design choice: prompts are named for the task not the tool. An agent doesn't "call the traverse prompt" — it "browses a user" or "explores a directory." This lowers the activation energy for agents to use the prompts effectively.
 
@@ -268,23 +268,23 @@ await instance.register(fastifyRateLimit, {
 
 ## Input Validation Rules
 
-| Field                    | Constraints                                                                                                             |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `unifiedId`              | 1-64 chars, regex `^[a-zA-Z0-9_-]+$`                                                                                    |
-| `nickname`               | 1-32 chars, regex `^[a-zA-Z0-9_]+$`                                                                                     |
-| `pathCid`                | 1-200 chars                                                                                                             |
-| `keyword` / `search`     | 1-100 chars (search: min 2)                                                                                             |
-| `query`                  | 2-200 chars                                                                                                             |
-| `limit`                  | 1-100                                                                                                                   |
-| `page`                   | ≥ 0 or ≥ 1                                                                                                              |
-| `after`                  | Base64url cursor string                                                                                                 |
-| `edge`                   | Enum: `uploads`, `tagged_files`, `has_license`, `contains`, `random`, `recent`, `search`, `keywords`, `profile`, `info` |
-| `from.type` file variant | `unifiedId` when `from.type` is `file`                                                                                  |
-| `query`                  | 2-200 chars (required for `edge: search` or `edge: keywords`)                                                           |
-| `from.type`              | Enum: `user`, `keyword`, `license`, `directory`, `root`                                                                 |
-| `filter.what`            | Enum: `all`, `images`, `videos`, `files`                                                                                |
-| `filter.allowedAiTraining` | Boolean (data mining permission)                         |
-| `filter.allowAi`           | Boolean (exclude AI-generated files)                     |
+| Field                      | Constraints                                                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `unifiedId`                | 1-64 chars, regex `^[a-zA-Z0-9_-]+$`                                                                                    |
+| `nickname`                 | 1-32 chars, regex `^[a-zA-Z0-9_]+$`                                                                                     |
+| `pathCid`                  | 1-200 chars                                                                                                             |
+| `keyword` / `search`       | 1-100 chars (search: min 2)                                                                                             |
+| `query`                    | 2-200 chars                                                                                                             |
+| `limit`                    | 1-100                                                                                                                   |
+| `page`                     | ≥ 0 or ≥ 1                                                                                                              |
+| `after`                    | Base64url cursor string                                                                                                 |
+| `edge`                     | Enum: `uploads`, `tagged_files`, `has_license`, `contains`, `random`, `recent`, `search`, `keywords`, `profile`, `info` |
+| `from.type` file variant   | `unifiedId` when `from.type` is `file`                                                                                  |
+| `query`                    | 2-200 chars (required for `edge: search` or `edge: keywords`)                                                           |
+| `from.type`                | Enum: `user`, `keyword`, `license`, `directory`, `root`                                                                 |
+| `filter.what`              | Enum: `all`, `images`, `videos`, `files`                                                                                |
+| `filter.allowedAiTraining` | Boolean (data mining permission)                                                                                        |
+| `filter.allowAi`           | Boolean (exclude AI-generated files)                                                                                    |
 
 ## Development vs Production
 
