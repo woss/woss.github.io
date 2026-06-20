@@ -4,6 +4,7 @@ import { chatStreamWithTools } from '$lib/server/openai-provider';
 import type { LLMEvent } from '$lib/server/llm/types';
 import type { McpToolDef } from '$lib/server/mcp/tools';
 import { getDoomLoopRecoveryPrompt } from '../prompts.ts';
+import { hasDsmlBlocks, stripDsmlBlocks } from './dsml-parser.ts';
 import { config } from '$lib/server/config';
 import { setMsgId } from '../trace-context.ts';
 import { CAT, createLogger } from '$lib/server/logger';
@@ -158,6 +159,7 @@ export async function streamWithRetry(
 
   // change from 3 to 10 attempts after adding retry-on-doom-loop logic, to give the model more chances to recover with tools disabled
   const baseSystemPrompt = messages[0].content;
+  let dsmlRetryCount = 0;
   let irrecoverable = false;
   for (let attempt = 0; attempt < 10; attempt++) {
     try {
@@ -253,6 +255,23 @@ export async function streamWithRetry(
         ),
       );
       log.debug`RAW_LLM_OUTPUT:\n${answerText}`;
+
+      // DSML handling: strip DeepSeek DSML tool call blocks from output
+      {
+        const modelRow = db
+          .prepare('SELECT model_name, actual_model_name FROM models WHERE id = ?')
+          .get(currentModelId) as
+          | { model_name: string; actual_model_name: string }
+          | undefined;
+        const isDeepSeekModel =
+          modelRow &&
+          (/deepseek/i.test(modelRow.model_name) || /deepseek/i.test(modelRow.actual_model_name));
+
+        if (isDeepSeekModel && hasDsmlBlocks(answerText)) {
+          answerText = stripDsmlBlocks(answerText).trim();
+          log.debug`DSML blocks stripped from output, remaining text length: ${answerText.length}`;
+        }
+      }
 
       // Post-stream: convert GitHub PR/issue references to clickable markdown links
       answerText = answerText.replace(

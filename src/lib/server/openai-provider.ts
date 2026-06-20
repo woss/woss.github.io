@@ -381,11 +381,14 @@ export function chatStreamWithTools(
                       // "Empty answer" / "Doom loop" detection handles the retry.
                       const reachedMaxRounds = round >= MAX_ROUNDS;
                       const isDoomLoop = toolLoopDetected;
+                      const INTERIM_PATTERNS = /\b(let me|i'll|i will|i should|i need to)\b/gi;
+                      const interimMatchCount = (roundText.match(INTERIM_PATTERNS) ?? []).length;
                       const isInterimRound =
                         roundTextLength > 0 &&
                         roundToolCalls > 0 &&
-                        /(let me|i'll|i will|i should|i need to)/i.test(roundText) &&
-                        !/```|`[^`]+`|\|.*\|.*\||^#+\s/m.test(roundText);
+                        interimMatchCount >= 3 &&
+                        !/```|`[^`]+`|\|.*\|.*\||^#+\s/m.test(roundText) &&
+                        roundTextLength < 2000;
                       if (isDoomLoop) {
                         log.warn`[llm-round] Cross-round tool loop detected (fingerprint repeat > ${CROSS_ROUND_THRESHOLD}) — forcing final round without tools`;
                         doomLoopDetectedInRound = true;
