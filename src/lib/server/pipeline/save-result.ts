@@ -16,7 +16,7 @@ export interface SaveResultParams {
   userAgentId: number | undefined;
   answerText: string;
   reasoningText: string;
-  sources: { title: string; score: number; slug: string; url: string }[];
+  sources: { title: string; score: number; slug: string; url: string; type?: string; chunkCount?: number }[];
   currentModelId: number;
   tokenUsage: { promptTokens: number; completionTokens: number };
   responseMs: number;
@@ -26,7 +26,7 @@ export interface SaveResultParams {
   msgId: string;
   cacheEmbeddingData: number[];
   cacheText: string;
-  ragChunks: { title: string; text: string; score: number }[];
+  ragChunks: { title: string; text: string; score: number; slug: string; type: string }[];
   queryType: string;
   startTime: number;
   irrecoverable: boolean;
@@ -43,12 +43,32 @@ export interface SaveResultParams {
  * On success: saves the full answer, stores in semantic cache, emits 'done'
  * with sources and usage metadata.
  */
+function linkContextRefs(text: string, chunks: { slug: string; type: string }[]): string {
+  if (!chunks.length) return text;
+  const map = new Map<number, string>();
+  chunks.forEach((ch, i) => {
+    map.set(
+      i + 1,
+      ch.type === 'experience'
+        ? `/experience/${ch.slug}`
+        : ch.slug === 'about'
+          ? `/about`
+          : `/posts/${ch.slug}`,
+    );
+  });
+  return text.replace(/\(\[Context (\d+)\]\)|\[Context (\d+)\]/g, (match, p1, p2) => {
+    const n = parseInt(p1 || p2, 10);
+    const url = map.get(n);
+    return url ? `[Context ${n}](${url})` : match;
+  });
+}
+
 export async function saveAndEmitResult(params: SaveResultParams): Promise<void> {
   const {
     userId,
     chatId,
     userAgentId,
-    answerText,
+    answerText: rawAnswerText,
     reasoningText,
     sources,
     currentModelId,
@@ -68,8 +88,8 @@ export async function saveAndEmitResult(params: SaveResultParams): Promise<void>
   } = params;
 
   if (lastError && !partial) {
-    const fallbackText = answerText.trim()
-      ? answerText
+    const fallbackText = rawAnswerText.trim()
+      ? rawAnswerText
       : "I'm sorry, I wasn't able to generate a response. Please try rephrasing your question.";
     try {
       const errMsgId = addMessage({
@@ -105,6 +125,8 @@ export async function saveAndEmitResult(params: SaveResultParams): Promise<void>
     }
     return;
   }
+
+  const answerText = linkContextRefs(rawAnswerText, ragChunks);
 
   // Save assistant message
   try {

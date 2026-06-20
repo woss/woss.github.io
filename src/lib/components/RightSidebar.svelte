@@ -116,9 +116,12 @@
  style="width: {Math.round((1 - source.score) * 100)}%; background-color: {1 - source.score > 0.6 ? 'var(--color-primary)' : 1 - source.score > 0.45 ? 'var(--color-warning)' : 'var(--color-error)'};"
  ></div>
  </div>
- {/if}
- </div>
- <svg class="size-4 text-on-surface-variant shrink-0 mt-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+  {/if}
+  {#if source.chunkCount && source.chunkCount > 1}
+    <span class="text-xs text-on-surface-variant">{source.chunkCount} chunks</span>
+  {/if}
+  </div>
+  <svg class="size-4 text-on-surface-variant shrink-0 mt-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
  </a>
  {/each}
  </div>

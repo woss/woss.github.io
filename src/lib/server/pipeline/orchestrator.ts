@@ -90,7 +90,7 @@ export async function startGeneration(
     }
 
     // 5. RAG search (skip for tool-only queries)
-    let ragChunks: { title: string; text: string; score: number }[] = [];
+    let ragChunks: { title: string; text: string; score: number; slug: string; type: string }[] = [];
     let sources: { title: string; score: number; slug: string; url: string; type?: string }[] = [];
 
     // 5b. Detect tool needs BEFORE RAG gate — keyword matching may identify tools even when
@@ -130,7 +130,16 @@ export async function startGeneration(
         title: r.chunk.title,
         text: r.chunk.text,
         score: r.score,
+        slug: r.chunk.slug,
+        type: r.chunk.type,
       }));
+
+      // Count chunks per slug before dedup for sidebar display
+      const slugCounts = new Map<string, number>();
+      selected.forEach((r) => {
+        const slug = r.chunk.slug;
+        slugCounts.set(slug, (slugCounts.get(slug) || 0) + 1);
+      });
 
       const seen = new Set<string>();
       sources = selected
@@ -150,6 +159,7 @@ export async function startGeneration(
                 ? `/about`
                 : `/posts/${r.chunk.slug}`,
           type: r.chunk.type,
+          chunkCount: slugCounts.get(r.chunk.slug) ?? 1,
         }));
     }
 

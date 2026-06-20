@@ -4,6 +4,7 @@ export interface Source {
   slug?: string;
   url: string;
   type: 'post' | 'experience';
+  chunkCount?: number;
 }
 
 export interface ToolCallInfo {
