@@ -15,7 +15,6 @@ import type { LLMEvent, FinishReason, TokenUsage } from './llm/types';
 import type { ModelMessage, ToolSet } from 'ai';
 import type { McpToolCallResult } from './mcp/client';
 import { getSystemPrompt } from './prompts.ts';
-import { sanitizeText } from '$lib/server/sanitize';
 
 /* ------------------------------------------------------------------ */
 /*  LLMEvent Factory Functions (type-safe constructors)                */
@@ -597,19 +596,31 @@ async function isAvailable(): Promise<boolean> {
     log.debug`[isAvailable] false: no API_KEY`;
     return false;
   }
-  try {
     const url = `${BASE_URL}/models`;
     log.debug`[isAvailable] fetching: ${url}`;
     const res = await fetch(url, {
       signal: AbortSignal.timeout(15000),
       headers: { Authorization: `Bearer ${config().openai.apiKey}` },
     });
+
+    if(!res.ok) {
+      log.error`[isAvailable] fetch failed: ${res.status} ${res.statusText}`;
+      return false;
+    }
+
     log.debug`[isAvailable] status: ${res.status} ok: ${res.ok}`;
-    return res.ok;
-  } catch (err) {
-    log.error`[isAvailable] catch: ${err}`;
-    return false;
-  }
+
+    const models = await res.json();
+    console.log('[isAvailable] models:', models);
+    const modelExists = models.data.find((model: { id: string }) => model.id === MODEL);
+
+    if(!modelExists) {
+      log.debug`[isAvailable] model ${MODEL} not found in available models`;
+      return false;
+    }
+
+    return true
+
 }
 
 /* ------------------------------------------------------------------ */
