@@ -213,6 +213,26 @@
         <p class="text-on-surface-variant text-sm text-center py-8">No chats yet</p>
       {/if}
     </div>
+      <!-- Site navigation links for mobile -->
+      <div class="border-t border-white/8 pt-3 mt-3">
+        <p class="text-xs text-on-surface-variant px-3 pb-2 font-medium tracking-wider uppercase">Navigate</p>
+        <a href="/" class="flex items-center gap-2 px-3 py-2 text-sm text-on-surface-variant hover:text-on-surface no-underline rounded-md hover:bg-surface-container-high/50 transition-colors" onclick={() => showMobile = false}>
+          <Icon name="lucide:home" size={14} />
+          Home
+        </a>
+        <a href="/experience" class="flex items-center gap-2 px-3 py-2 text-sm text-on-surface-variant hover:text-on-surface no-underline rounded-md hover:bg-surface-container-high/50 transition-colors" onclick={() => showMobile = false}>
+          <Icon name="lucide:briefcase" size={14} />
+          Experience
+        </a>
+        <a href="/posts" class="flex items-center gap-2 px-3 py-2 text-sm text-on-surface-variant hover:text-on-surface no-underline rounded-md hover:bg-surface-container-high/50 transition-colors" onclick={() => showMobile = false}>
+          <Icon name="lucide:file-text" size={14} />
+          Posts
+        </a>
+        <a href="/about" class="flex items-center gap-2 px-3 py-2 text-sm text-on-surface-variant hover:text-on-surface no-underline rounded-md hover:bg-surface-container-high/50 transition-colors" onclick={() => showMobile = false}>
+          <Icon name="lucide:user" size={14} />
+          About
+        </a>
+      </div>
     <div class="mt-auto">
       <McpServerStatus servers={mcpServers} />
       <SlashCommandsPanel {oncommand} onclose={() => showMobile = false} />

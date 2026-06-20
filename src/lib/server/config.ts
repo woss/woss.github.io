@@ -36,7 +36,7 @@ const {
   ORIGIN,
   OPENAI_API_KEY,
   OPENAI_BASE_URL,
-  OPENAI_MODEL,
+  MAIN_MODEL,
   OPENAI_MAX_TOKENS,
   OPENAI_FIRST_ROUND_MAX_STEPS,
   OPENAI_MAX_ROUNDS,
@@ -47,8 +47,8 @@ const {
   WOSS_USER_WEBHOOK_TOKEN,
   WOSS_USER_WEBHOOK_ERROR_URL,
   OPENAI_TOOL_CLASSIFY_TIMEOUT_MS,
-  OPENAI_TOOL_CLASSIFY_MODEL,
-  OPENAI_RELEVANCE_CHECK_MODEL,
+  TOOL_CLASSIFY_MODEL,
+  RELEVANCE_CHECK_MODEL,
   OPENAI_MAX_RESULTS_LENGTH,
 } = env;
 
@@ -66,15 +66,15 @@ function loadConfig(): Config {
     openai: {
       apiKey: OPENAI_API_KEY ?? 'public',
       baseUrl: (OPENAI_BASE_URL ?? 'http://localhost:1234/v1').replace(/\/+$/, ''),
-      model: OPENAI_MODEL ?? 'mistralai/ministral-3-3b',
+      model: MAIN_MODEL ?? 'mistralai/ministral-3-3b',
       maxTokens: Number(OPENAI_MAX_TOKENS) > 0 ? Number(OPENAI_MAX_TOKENS) : 10000,
       firstRoundMaxSteps: Number(OPENAI_FIRST_ROUND_MAX_STEPS) > 0 ? Number(OPENAI_FIRST_ROUND_MAX_STEPS) : 5,
       maxRounds: Number(OPENAI_MAX_ROUNDS) > 0 ? Number(OPENAI_MAX_ROUNDS) : 3,
       maxResultsLength: Number(OPENAI_MAX_RESULTS_LENGTH) > 0 ? Number(OPENAI_MAX_RESULTS_LENGTH) : 64000,
       toolClassifyTimeoutMs:
         Number(OPENAI_TOOL_CLASSIFY_TIMEOUT_MS) > 0 ? Number(OPENAI_TOOL_CLASSIFY_TIMEOUT_MS) : 15000,
-      toolClassifyModel: OPENAI_TOOL_CLASSIFY_MODEL || undefined,
-      relevanceCheckModel: OPENAI_RELEVANCE_CHECK_MODEL || undefined,
+      toolClassifyModel: TOOL_CLASSIFY_MODEL || undefined,
+      relevanceCheckModel: RELEVANCE_CHECK_MODEL || undefined,
     },
     mcp: {
       servers: mcpServers,

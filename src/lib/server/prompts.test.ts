@@ -5,7 +5,7 @@ vi.mock('$env/dynamic/private', () => ({
     ORIGIN: 'http://localhost:5173',
     OPENAI_API_KEY: 'test-key',
     OPENAI_BASE_URL: 'http://localhost:1234/v1',
-    OPENAI_MODEL: 'test-model',
+    MAIN_MODEL: 'test-model',
     OPENAI_MAX_TOKENS: '',
     OPENAI_FIRST_ROUND_MAX_STEPS: '',
     OPENAI_MAX_ROUNDS: '',

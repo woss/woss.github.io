@@ -4,7 +4,7 @@
 import { resolve } from '$app/paths';
 import { matchSlashCommand } from '$lib/chat/slash-commands';
 import ChatSidebar from '$lib/components/ChatSidebar.svelte';
-import { Icon } from 'sv5ui';
+import { Button, Icon } from 'sv5ui';
 import { SUGGESTED_QUESTIONS } from '$lib/chat/suggested-questions';
 import { createChat as createChatApi, deleteChat as deleteChatApi } from '$lib/chat/chat-crud';
  import type { Chat } from '$lib/chat/types';
@@ -15,9 +15,10 @@ import { createChat as createChatApi, deleteChat as deleteChatApi } from '$lib/c
  let chats = $state<Chat[]>([]);
  let chatsLoaded = $state(false);
  let showDeleteConfirm = $state<string | null>(null);
- let deleting = $state(false);
+let deleting = $state(false);
+let showMobile = $state(false);
 
- // Load userId from localStorage
+// Load userId from localStorage
  $effect(() => {
  if (!browser) return;
  try {
@@ -69,13 +70,23 @@ import { createChat as createChatApi, deleteChat as deleteChatApi } from '$lib/c
  <title>Chats — woss</title>
 </svelte:head>
 
-<div class="flex" style="height: 100dvh;">
- <ChatSidebar
+<div class="flex flex-1 min-h-0">
+  <!-- Mobile header bar (hamburger + title) -->
+  <div class="md:hidden flex items-center justify-between px-4 py-3 border-b border-white/8 bg-surface shrink-0">
+    <h1 class="font-heading text-sm font-semibold text-on-surface">Chats</h1>
+    <Button
+      variant="ghost" square size="sm"
+      icon="lucide:menu"
+      aria-label="Open chat list"
+      onclick={() => (showMobile = true)}
+    />
+  </div>
+  <ChatSidebar
  {chats}
  currentChatId={null}
  {canCreateChat}
  {showDeleteConfirm}
- showMobile={true}
+ bind:showMobile
  oncreateChat={createChat}
  onconfirmDeleteChat={confirmDeleteChat}
  ondeleteChat={deleteChat}
