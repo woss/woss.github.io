@@ -106,6 +106,9 @@ export async function startGeneration(
       // Search more candidates for type-balanced selection
       const results = searchChunks(embedding.data, maxChunks * 3);
       const filtered = results.filter((r) => r.score < SOURCE_SCORE_THRESHOLD);
+      if (filtered.length === 0) {
+        log.warn`All ${results.length} RAG chunks filtered by score threshold ${SOURCE_SCORE_THRESHOLD} — no sources available`;
+      }
 
       // Split by type for balanced selection
       const postChunks = filtered.filter((r) => r.chunk.type === 'post');

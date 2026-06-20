@@ -66,15 +66,13 @@ vi.mock('$lib/server/config', () => ({
   })),
 }));
 
-vi.mock('$lib/server/logger', () => ({
-  CAT: { chat: 'chat', llm: 'llm', api: 'api', search: 'search', content: 'content', db: 'db' },
-  createLogger: vi.fn(() => ({
-    info: vi.fn(),
-    debug: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  })),
-}));
+vi.mock('$lib/server/logger', () => {
+  const methods = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
+  return {
+    CAT: { chat: 'chat', llm: 'llm', api: 'api', search: 'search', content: 'content', db: 'db' },
+    createLogger: vi.fn(() => methods),
+  };
+});
 
 vi.mock('$lib/query-classifier', () => ({
   classifyQuery: vi.fn(() => 'rag'),
@@ -120,7 +118,8 @@ import { handleEarlyGates } from './early-gates';
 import { streamWithRetry } from './stream';
 import { saveAndEmitResult } from './save-result';
 import { publishLive, publishPersistent } from '$lib/server/chat-events';
-import { addMessage } from '$lib/server/db';
+import { addMessage, searchChunks } from '$lib/server/db';
+import { CAT, createLogger } from '$lib/server/logger';
 
 // ===========================================================================
 // abortGeneration
@@ -254,5 +253,163 @@ describe('startGeneration', () => {
       'error',
       expect.objectContaining({ message: 'Unexpected DB failure', irrecoverable: true }),
     );
+  });
+});
+
+// ===========================================================================
+// source score threshold
+// ===========================================================================
+
+describe('source score threshold', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('filters chunks with score >= threshold from sources', async () => {
+    vi.mocked(handleEarlyGates).mockResolvedValueOnce({
+      handled: false,
+      embedding: { data: [0.1, 0.2, 0.3], dimensions: 3 },
+      cacheEmbeddingData: [0.1, 0.2, 0.3],
+      cacheText: 'Hello',
+      ctxMessages: [],
+      history: [],
+    });
+    vi.mocked(streamWithRetry).mockResolvedValueOnce({
+      answerText: 'Hello back!',
+      reasoningText: '',
+      currentModelId: 42,
+      tokenUsage: { promptTokens: 10, completionTokens: 20 },
+      responseMs: 100,
+      maxTokens: 4096,
+      anyStepHadToolCalls: false,
+      lastError: null,
+      partial: false,
+      msgId: 'msg-1',
+      toolLoopDetected: false,
+      irrecoverable: false,
+    });
+
+    const makeChunk = (title: string, slug: string, text = '...') => ({
+      id: `id-${slug}`,
+      date: null,
+      tags: [],
+      section: '',
+      embedding: [],
+      title,
+      slug,
+      text,
+      type: 'post' as const,
+    });
+
+    vi.mocked(searchChunks).mockReturnValueOnce([
+      { score: 0.1, chunk: makeChunk('Good', 'good') },
+      { score: 0.4, chunk: makeChunk('Bad', 'bad') },
+      { score: 0.29, chunk: makeChunk('Edge', 'edge') },
+    ]);
+
+    await startGeneration('Hello', 'chat-1', 'user-1', 5);
+
+    const callArg = vi.mocked(saveAndEmitResult).mock.calls[0][0];
+    expect(callArg.sources).toHaveLength(2);
+    expect(callArg.sources[0]).toMatchObject({ title: 'Good' });
+    expect(callArg.sources[1]).toMatchObject({ title: 'Edge' });
+  });
+
+  it('warns when all chunks filtered by threshold', async () => {
+    vi.mocked(handleEarlyGates).mockResolvedValueOnce({
+      handled: false,
+      embedding: { data: [0.1, 0.2, 0.3], dimensions: 3 },
+      cacheEmbeddingData: [0.1, 0.2, 0.3],
+      cacheText: 'Hello',
+      ctxMessages: [],
+      history: [],
+    });
+    vi.mocked(streamWithRetry).mockResolvedValueOnce({
+      answerText: 'Hello back!',
+      reasoningText: '',
+      currentModelId: 42,
+      tokenUsage: { promptTokens: 10, completionTokens: 20 },
+      responseMs: 100,
+      maxTokens: 4096,
+      anyStepHadToolCalls: false,
+      lastError: null,
+      partial: false,
+      msgId: 'msg-1',
+      toolLoopDetected: false,
+      irrecoverable: false,
+    });
+
+    const makeChunk = (title: string, slug: string) => ({
+      id: `id-${slug}`,
+      date: null,
+      tags: [],
+      section: '',
+      embedding: [],
+      title,
+      slug,
+      text: '...',
+      type: 'post' as const,
+    });
+
+    vi.mocked(searchChunks).mockReturnValueOnce([
+      { score: 0.35, chunk: makeChunk('A', 'a') },
+      { score: 0.5, chunk: makeChunk('B', 'b') },
+    ]);
+
+    await startGeneration('Hello', 'chat-1', 'user-1', 5);
+
+    // createLogger returns the same shared methods object; call it to get the warn mock
+    const logger = vi.mocked(createLogger)(CAT.chat);
+    expect(logger.warn).toHaveBeenCalled();
+
+    // Pipeline still completes with empty sources
+    expect(saveAndEmitResult).toHaveBeenCalledWith(expect.objectContaining({ sources: [] }));
+  });
+
+  it('preserves all chunks when all score below threshold', async () => {
+    vi.mocked(handleEarlyGates).mockResolvedValueOnce({
+      handled: false,
+      embedding: { data: [0.1, 0.2, 0.3], dimensions: 3 },
+      cacheEmbeddingData: [0.1, 0.2, 0.3],
+      cacheText: 'Hello',
+      ctxMessages: [],
+      history: [],
+    });
+    vi.mocked(streamWithRetry).mockResolvedValueOnce({
+      answerText: 'Hello back!',
+      reasoningText: '',
+      currentModelId: 42,
+      tokenUsage: { promptTokens: 10, completionTokens: 20 },
+      responseMs: 100,
+      maxTokens: 4096,
+      anyStepHadToolCalls: false,
+      lastError: null,
+      partial: false,
+      msgId: 'msg-1',
+      toolLoopDetected: false,
+      irrecoverable: false,
+    });
+
+    const makeChunk = (title: string, slug: string) => ({
+      id: `id-${slug}`,
+      date: null,
+      tags: [],
+      section: '',
+      embedding: [],
+      title,
+      slug,
+      text: '...',
+      type: 'post' as const,
+    });
+
+    vi.mocked(searchChunks).mockReturnValueOnce([
+      { score: 0.1, chunk: makeChunk('X', 'x') },
+      { score: 0.2, chunk: makeChunk('Y', 'y') },
+    ]);
+
+    await startGeneration('Hello', 'chat-1', 'user-1', 5);
+
+    const callArg = vi.mocked(saveAndEmitResult).mock.calls[0][0];
+    expect(callArg.sources).toHaveLength(2);
   });
 });
