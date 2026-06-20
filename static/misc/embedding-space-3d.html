@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BGE Embedding Space — 3D</title>
+<script src="https://cdn.plot.ly/plotly-3.0.0.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #fafafa; font-family: system-ui, -apple-system, sans-serif; overflow: hidden; }
+#plot { width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="plot"></div>
+<script>
+var data = [
+    {
+      x: [-0.1611966649513725,-0.1264718404985461,-0.20142685788924344,0.23950264253039574,0.15256844539118536,0.12713249046287914],
+      y: [0.19900648139092642,0.26866277957277185,0.019613922057425907,0.39130821757825085,0.4993030479989998,0.44733049802778296],
+      z: [-0.1652330379485654,-0.08209874114649579,-0.09199873352361405,-0.09676268466383656,-0.02783603058747434,-0.11305711804067228],
+      text: ["Search GitHub for Daniel's repositories","Find Daniel's open issues on GitHub","What commits has Daniel made","How many stars does woss-io have","Show me the open issues on woss.io","Who contributed to woss-io recently"],
+      mode: 'markers',
+      type: 'scatter3d',
+      name: 'Tool SEED_QUERIES',
+      marker: { size: 6, color: '#3b82f6', line: { color: '#fff', width: 1 } },
+      hoverinfo: 'text',
+    },
+    {
+      x: [-0.00583574114064212,-0.10091148500516901,-0.27764605408700066,-0.20231725282922175,0.2601663690001653,-0.11867665588929574,-0.22627231240626888,-0.21861355242178337,-0.16797567226024374,-0.1418859323576126,-0.11695453418086514,-0.13251490525143178,-0.1423962825767483,-0.20839796075398434,-0.1780949885863367,-0.21235082608251188,-0.16036256594510098],
+      y: [-0.1399840731579169,-0.13884404343974643,-0.07139385875964957,-0.1342202185526273,0.40475758578012944,-0.007537932719206292,0.008888620715669409,-0.07791532983543326,-0.16455007739411592,-0.176503908239075,0.13804303265219703,-0.1847072489255567,-0.1758829733946496,-0.009622472086676992,-0.23736398217956953,-0.14722019766627753,-0.1748224793800839],
+      z: [0.19440784869493766,0.1779953453212962,-0.040886979666861334,-0.010315168436994012,0.0011230583628127136,0.0745567348379462,-0.01859443743631014,-0.03688350216083619,-0.05030174084723719,-0.08893652799466864,-0.13186367175224886,0.18488549389281259,0.007712742863912705,-0.006184740626944698,0.07613350393533472,-0.029692403788284822,-0.005722488952978727],
+      text: ["Tell me about Daniel","Describe Daniel's work experience","What projects has Daniel founded?","What skills and technologies does Daniel use","Tell me about woss.io","Tell me about Daniel's experience with copyrights and IP?","What DevOps and cloud experience does Daniel have?","How has Daniel grown as a software developer","What did Daniel learn building Anagolay Network","What did Daniel learn building Macula","What did Daniel learn building Woss.io","Tell me about Daniel's entrepreneurial journey","What leadership lessons did Daniel learn at Kelp Digital","How did Daniel's platform engineering skills grow at Ipsos","What did Daniel learn from being a digital nomad","How did Daniel develop his data visualization skills","What did Daniel learn from his first startup at Biddl"],
+      mode: 'markers',
+      type: 'scatter3d',
+      name: 'RAG SEED_QUERIES',
+      marker: { size: 6, color: '#22c55e', line: { color: '#fff', width: 1 } },
+      hoverinfo: 'text',
+    },
+    {
+      x: [-0.11724135738235025,-0.16702046580923569,-0.14870282241257865,-0.2614965269503535,-0.1348470058138711,-0.22224559795198823],
+      y: [0.04921846539342562,0.041686653805284746,-0.07629217799278522,0.1246180212959218,0.10804292020215366,-0.06611029362726542],
+      z: [0.07354551310394221,-0.060766464244672795,0.04847936236933859,-0.13998140264580103,-0.021241605162650907,-0.05584098104047433],
+      text: ["Show me Daniel's portfolio","Show me Daniel's AI projects and implementations","Daniel's experience and his recent PRs","What open source projects has Daniel contributed to","Tell me about Daniel and his GitHub activity","What grants has Daniel received"],
+      mode: 'markers',
+      type: 'scatter3d',
+      name: 'Ambiguous',
+      marker: { size: 6, color: '#f59e0b', line: { color: '#fff', width: 1 } },
+      hoverinfo: 'text',
+    },
+    {
+      x: [0.5345427555318497,0.5604721314080415,0.5106735639942551,0.38696342748442675,0.38904069222746324,0.5309210958562465,0.33328882126751763,0.25986188177809727],
+      y: [-0.2553982935006574,-0.2485560016352063,-0.19294060823976633,0.025223104915109727,-0.007451613836150866,-0.24986004761896294,-0.04129922386137307,0.024385991390534205],
+      z: [-0.3512642287549212,-0.3852214347898404,-0.21394100463602933,0.45737792167758917,0.42616012867342273,-0.2868725957989849,0.4901989923496348,0.37758940682919145],
+      text: ["who is haistlin?","what is haistlin?","tell me about haistlin","who are you?","what is your name?","explain the name haistlin","tell me about yourself","what do you do?"],
+      mode: 'markers',
+      type: 'scatter3d',
+      name: 'Meta',
+      marker: { size: 6, color: '#a855f7', line: { color: '#fff', width: 1 } },
+      hoverinfo: 'text',
+    },
+    {
+      x: [0.005018035840883076,-0.13829649133965016],
+      y: [0.3042041577710261,-0.07581644450485796],
+      z: [-0.09616439098510973,0.017496062720334604],
+      text: ["Tool centroid","RAG centroid"],
+      mode: 'markers',
+      type: 'scatter3d',
+      name: 'Centroids',
+      marker: { size: 14, symbol: 'diamond', color: ['#3b82f6', '#22c55e'], line: { color: '#000', width: 1.5 } },
+      hoverinfo: 'text',
+    }
+];
+var layout = {
+  title: { text: 'BGE Embedding Space — Tool vs RAG (3D PCA)', font: { size: 16 } },
+  scene: {
+    xaxis: { title: 'PC1' },
+    yaxis: { title: 'PC2' },
+    zaxis: { title: 'PC3' },
+  },
+  margin: { l: 0, r: 0, b: 0, t: 50 },
+  paper_bgcolor: '#fafafa',
+  plot_bgcolor: '#fafafa',
+  legend: { x: 0.02, y: 0.98, bgcolor: 'rgba(255,255,255,0.8)', bordercolor: '#ddd', borderwidth: 1 },
+};
+Plotly.newPlot('plot', data, layout, { responsive: true });
+</script>
+</body>
+</html>

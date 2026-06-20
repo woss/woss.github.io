@@ -1,26 +1,10 @@
 /**
  * Visualize BGE embedding space for query classification.
- * Embeds seed queries → PCA to 2D → SVG scatter plot.
- *
- * Usage: node src/scripts/visualize-embedding-space.ts
+ * Embeds seed queries → PCA to 2D/3D → SVG/Plotly visualization output.
  */
 
 import { writeFile } from 'node:fs/promises';
-import { initLogger, CAT, createLogger } from '../lib/server/logger.ts';
-import { SEED_QUERIES } from '../lib/chat/suggested-questions.ts';
-import { embedAndComputeCentroids, saveCentroids } from './seed-data.ts';
-
-await initLogger();
-const log = createLogger(CAT.search);
-
-// Embed all seed queries and compute centroids
-log.info(`Embedding ${SEED_QUERIES.length} queries...`);
-const { vectors, toolCentroid, ragCentroid } = await embedAndComputeCentroids(log);
-if (vectors.length === 0) {
-  log.error('No seed queries to embed — SEED_QUERIES is empty');
-  process.exit(1);
-}
-log.info(`Done — ${vectors[0].length} dimensions each`);
+import type { SeedQuery } from '../lib/chat/suggested-questions.ts';
 
 // ---------------------------------------------------------------------------
 // PCA via power iteration — reduce 1024D → 2D
@@ -152,200 +136,147 @@ function pca3d(data: Matrix): PcaResult {
   return { projected, eigenvalues: [e1, e2, e3] };
 }
 
-// Save centroid data to JSON
-await saveCentroids({ queries: SEED_QUERIES, vectors, toolCentroid, ragCentroid, metaCentroid: [] }, log);
-log.info(`Centroids saved to ./data/centroid.json`);
+function buildEmbeddingSvg(
+  queries: SeedQuery[],
+  queryProjections: number[][],
+  toolCenter: number[],
+  ragCenter: number[],
+): string {
+  const W = 800, H = 600, PAD = 60;
+  const COLORS = { tool: '#3b82f6', rag: '#22c55e', hybrid: '#f59e0b', meta: '#a855f7' };
 
-// ---------------------------------------------------------------------------
-// PCA on all vectors + centroids
-// ---------------------------------------------------------------------------
+  // bounds computation using all points
+  const allPoints = [...queryProjections, toolCenter, ragCenter] as number[][];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const [x, y] of allPoints) {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
+  const rangeX = maxX - minX || 1;
+  const rangeY = maxY - minY || 1;
+  const pad = 0.1;
+  minX -= rangeX * pad;
+  maxX += rangeX * pad;
+  minY -= rangeY * pad;
+  maxY += rangeY * pad;
 
-const allVecs = [...vectors, toolCentroid, ragCentroid];
-const { projected: projected3d, eigenvalues } = pca3d(allVecs);
-log.info`PC1 eigenvalue: ${eigenvalues[0].toFixed(4)}`;
-log.info`PC2 eigenvalue: ${eigenvalues[1].toFixed(4)}`;
-log.info`PC3 eigenvalue: ${eigenvalues[2].toFixed(4)}`;
+  function x2svg(x: number): number {
+    return PAD + ((x - minX) / (maxX - minX)) * (W - 2 * PAD);
+  }
+  function y2svg(y: number): number {
+    return H - PAD - ((y - minY) / (maxY - minY)) * (H - 2 * PAD);
+  }
 
-// 2D slice for SVG (PC1 × PC2)
-const projected = projected3d.map(([x, y]) => [x, y]);
-const queryProjections = projected.slice(0, vectors.length);
-const [toolCenter, ragCenter] = projected.slice(vectors.length);
+  function svgCircle(cx: number, cy: number, r: number, fill: string, stroke = 'none', label = ''): string {
+    const elems = [
+      `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" />`,
+    ];
+    if (label) {
+      elems.push(
+        `<text x="${(cx + 8).toFixed(1)}" y="${(cy + 4).toFixed(1)}" font-size="11" font-family="monospace" fill="#333">${label}</text>`,
+      );
+    }
+    return elems.join('\n');
+  }
 
-// 3D projections for HTML
-const queryProjections3d = projected3d.slice(0, vectors.length);
-const [toolCenter3d, ragCenter3d] = projected3d.slice(vectors.length);
+  function starPoints(cx: number, cy: number, r: number): string {
+    const pts: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const angleOut = (i * 2 * Math.PI) / 5 - Math.PI / 2;
+      pts.push(`${(cx + r * Math.cos(angleOut)).toFixed(1)},${(cy + r * Math.sin(angleOut)).toFixed(1)}`);
+      const angleIn = angleOut + Math.PI / 5;
+      const ri = r * 0.4;
+      pts.push(`${(cx + ri * Math.cos(angleIn)).toFixed(1)},${(cy + ri * Math.sin(angleIn)).toFixed(1)}`);
+    }
+    return pts.join(' ');
+  }
 
-// ---------------------------------------------------------------------------
-// SVG generation
-// ---------------------------------------------------------------------------
+  const lines: string[] = [];
+  lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`);
 
-const W = 800;
-const H = 600;
-const PAD = 60;
+  // Background
+  lines.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="#fafafa" rx="8"/>`);
 
-// Find bounds
-let minX = Infinity,
-  maxX = -Infinity,
-  minY = Infinity,
-  maxY = -Infinity;
-for (const [x, y] of projected) {
-  if (x < minX) minX = x;
-  if (x > maxX) maxX = x;
-  if (y < minY) minY = y;
-  if (y > maxY) maxY = y;
-}
-const rangeX = maxX - minX || 1;
-const rangeY = maxY - minY || 1;
-const pad = 0.1; // 10% padding
-minX -= rangeX * pad;
-maxX += rangeX * pad;
-minY -= rangeY * pad;
-maxY += rangeY * pad;
+  // Title
+  lines.push(
+    `<text x="${W / 2}" y="30" text-anchor="middle" font-size="16" font-weight="bold" font-family="sans-serif" fill="#111">BGE Embedding Space — Tool vs RAG Queries</text>`,
+  );
 
-function x2svg(x: number): number {
-  return PAD + ((x - minX) / (maxX - minX)) * (W - 2 * PAD);
-}
-function y2svg(y: number): number {
-  return H - PAD - ((y - minY) / (maxY - minY)) * (H - 2 * PAD);
-}
+  // Axes
+  lines.push(`<line x1="${PAD}" y1="${H - PAD}" x2="${W - PAD}" y2="${H - PAD}" stroke="#ccc" stroke-width="1"/>`);
+  lines.push(`<line x1="${PAD}" y1="${PAD}" x2="${PAD}" y2="${H - PAD}" stroke="#ccc" stroke-width="1"/>`);
+  lines.push(`<text x="${W - PAD + 5}" y="${H - PAD + 4}" font-size="10" font-family="monospace" fill="#888">PC1</text>`);
+  lines.push(
+    `<text x="${PAD - 5}" y="${PAD - 5}" text-anchor="end" font-size="10" font-family="monospace" fill="#888">PC2</text>`,
+  );
 
-const COLORS = { tool: '#3b82f6', rag: '#22c55e', hybrid: '#f59e0b', meta: '#a855f7' };
+  // Grid lines (light)
+  const GRID_LINES = 4;
+  for (let i = 0; i <= GRID_LINES; i++) {
+    const t = i / GRID_LINES;
+    const vx = minX + t * (maxX - minX);
+    const vy = minY + t * (maxY - minY);
+    const sx = x2svg(vx);
+    const sy = y2svg(vy);
+    lines.push(`<line x1="${PAD}" y1="${sy}" x2="${W - PAD}" y2="${sy}" stroke="#eee" stroke-width="1"/>`);
+    lines.push(`<line x1="${sx}" y1="${PAD}" x2="${sx}" y2="${H - PAD}" stroke="#eee" stroke-width="1"/>`);
+    if (i > 0) {
+      lines.push(
+        `<text x="${sx}" y="${H - PAD + 15}" text-anchor="middle" font-size="9" font-family="monospace" fill="#aaa">${vx.toFixed(2)}</text>`,
+      );
+      lines.push(
+        `<text x="${PAD - 8}" y="${sy + 3}" text-anchor="end" font-size="9" font-family="monospace" fill="#aaa">${vy.toFixed(2)}</text>`,
+      );
+    }
+  }
 
-/**
- * Build an SVG circle element with optional text label.
- * @param cx - center X in SVG coordinate space
- * @param cy - center Y in SVG coordinate space
- * @param r - radius in SVG units
- * @param fill - fill color (hex, rgb, or named)
- * @param stroke - stroke color (default 'none')
- * @param label - optional text label rendered to the right of the circle
- */
-function svgCircle(cx: number, cy: number, r: number, fill: string, stroke = 'none', label = ''): string {
-  const elems = [
-    `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" />`,
+  // Centroids
+  lines.push(
+    `<polygon points="${starPoints(x2svg(toolCenter[0]), y2svg(toolCenter[1]), 8)}" fill="${COLORS.tool}" opacity="0.6"/>`,
+  );
+  lines.push(
+    `<polygon points="${starPoints(x2svg(ragCenter[0]), y2svg(ragCenter[1]), 8)}" fill="${COLORS.rag}" opacity="0.6"/>`,
+  );
+
+  // Query points
+  for (let i = 0; i < queryProjections.length; i++) {
+    const [x, y] = queryProjections[i];
+    const q = queries[i];
+    const cx = x2svg(x);
+    const cy = y2svg(y);
+    lines.push(svgCircle(cx, cy, 5, COLORS[q.class], '#fff', q.text.slice(0, 40)));
+  }
+
+  // Legend
+  const legendX = W - 140;
+  const legendY = 50;
+  lines.push(`<rect x="${legendX - 10}" y="${legendY - 10}" width="140" height="90" fill="white" stroke="#ddd" rx="4"/>`);
+  lines.push(
+    `<text x="${legendX}" y="${legendY + 5}" font-size="11" font-weight="bold" font-family="sans-serif" fill="#333">Legend</text>`,
+  );
+  const legendItems: [string, string][] = [
+    ['tool', 'Tool SEED_QUERIES'],
+    ['rag', 'RAG SEED_QUERIES'],
+    ['hybrid', 'Ambiguous'],
   ];
-  if (label) {
-    elems.push(
-      `<text x="${(cx + 8).toFixed(1)}" y="${(cy + 4).toFixed(1)}" font-size="11" font-family="monospace" fill="#333">${label}</text>`,
-    );
-  }
-  return elems.join('\n');
-}
-
-// Build SVG
-const lines: string[] = [];
-lines.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`);
-
-// Background
-lines.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="#fafafa" rx="8"/>`);
-
-// Title
-lines.push(
-  `<text x="${W / 2}" y="30" text-anchor="middle" font-size="16" font-weight="bold" font-family="sans-serif" fill="#111">BGE Embedding Space — Tool vs RAG Queries</text>`,
-);
-
-// Axes
-lines.push(`<line x1="${PAD}" y1="${H - PAD}" x2="${W - PAD}" y2="${H - PAD}" stroke="#ccc" stroke-width="1"/>`);
-lines.push(`<line x1="${PAD}" y1="${PAD}" x2="${PAD}" y2="${H - PAD}" stroke="#ccc" stroke-width="1"/>`);
-lines.push(`<text x="${W - PAD + 5}" y="${H - PAD + 4}" font-size="10" font-family="monospace" fill="#888">PC1</text>`);
-lines.push(
-  `<text x="${PAD - 5}" y="${PAD - 5}" text-anchor="end" font-size="10" font-family="monospace" fill="#888">PC2</text>`,
-);
-
-// Grid lines (light)
-const GRID_LINES = 4;
-for (let i = 0; i <= GRID_LINES; i++) {
-  const t = i / GRID_LINES;
-  const vx = minX + t * (maxX - minX);
-  const vy = minY + t * (maxY - minY);
-  const sx = x2svg(vx);
-  const sy = y2svg(vy);
-  lines.push(`<line x1="${PAD}" y1="${sy}" x2="${W - PAD}" y2="${sy}" stroke="#eee" stroke-width="1"/>`);
-  lines.push(`<line x1="${sx}" y1="${PAD}" x2="${sx}" y2="${H - PAD}" stroke="#eee" stroke-width="1"/>`);
-  // Axis labels
-  if (i > 0) {
+  legendItems.forEach(([cls, label], i) => {
+    const ly = legendY + 22 + i * 22;
     lines.push(
-      `<text x="${sx}" y="${H - PAD + 15}" text-anchor="middle" font-size="9" font-family="monospace" fill="#aaa">${vx.toFixed(2)}</text>`,
+      `<circle cx="${legendX + 5}" cy="${ly - 2}" r="4" fill="${COLORS[cls as keyof typeof COLORS]}" stroke="white" stroke-width="1"/>`,
     );
     lines.push(
-      `<text x="${PAD - 8}" y="${sy + 3}" text-anchor="end" font-size="9" font-family="monospace" fill="#aaa">${vy.toFixed(2)}</text>`,
+      `<text x="${legendX + 16}" y="${ly + 2}" font-size="10" font-family="sans-serif" fill="#555">${label}</text>`,
     );
-  }
-}
-
-// Draw centroids (large stars)
-lines.push(
-  `<polygon points="${starPoints(x2svg(toolCenter[0]), y2svg(toolCenter[1]), 8)}" fill="${COLORS.tool}" opacity="0.6"/>`,
-);
-lines.push(
-  `<polygon points="${starPoints(x2svg(ragCenter[0]), y2svg(ragCenter[1]), 8)}" fill="${COLORS.rag}" opacity="0.6"/>`,
-);
-
-// Draw query points
-for (let i = 0; i < queryProjections.length; i++) {
-  const [x, y] = queryProjections[i];
-  const q = SEED_QUERIES[i];
-  const cx = x2svg(x);
-  const cy = y2svg(y);
-  lines.push(svgCircle(cx, cy, 5, COLORS[q.class], '#fff', q.text.slice(0, 40)));
-}
-
-// Legend
-const legendX = W - 140;
-const legendY = 50;
-lines.push(`<rect x="${legendX - 10}" y="${legendY - 10}" width="140" height="90" fill="white" stroke="#ddd" rx="4"/>`);
-lines.push(
-  `<text x="${legendX}" y="${legendY + 5}" font-size="11" font-weight="bold" font-family="sans-serif" fill="#333">Legend</text>`,
-);
-const legendItems: [string, string][] = [
-  ['tool', 'Tool SEED_QUERIES'],
-  ['rag', 'RAG SEED_QUERIES'],
-  ['hybrid', 'Ambiguous'],
-];
-legendItems.forEach(([cls, label], i) => {
-  const ly = legendY + 22 + i * 22;
+  });
   lines.push(
-    `<circle cx="${legendX + 5}" cy="${ly - 2}" r="4" fill="${COLORS[cls as keyof typeof COLORS]}" stroke="white" stroke-width="1"/>`,
+    `<text x="${legendX}" y="${legendY + 90}" font-size="9" font-family="sans-serif" fill="#999">★ centroids</text>`,
   );
-  lines.push(
-    `<text x="${legendX + 16}" y="${ly + 2}" font-size="10" font-family="sans-serif" fill="#555">${label}</text>`,
-  );
-});
-
-// Centroid note
-lines.push(
-  `<text x="${legendX}" y="${legendY + 90}" font-size="9" font-family="sans-serif" fill="#999">★ centroids</text>`,
-);
-
-lines.push('</svg>');
-
-/**
- * Compute 5-point star polygon vertices for centroid markers.
- * Outer vertices on circumscribed circle of radius r.
- * Inner vertices at 40% of r, rotated 36° from outer vertices.
- * @param cx - center X
- * @param cy - center Y
- * @param r - outer radius
- * @returns SVG points attribute string ("x1,y1 x2,y2 ...")
- */
-function starPoints(cx: number, cy: number, r: number): string {
-  const pts: string[] = [];
-  for (let i = 0; i < 5; i++) {
-    // Outer vertex
-    const angleOut = (i * 2 * Math.PI) / 5 - Math.PI / 2;
-    pts.push(`${(cx + r * Math.cos(angleOut)).toFixed(1)},${(cy + r * Math.sin(angleOut)).toFixed(1)}`);
-    // Inner vertex
-    const angleIn = angleOut + Math.PI / 5;
-    const ri = r * 0.4;
-    pts.push(`${(cx + ri * Math.cos(angleIn)).toFixed(1)},${(cy + ri * Math.sin(angleIn)).toFixed(1)}`);
-  }
-  return pts.join(' ');
+  lines.push('</svg>');
+  return lines.join('\n');
 }
 
-const svg = lines.join('\n');
-const outPath = './docs/embedding-space.svg';
-await writeFile(outPath, svg, 'utf-8');
-log.info`SVG written to ${outPath}`;
 
 // ---------------------------------------------------------------------------
 // 3D interactive HTML (Plotly.js via CDN)
@@ -359,7 +290,7 @@ log.info`SVG written to ${outPath}`;
  * @param centroids - array of centroid points with labels
  * @returns complete HTML string (inline JS, no external deps beyond CDN)
  */
-function buildPlotlyHtml3d(
+export function buildPlotlyHtml3d(
   queryData: { text: string; class: string; x: number; y: number; z: number }[],
   centroids: { label: string; x: number; y: number; z: number }[],
 ): string {
@@ -435,36 +366,44 @@ Plotly.newPlot('plot', data, layout, { responsive: true });
 </html>`;
 }
 
-const queryPoints = SEED_QUERIES.map((q, i) => ({
-  text: q.text,
-  class: q.class,
-  x: queryProjections3d[i][0],
-  y: queryProjections3d[i][1],
-  z: queryProjections3d[i][2],
-}));
+export async function saveEmbeddingVisualizations(
+  queries: SeedQuery[],
+  vectors: number[][],
+  toolCentroid: number[],
+  ragCentroid: number[],
+  outputDir: string,
+  metaCentroid?: number[],
+): Promise<void> {
+  const centroidVecs: number[][] = [toolCentroid, ragCentroid];
+  if (metaCentroid && metaCentroid.length > 0) centroidVecs.push(metaCentroid);
 
-const centData = [
-  { label: 'Tool centroid', x: toolCenter3d[0], y: toolCenter3d[1], z: toolCenter3d[2] },
-  { label: 'RAG centroid', x: ragCenter3d[0], y: ragCenter3d[1], z: ragCenter3d[2] },
-];
+  const allVecs = [...vectors, ...centroidVecs];
+  const { projected: projected3d } = pca3d(allVecs);
 
-const html = buildPlotlyHtml3d(queryPoints, centData);
-const htmlPath = './docs/embedding-space-3d.html';
-await writeFile(htmlPath, html, 'utf-8');
-log.info`3D HTML written to ${htmlPath}`;
+  // SVG (2D: PC1, PC2)
+  const projected2d = projected3d.map(([x, y]) => [x, y]);
+  const queryProjections = projected2d.slice(0, vectors.length);
+  const [toolCenter, ragCenter] = projected2d.slice(vectors.length);
+  const svg = buildEmbeddingSvg(queries, queryProjections, toolCenter, ragCenter);
+  await writeFile(`${outputDir}/embedding-space.svg`, svg, 'utf-8');
 
-// Also print cosine similarities for inspection
-log.info`\nCosine similarities to centroids:`;
-for (let i = 0; i < SEED_QUERIES.length; i++) {
-  const q = SEED_QUERIES[i];
-  // cosine sim to centroids using full vectors
-  const dotT = vectors[i].reduce((s, v, j) => s + v * toolCentroid[j], 0);
-  const magT =
-    Math.sqrt(vectors[i].reduce((s, v) => s + v * v, 0)) * Math.sqrt(toolCentroid.reduce((s, v) => s + v * v, 0));
-  const simT = magT > 0 ? dotT / magT : 0;
-  const dotR = vectors[i].reduce((s, v, j) => s + v * ragCentroid[j], 0);
-  const magR =
-    Math.sqrt(vectors[i].reduce((s, v) => s + v * v, 0)) * Math.sqrt(ragCentroid.reduce((s, v) => s + v * v, 0));
-  const simR = magR > 0 ? dotR / magR : 0;
-  log.info`  ${q.class.padEnd(7)} sim(tool)=${simT.toFixed(4)} sim(rag)=${simR.toFixed(4)} gap=${(simT - simR).toFixed(4)}  "${q.text.slice(0, 50)}"`;
+  // 3D HTML (PC1, PC2, PC3)
+  const queryProjections3d = projected3d.slice(0, vectors.length);
+  const centroidProjections = projected3d.slice(vectors.length);
+  const queryData = queries.map((q, i) => ({
+    text: q.text,
+    class: q.class,
+    x: queryProjections3d[i][0],
+    y: queryProjections3d[i][1],
+    z: queryProjections3d[i][2],
+  }));
+  const centroidData: { label: string; x: number; y: number; z: number }[] = [
+    { label: 'Tool centroid', x: centroidProjections[0][0], y: centroidProjections[0][1], z: centroidProjections[0][2] },
+    { label: 'RAG centroid', x: centroidProjections[1][0], y: centroidProjections[1][1], z: centroidProjections[1][2] },
+  ];
+  if (centroidProjections[2]) {
+    centroidData.push({ label: 'Meta centroid', x: centroidProjections[2][0], y: centroidProjections[2][1], z: centroidProjections[2][2] });
+  }
+  const html = buildPlotlyHtml3d(queryData, centroidData);
+  await writeFile(`${outputDir}/embedding-space-3d.html`, html, 'utf-8');
 }

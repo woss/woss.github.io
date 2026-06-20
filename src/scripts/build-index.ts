@@ -14,6 +14,8 @@ import { chunkContent } from './chunk-content.js';
 import { initDatabase } from '../lib/server/schema.js';
 import { initLogger, CAT, createLogger } from '../lib/server/logger.js';
 import { centroidDataChanged, embedAndComputeCentroids, saveCentroids } from './seed-data.js';
+import { saveEmbeddingVisualizations } from './visualize-embedding-space.js';
+
 
 // ---------------------------------------------------------------------------
 // Frontmatter helpers
@@ -304,6 +306,7 @@ async function buildIndex(): Promise<void> {
     log.info`Computing and saving centroids... [centroids]`;
     const { toolCentroid, ragCentroid, metaCentroid, queries, vectors } = await embedAndComputeCentroids(log);
     await saveCentroids({ toolCentroid, ragCentroid, metaCentroid, queries, vectors }, log);
+    await saveEmbeddingVisualizations(queries, vectors, toolCentroid, ragCentroid, './static/misc', metaCentroid);
     log.info`Done. [centroids]`;
   } else {
     log.info`Centroid data unchanged. Skipping centroid computation. [centroids]`;
