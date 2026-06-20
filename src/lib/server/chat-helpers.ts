@@ -41,10 +41,7 @@ export function tryRenameChat(chatId: string, text: string): void {
  * Daniel/project references fall through to the LLM-based classifyToolNeeds fallback
  * in handleEarlyGates instead of returning false immediately.
  */
-export function needsGithubTools(
-  text: string,
-  ctxMessages?: { role: string; content: string }[],
-): boolean {
+export function needsGithubTools(text: string, ctxMessages?: { role: string; content: string }[]): boolean {
   const t = text.toLowerCase();
   const referencesDaniel = /\b(daniel(?:'?s)?|woss|anagolay|macula)\b/i.test(t);
   const contextReferencesDaniel =
@@ -69,10 +66,7 @@ export function needsGithubTools(
  * Same fast-path pattern as needsGithubTools — short messages without Daniel/project
  * references fall through to classifyToolNeeds in handleEarlyGates.
  */
-export function needsMaculaTools(
-  text: string,
-  ctxMessages?: { role: string; content: string }[],
-): boolean {
+export function needsMaculaTools(text: string, ctxMessages?: { role: string; content: string }[]): boolean {
   const t = text.toLowerCase();
   const referencesDaniel = /\b(daniel(?:'?s)?|woss|macula)\b/i.test(t);
   const contextReferencesDaniel =
@@ -141,7 +135,7 @@ export async function isRelevant(
       },
 
       body: JSON.stringify({
-        model: config().openai.model,
+        model: config().openai.relevanceCheckModel ?? config().openai.model,
         // OpenRouter: hide reasoning
         provider: { reasoning_type: 'hidden' },
         // Fallback for other APIs
@@ -252,5 +246,3 @@ export function parseSources(json: string): RawSource[] {
     return [];
   }
 }
-
-

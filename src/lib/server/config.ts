@@ -24,6 +24,7 @@ type Config = DeepReadonly<{
     firstRoundMaxSteps: number;
     toolClassifyTimeoutMs: number;
     toolClassifyModel: string | undefined;
+    relevanceCheckModel: string | undefined;
     maxRounds: number;
   };
   mcp: { servers: McpServerConfig[] };
@@ -47,6 +48,7 @@ const {
   WOSS_USER_WEBHOOK_ERROR_URL,
   OPENAI_TOOL_CLASSIFY_TIMEOUT_MS,
   OPENAI_TOOL_CLASSIFY_MODEL,
+  OPENAI_RELEVANCE_CHECK_MODEL,
   OPENAI_MAX_RESULTS_LENGTH,
 } = env;
 
@@ -72,6 +74,7 @@ function loadConfig(): Config {
       toolClassifyTimeoutMs:
         Number(OPENAI_TOOL_CLASSIFY_TIMEOUT_MS) > 0 ? Number(OPENAI_TOOL_CLASSIFY_TIMEOUT_MS) : 15000,
       toolClassifyModel: OPENAI_TOOL_CLASSIFY_MODEL || undefined,
+      relevanceCheckModel: OPENAI_RELEVANCE_CHECK_MODEL || undefined,
     },
     mcp: {
       servers: mcpServers,

@@ -141,13 +141,19 @@ function buildEmbeddingSvg(
   queryProjections: number[][],
   toolCenter: number[],
   ragCenter: number[],
+  metaCenter: number[],
 ): string {
-  const W = 800, H = 600, PAD = 60;
+  const W = 800,
+    H = 600,
+    PAD = 60;
   const COLORS = { tool: '#3b82f6', rag: '#22c55e', hybrid: '#f59e0b', meta: '#a855f7' };
 
   // bounds computation using all points
-  const allPoints = [...queryProjections, toolCenter, ragCenter] as number[][];
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  const allPoints = [...queryProjections, toolCenter, ragCenter, metaCenter] as number[][];
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
   for (const [x, y] of allPoints) {
     if (x < minX) minX = x;
     if (x > maxX) maxX = x;
@@ -207,7 +213,9 @@ function buildEmbeddingSvg(
   // Axes
   lines.push(`<line x1="${PAD}" y1="${H - PAD}" x2="${W - PAD}" y2="${H - PAD}" stroke="#ccc" stroke-width="1"/>`);
   lines.push(`<line x1="${PAD}" y1="${PAD}" x2="${PAD}" y2="${H - PAD}" stroke="#ccc" stroke-width="1"/>`);
-  lines.push(`<text x="${W - PAD + 5}" y="${H - PAD + 4}" font-size="10" font-family="monospace" fill="#888">PC1</text>`);
+  lines.push(
+    `<text x="${W - PAD + 5}" y="${H - PAD + 4}" font-size="10" font-family="monospace" fill="#888">PC1</text>`,
+  );
   lines.push(
     `<text x="${PAD - 5}" y="${PAD - 5}" text-anchor="end" font-size="10" font-family="monospace" fill="#888">PC2</text>`,
   );
@@ -239,6 +247,9 @@ function buildEmbeddingSvg(
   lines.push(
     `<polygon points="${starPoints(x2svg(ragCenter[0]), y2svg(ragCenter[1]), 8)}" fill="${COLORS.rag}" opacity="0.6"/>`,
   );
+  lines.push(
+    `<polygon points="${starPoints(x2svg(metaCenter[0]), y2svg(metaCenter[1]), 8)}" fill="${COLORS.meta}" opacity="0.6"/>`,
+  );
 
   // Query points
   for (let i = 0; i < queryProjections.length; i++) {
@@ -252,7 +263,9 @@ function buildEmbeddingSvg(
   // Legend
   const legendX = W - 140;
   const legendY = 50;
-  lines.push(`<rect x="${legendX - 10}" y="${legendY - 10}" width="140" height="90" fill="white" stroke="#ddd" rx="4"/>`);
+  lines.push(
+    `<rect x="${legendX - 10}" y="${legendY - 10}" width="140" height="120" fill="white" stroke="#ddd" rx="4"/>`,
+  );
   lines.push(
     `<text x="${legendX}" y="${legendY + 5}" font-size="11" font-weight="bold" font-family="sans-serif" fill="#333">Legend</text>`,
   );
@@ -260,6 +273,7 @@ function buildEmbeddingSvg(
     ['tool', 'Tool SEED_QUERIES'],
     ['rag', 'RAG SEED_QUERIES'],
     ['hybrid', 'Ambiguous'],
+    ['meta', 'Meta'],
   ];
   legendItems.forEach(([cls, label], i) => {
     const ly = legendY + 22 + i * 22;
@@ -271,12 +285,11 @@ function buildEmbeddingSvg(
     );
   });
   lines.push(
-    `<text x="${legendX}" y="${legendY + 90}" font-size="9" font-family="sans-serif" fill="#999">★ centroids</text>`,
+    `<text x="${legendX}" y="${legendY + 120}" font-size="9" font-family="sans-serif" fill="#999">★ centroids</text>`,
   );
   lines.push('</svg>');
   return lines.join('\n');
 }
-
 
 // ---------------------------------------------------------------------------
 // 3D interactive HTML (Plotly.js via CDN)
@@ -317,6 +330,9 @@ export function buildPlotlyHtml3d(
 `;
   }
 
+  const centroidColors = centroids.map((c) =>
+    c.label === 'Tool centroid' ? '#3b82f6' : c.label === 'RAG centroid' ? '#22c55e' : '#a855f7',
+  );
   const centroidsJs = `    {
       x: ${JSON.stringify(centroids.map((c) => c.x))},
       y: ${JSON.stringify(centroids.map((c) => c.y))},
@@ -325,7 +341,7 @@ export function buildPlotlyHtml3d(
       mode: 'markers',
       type: 'scatter3d',
       name: 'Centroids',
-      marker: { size: 14, symbol: 'diamond', color: ['#3b82f6', '#22c55e'], line: { color: '#000', width: 1.5 } },
+      marker: { size: 14, symbol: 'diamond', color: ${JSON.stringify(centroidColors)}, line: { color: '#000', width: 1.5 } },
       hoverinfo: 'text',
     }`;
 
@@ -383,8 +399,8 @@ export async function saveEmbeddingVisualizations(
   // SVG (2D: PC1, PC2)
   const projected2d = projected3d.map(([x, y]) => [x, y]);
   const queryProjections = projected2d.slice(0, vectors.length);
-  const [toolCenter, ragCenter] = projected2d.slice(vectors.length);
-  const svg = buildEmbeddingSvg(queries, queryProjections, toolCenter, ragCenter);
+  const [toolCenter, ragCenter, metaCenter] = projected2d.slice(vectors.length);
+  const svg = buildEmbeddingSvg(queries, queryProjections, toolCenter, ragCenter, metaCenter);
   await writeFile(`${outputDir}/embedding-space.svg`, svg, 'utf-8');
 
   // 3D HTML (PC1, PC2, PC3)
@@ -398,11 +414,21 @@ export async function saveEmbeddingVisualizations(
     z: queryProjections3d[i][2],
   }));
   const centroidData: { label: string; x: number; y: number; z: number }[] = [
-    { label: 'Tool centroid', x: centroidProjections[0][0], y: centroidProjections[0][1], z: centroidProjections[0][2] },
+    {
+      label: 'Tool centroid',
+      x: centroidProjections[0][0],
+      y: centroidProjections[0][1],
+      z: centroidProjections[0][2],
+    },
     { label: 'RAG centroid', x: centroidProjections[1][0], y: centroidProjections[1][1], z: centroidProjections[1][2] },
   ];
   if (centroidProjections[2]) {
-    centroidData.push({ label: 'Meta centroid', x: centroidProjections[2][0], y: centroidProjections[2][1], z: centroidProjections[2][2] });
+    centroidData.push({
+      label: 'Meta centroid',
+      x: centroidProjections[2][0],
+      y: centroidProjections[2][1],
+      z: centroidProjections[2][2],
+    });
   }
   const html = buildPlotlyHtml3d(queryData, centroidData);
   await writeFile(`${outputDir}/embedding-space-3d.html`, html, 'utf-8');
