@@ -281,7 +281,13 @@ describe('isAvailable', () => {
   });
 
   it('returns true when API responds OK', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: vi.fn().mockResolvedValue({ data: [{ id: 'test-model' }] }),
+      }),
+    );
     const result = await isAvailable();
     expect(result).toBe(true);
   });

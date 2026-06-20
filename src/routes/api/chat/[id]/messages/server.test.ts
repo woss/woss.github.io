@@ -56,12 +56,24 @@ describe('GET /api/chat/[id]/messages', () => {
 
   it('returns 200 with messages including toolCalls on success', async () => {
     const mockMessages = [
-      { id: 'msg-1', role: 'user', content: 'Hello' },
-      { id: 'msg-2', role: 'assistant', content: 'Hi there' },
+      { id: 'msg-1', role: 'user', content: 'Hello', sources: '[]' },
+      {
+        id: 'msg-2',
+        role: 'assistant',
+        content: 'Hi there',
+        sources: '[{"title":"Source 1","score":0.95,"slug":"test","url":"/test","type":"post"}]',
+      },
     ];
     const mockToolCalls = {
       'msg-2': [
-        { id: 'tc-1', name: 'search', serverId: 'server-1', startedAt: '2024-01-01', finishedAt: '2024-01-01', durationMs: null },
+        {
+          id: 'tc-1',
+          name: 'search',
+          serverId: 'server-1',
+          startedAt: '2024-01-01',
+          finishedAt: '2024-01-01',
+          durationMs: null,
+        },
       ],
     };
 
@@ -74,17 +86,19 @@ describe('GET /api/chat/[id]/messages', () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.messages).toEqual([
-      { ...mockMessages[0], toolCalls: [] },
-      { ...mockMessages[1], toolCalls: mockToolCalls['msg-2'] },
+      { ...mockMessages[0], sources: [], toolCalls: [] },
+      {
+        ...mockMessages[1],
+        sources: [{ title: 'Source 1', score: 0.95, slug: 'test', url: '/test', type: 'post' }],
+        toolCalls: mockToolCalls['msg-2'],
+      },
     ]);
     expect(getMessages).toHaveBeenCalledWith('chat-1', 50, 0);
     expect(getToolCallsForMessages).toHaveBeenCalledWith(['msg-1', 'msg-2']);
   });
 
   it('returns 200 with empty toolCalls when getToolCallsForMessages returns empty', async () => {
-    const mockMessages = [
-      { id: 'msg-1', role: 'user', content: 'Hello' },
-    ];
+    const mockMessages = [{ id: 'msg-1', role: 'user', content: 'Hello' }];
     vi.mocked(getMessages).mockReturnValue(mockMessages as any);
     vi.mocked(getToolCallsForMessages).mockReturnValue({});
 
@@ -93,9 +107,21 @@ describe('GET /api/chat/[id]/messages', () => {
 
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.messages).toEqual([
-      { ...mockMessages[0], toolCalls: [] },
-    ]);
+    expect(json.messages).toEqual([{ ...mockMessages[0], toolCalls: [] }]);
+  });
+
+  it('returns sources as undefined for invalid JSON', async () => {
+    const mockMessages = [{ id: 'msg-1', role: 'user', content: 'Hello', sources: 'not-valid-json' }];
+
+    vi.mocked(getMessages).mockReturnValue(mockMessages as any);
+    vi.mocked(getToolCallsForMessages).mockReturnValue({});
+
+    const event = buildEvent('chat-1');
+    const res = await GET(event);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.messages).toEqual([{ ...mockMessages[0], sources: undefined, toolCalls: [] }]);
   });
 
   it('returns 500 when getMessages throws', async () => {

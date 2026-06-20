@@ -35,7 +35,8 @@ export function parseMcpServers(raw: string | undefined): McpServerConfig[] {
   if (!raw) return [];
 
   // Resolve $VAR and ${VAR} placeholders from process.env
-  const resolved = raw.replace(/\$(\w+)|\$\{(\w+)\}/g, (match, v1, v2) => {
+  const resolved = raw.replace(/\$\$|\$(\w+)|\$\{(\w+)\}/g, (match, v1, v2) => {
+    if (match === '$$') return '$';
     const name = v1 ?? v2;
     return process.env[name] ?? match;
   });

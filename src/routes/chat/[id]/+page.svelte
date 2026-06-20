@@ -210,7 +210,7 @@
           error: m.error as string | undefined,
           irrecoverable: m.irrecoverable as boolean | undefined,
           queryType: (m.queryType as string) || undefined,
-          sources: m.sources ? JSON.parse(m.sources as string) : undefined,
+          sources: m.sources as Source[] | undefined,
           timestamp: new Date(m.createdAt as string).getTime() || Date.now(),
           createdAt: m.createdAt as string,
           tokensIn: (m.tokensIn as number) || 0,

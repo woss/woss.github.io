@@ -592,10 +592,17 @@ export async function isAvailable(): Promise<boolean> {
   }
   const url = `${BASE_URL}/models`;
   log.debug`[isAvailable] fetching: ${url}`;
-  const res = await fetch(url, {
-    signal: AbortSignal.timeout(15000),
-    headers: { Authorization: `Bearer ${config().openai.apiKey}` },
-  });
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      signal: AbortSignal.timeout(15000),
+      headers: { Authorization: `Bearer ${config().openai.apiKey}` },
+    });
+  } catch (err) {
+    log.error`[isAvailable] fetch threw: ${err}`;
+    return false;
+  }
 
   if (!res.ok) {
     log.error`[isAvailable] fetch failed: ${res.status} ${res.statusText}`;

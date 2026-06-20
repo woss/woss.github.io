@@ -53,10 +53,11 @@ traverse({ from, edge })                         Returns
 │   └── root       → keywords      → Keyword autocomplete (fuzzy match)
 │
 └── Cross-cutting filters (apply to any edge)
-    ├── filter.what          → 'all' | 'images' | 'videos' | 'files'
-    ├── filter.allowAI       → Boolean (data mining permission)
-    ├── filter.nickname      → Filter results by uploader
-    └── limit / after        → Cursor-based pagination
+    ├── filter.what               → 'all' | 'images' | 'videos' | 'files'
+    ├── filter.allowedAiTraining  → Boolean (data mining permission)
+    ├── filter.allowAi            → Boolean (exclude AI-generated files)
+    ├── filter.nickname           → Filter results by uploader
+    └── limit / after             → Cursor-based pagination
 ```
 
 Separate leaf-reader tools (different return shapes):
@@ -164,7 +165,7 @@ Multiple layers of security:
 │  │                       McpServer                          │   │
 │  │                   1 Tool (traverse)                      │   │
 │  │                   3 Leaf Readers                         │   │
-│  │                   4 Task Prompts                          │   │
+│   │                   5 Task Prompts                          │   │
 │  │                  2 Resources                             │   │
 │  └────────────────────────────────────────────────────────┘   │
 │                              │                                  │
@@ -185,7 +186,7 @@ One graph-walk tool plus three leaf readers.
 
 | Tool                | Input                                                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `traverse`          | `from`, `edge`, `filter?`, `limit?`, `after?`, `query?` | Graph walk: navigate from a starting node across a named edge to discover connected nodes. 11 valid `from`-`edge` pairs across 6 node types and 10 edge types. Full-text search via `edge: search` + `query`. Keyword search via `edge: keywords`. User profiles via `edge: profile`. File/directory details via `edge: info`. Cursor pagination via `after`. Filters: what, allowAI, nickname. Images work correctly — `contains` and `tagged_files` follow both direct file and rendition chains. |
+| `traverse`          | `from`, `edge`, `filter?`, `limit?`, `after?`, `query?` | Graph walk: navigate from a starting node across a named edge to discover connected nodes. 11 valid `from`-`edge` pairs across 6 node types and 10 edge types. Full-text search via `edge: search` + `query`. Keyword search via `edge: keywords`. User profiles via `edge: profile`. File/directory details via `edge: info`. Cursor pagination via `after`. Filters: what, allowedAiTraining, allowAi, nickname. Images work correctly — `contains` and `tagged_files` follow both direct file and rendition chains. |
 | `get_file`          | `unifiedId`, `fields?`                                  | Leaf reader: get file information by unifiedId — title, description, creator, links, assets, size, copyright info, AI info. Optional `fields` for JSONPath-based selective field retrieval.                                                                                                                                                                                                                                                                                                         |
 | `get_file_metadata` | `unifiedId, a?`                                         | Leaf reader: get full EXIF/XMP/IPTC metadata. Optional `a` for specific metadata fields.                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `get_users`         | `nicknames`                                             | Leaf reader: batch user profile lookup. Accepts 1-100 nicknames, returns array of UserNode or null for not-found.                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -196,9 +197,9 @@ The `traverse` tool alone replaced seven specialized tools via its 11 valid trav
 
 **Replaced `get_user`:** Single-user lookup replaced by `get_users(nicknames[])` for batch efficiency.
 
-## The 4 Task Prompts
+## The 5 Task Prompts
 
-We reduced from 14 specialized prompts to 4 task-oriented prompts. Rather than naming prompts after tool names, each prompt describes a user goal — what the agent should accomplish, not which tool it should use.
+We reduced from 14 specialized prompts to 5 task-oriented prompts. Rather than naming prompts after tool names, each prompt describes a user goal — what the agent should accomplish, not which tool it should use.
 
 | Prompt              | Description                                                                                          | Wraps                           |
 | ------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------- |
@@ -206,6 +207,7 @@ We reduced from 14 specialized prompts to 4 task-oriented prompts. Rather than n
 | `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                 | `get_file`                      |
 | `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                    | `traverse`                      |
 | `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs            | `get_file`, `get_file_metadata` |
+| `discover_content`  | Discover and filter content — search, browse random/recent, filter by AI generation status, data mining permission, type, and license | `traverse` |
 
 Key design choice: prompts are named for the task not the tool. An agent doesn't "call the traverse prompt" — it "browses a user" or "explores a directory." This lowers the activation energy for agents to use the prompts effectively.
 
@@ -281,7 +283,8 @@ await instance.register(fastifyRateLimit, {
 | `query`                  | 2-200 chars (required for `edge: search` or `edge: keywords`)                                                           |
 | `from.type`              | Enum: `user`, `keyword`, `license`, `directory`, `root`                                                                 |
 | `filter.what`            | Enum: `all`, `images`, `videos`, `files`                                                                                |
-| `filter.allowAI`         | Boolean                                                                                                                 |
+| `filter.allowedAiTraining` | Boolean (data mining permission)                         |
+| `filter.allowAi`           | Boolean (exclude AI-generated files)                     |
 
 ## Development vs Production
 

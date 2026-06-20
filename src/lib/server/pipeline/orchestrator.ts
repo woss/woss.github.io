@@ -15,6 +15,7 @@ import { streamWithRetry } from './stream';
 import { saveAndEmitResult } from './save-result';
 
 const log = createLogger(CAT.chat);
+const SOURCE_SCORE_THRESHOLD = 0.3;
 
 /** Active generation AbortControllers keyed by chatId */
 const activeGenerations = new Map<string, AbortController>();
@@ -104,7 +105,7 @@ export async function startGeneration(
       publishLive(chatId, 'status', { step: 'searching' });
       // Search more candidates for type-balanced selection
       const results = searchChunks(embedding.data, maxChunks * 3);
-      const filtered = results.filter((r) => r.score < 1.5);
+      const filtered = results.filter((r) => r.score < SOURCE_SCORE_THRESHOLD);
 
       // Split by type for balanced selection
       const postChunks = filtered.filter((r) => r.chunk.type === 'post');
@@ -240,7 +241,6 @@ export async function startGeneration(
       tokenUsage,
       responseMs,
       maxTokens,
-      anyStepHadToolCalls,
       lastError,
       partial,
       msgId,
@@ -258,8 +258,10 @@ export async function startGeneration(
         log.debug`Failed to parse baseUrl for error webhook`;
       }
       const statusCode =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         typeof (lastError as any).status === 'number' && (lastError as any).status > 0
-          ? (lastError as any).status
+          ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (lastError as any).status
           : Number((lastError as Error).message.match(/ (\d{3}) /)?.[1] ?? 0);
       log.info`🚨 LLM error detected — firing error webhook`;
       callErrorWebhook({

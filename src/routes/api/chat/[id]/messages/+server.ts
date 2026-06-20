@@ -27,6 +27,15 @@ export async function GET(event: RequestEvent): Promise<Response> {
     const toolCallsByMessage = getToolCallsForMessages(messageIds);
     const messages = storedMessages.map((m) => ({
       ...m,
+      sources: m.sources
+        ? (() => {
+            try {
+              return JSON.parse(m.sources);
+            } catch {
+              return undefined;
+            }
+          })()
+        : undefined,
       toolCalls: toolCallsByMessage[m.id] || [],
     }));
     return new Response(JSON.stringify({ messages }), {

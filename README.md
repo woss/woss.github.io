@@ -43,7 +43,7 @@ pnpm install
 
 # 2. Configure environment
 cp example.env .env
-# Edit .env: set OPENAI_API_KEY, OPENAI_BASE_URL, OPENAI_MODEL
+# Edit .env: set PROVIDER_API_KEY, LLM_PROVIDER_BASE_URL, OPENAI_MODEL
 
 # 3. Start dev server
 pnpm run dev
@@ -59,8 +59,8 @@ Open <http://localhost:5173>.
 | Variable                       | Default                    | Description                        |
 | ------------------------------ | -------------------------- | ---------------------------------- |
 | `ORIGIN`                       | `http://localhost:5173`    | App origin for CORS/redirects      |
-| `OPENAI_API_KEY`               | `public`                   | API key for your LLM endpoint      |
-| `OPENAI_BASE_URL`              | `http://localhost:1234/v1` | OpenAI-compatible API base URL     |
+| `PROVIDER_API_KEY`               | `public`                   | API key for your LLM endpoint      |
+| `LLM_PROVIDER_BASE_URL`              | `http://localhost:1234/v1` | OpenAI-compatible API base URL     |
 | `OPENAI_MODEL`                 | `mistralai/ministral-3-3b` | Model ID to use                    |
 | `OPENAI_MAX_TOKENS`            | `10000`                    | Max output tokens                  |
 | `OPENAI_FIRST_ROUND_MAX_STEPS` | `10`                       | Max tool steps in first round      |

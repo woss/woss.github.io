@@ -62,7 +62,7 @@ Each walk shows the same tree structure: an agent starts at a node, follows edge
 
 A designer needs images for an article on sustainable architecture. An AI agent helps find them.
 
-```
+```sh
 traverse({ from:{type:'root'}, edge:'search', query:'sustainable architecture' })
 │
 ├── Returns: files matching search
@@ -107,7 +107,7 @@ Artist to albums to works. The agent discovers album structure from the profile,
 
 Sarah is a professional landscape photographer. She connects Manus AI to Macula's MCP server. Here is what a full day of agent-assisted work looks like:
 
-```
+```sh
 traverse({ from:{type:'user', nickname:'sarah'}, edge:'profile' })
 │
 ├── traverse({ from:{type:'directory', pathCid:'QmTravel'}, edge:'contains', filter:{what:'images'} })
@@ -119,8 +119,11 @@ traverse({ from:{type:'user', nickname:'sarah'}, edge:'profile' })
 │   │   ├── get_file({ unifiedId:'img002', fields:['title','dimensions','license'] })
 │   │   └── Prepares midday client presentation
 │   │
-│   └── traverse({ filter:{allowAI:true} })
-│       └── Reviews which images are enabled for AI training (afternoon)
+│   ├── traverse({ filter:{allowedAiTraining:true} })
+│   │   └── Reviews which images permit AI training (afternoon)
+│   │
+│   └── traverse({ from:{type:'root'}, edge:'search', query:'landscape', filter:{allowAi:false} })
+│       └── Non-AI landscape images for client review (afternoon)
 │
 └── traverse({ from:{type:'keyword', keyword:'iceland'}, edge:'tagged_files' })
     └── get_file({ unifiedId:'iceland01', fields:['title','creator','license','presets'] })
@@ -259,14 +262,14 @@ _These tool names map to the content graph operations described above._
 | `search(query)`               | `traverse(from: { type: 'root' }, edge: 'search', query)`                                      |
 | `search_keywords(search)`     | `traverse(from: { type: 'root' }, edge: 'keywords', query)`                                    |
 | `list_files_by_license`       | `traverse(from: { type: 'license', license }, edge: 'has_license')`                            |
-| `list_files_for_ai`           | `traverse(filter: { allowAI: true })`                                                          |
+| `list_files_for_ai`           | `traverse(filter: { allowedAiTraining: true })`                                                          |
 | `list_user_files`             | `traverse(from: { type: 'user', nickname }, edge: 'uploads')`                                  |
 | `list_random_files`           | `traverse(from: { type: 'root' }, edge: 'random')`                                             |
 | `list_files_by_keyword`       | `traverse(from: { type: 'keyword', keyword }, edge: 'tagged_files')`                           |
 | `get_directory`               | `traverse(edge: 'info', from: { type: 'directory', pathCid })`                                 |
 | `get_directory_files`         | `traverse(from: { type: 'directory', pathCid }, edge: 'contains')`                             |
 
-### All 4 Prompts
+### All 5 Prompts
 
 | Prompt              | Description                                                                                            |
 | ------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -274,6 +277,7 @@ _These tool names map to the content graph operations described above._
 | `display_media`     | Display files (images, video, audio) in markdown with optimal renditions and presets                   |
 | `explore_directory` | Deep-dive into a directory's structure, file inventory, and organization patterns                      |
 | `inspect_metadata`  | Analyze file metadata — EXIF/XMP/IPTC, AI generation info, licensing, and technical specs              |
+| `discover_content` | Discover and filter content — search, browse random/recent, filter by AI generation status, data mining permission, type, and license |
 
 ### Resources (2)
 

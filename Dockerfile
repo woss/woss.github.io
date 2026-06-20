@@ -26,4 +26,3 @@ COPY --from=builder /app/static ./static
 COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
 ENV NODE_ENV=production
 EXPOSE 3000
-# CMD ["node", "build/index.js"]
